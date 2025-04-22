@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block content %}
-    <h2>Proyectos Destacados</h2>
+    <h2 class="text-primary">Proyectos Destacados</h2>
     <div class="row">
         {% for project in projects %}
             <div class="col-md-4">
@@ -18,11 +18,11 @@
                 </div>
             </div>
         {% empty %}
-            <p>No hay proyectos disponibles.</p>
+            <p class="text-muted">No hay proyectos disponibles.</p>
         {% endfor %}
     </div>
 
-    <h2 class="mt-5">Planifica tu Emprendimiento</h2>
+    <h2 class="mt-5 text-primary">Planifica tu Emprendimiento</h2>
     <div class="row text-center">
         <div class="col-md-4">
             <div class="card mb-4">
@@ -53,7 +53,7 @@
         </div>
     </div>
 
-    <h2 class="mt-5">Lo que Dicen Nuestros Emprendedores</h2>
+    <h2 class="mt-5 text-primary">Lo que Dicen Nuestros Emprendedores</h2>
     <div class="row">
         <div class="col-md-4">
             <div class="card testimonial-card mb-4">
