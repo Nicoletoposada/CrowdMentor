@@ -14,7 +14,7 @@ def home(request):
 
 def register(request):
     if request.method == 'POST':
-        form = CustomUserCreationForm(request.POST)
+        form = CustomUserCreationForm(request.POST, request.FILES)
         if form.is_valid():
             user = form.save()
             profile = Profile.objects.create(
@@ -24,6 +24,17 @@ def register(request):
                 experience=form.cleaned_data['experience'],
                 is_approved=form.cleaned_data['user_type'] in ['entrepreneur', 'investor']
             )
+
+            # Manejar los archivos subidos
+            files = request.FILES.getlist('files')
+            if len(files) > 10:
+                messages.error(request, 'No puedes subir más de 10 archivos.')
+                return redirect('register')
+
+            # Guardar los archivos en el sistema de archivos o base de datos según sea necesario
+            for file in files:
+                # Aquí puedes implementar la lógica para guardar los archivos
+                pass
 
             login(request, user)
             messages.success(request, 'Registration successful!')

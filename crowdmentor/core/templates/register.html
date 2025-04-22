@@ -5,9 +5,13 @@
 {% block content %}
     <div class="col-md-6 mx-auto">
         <h2>Registrarse</h2>
-        <form method="post">
+        <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
             {{ form|crispy }}
+            <div class="form-group">
+                <label for="id_files">Subir Archivos (Máximo 10):</label>
+                <input type="file" name="files" id="id_files" multiple class="form-control">
+            </div>
             <button type="submit" class="btn btn-primary">Registrarse</button>
         </form>
     </div>
