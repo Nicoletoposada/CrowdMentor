@@ -14,8 +14,7 @@ from pathlib import Path
 import sys
 
 # Verificar que el servidor solo se inicie con 'runserver'
-if 'runserver' not in sys.argv:
-    raise RuntimeError("El servidor solo puede ejecutarse con 'python manage.py runserver'")
+# raise RuntimeError("El servidor solo puede ejecutarse con 'python manage.py runserver'")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
