@@ -31,3 +31,18 @@ Project.objects.create(
 print("Datos de ejemplo creados exitosamente.")
 
 exec(open('core/initialize_data.py').read())
+
+from django.contrib.auth.models import User # type: ignore
+from .models import Profile
+
+def create_missing_profiles():
+    users_without_profiles = User.objects.filter(profile__isnull=True)
+    for user in users_without_profiles:
+        Profile.objects.create(
+            user=user,
+            user_type='default',  # Cambia esto según el tipo de usuario predeterminado
+            bio='',
+            experience='',
+            is_approved=False
+        )
+    print(f"Se han creado perfiles para {users_without_profiles.count()} usuarios sin perfil.")
