@@ -25,17 +25,6 @@ def register(request):
                 is_approved=form.cleaned_data['user_type'] in ['entrepreneur', 'investor']
             )
 
-            # Guardar en MongoDB
-            mongo_user = {
-                "username": user.username,
-                "email": user.email,
-                "user_type": profile.user_type,
-                "bio": profile.bio,
-                "experience": profile.experience,
-                "is_approved": profile.is_approved
-            }
-            settings.MONGO_DB.users.insert_one(mongo_user)
-
             login(request, user)
             messages.success(request, 'Registration successful!')
             return redirect('dashboard')
