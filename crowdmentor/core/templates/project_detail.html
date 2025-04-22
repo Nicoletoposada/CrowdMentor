@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block content %}
+    <h2>{{ project.title }}</h2>
+    {% if project.image %}
+        <img src="{{ project.image.url }}" class="img-fluid mb-3" alt="{{ project.title }}">
+    {% endif %}
+    <p>{{ project.description }}</p>
+    <p><strong>Meta de Financiación:</strong> ${{ project.funding_goal }}</p>
+    <p><strong>Monto Recaudado:</strong> ${{ project.amount_raised }}</p>
+    <p><strong>Propietario:</strong> {{ project.owner.username }}</p>
+    {% if user.is_authenticated and user.profile.user_type == 'investor' %}
+        <h3>Invertir en este Proyecto</h3>
+        <form method="post" class="col-md-6">
+            {% csrf_token %}
+            {{ form|crispy }}
+            <button type="submit" class="btn btn-primary">Invertir</button>
+        </form>
+    {% endif %}
+{% endblock %}

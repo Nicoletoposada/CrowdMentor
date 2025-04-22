@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+    <h2>Panel - {{ profile.user_type|title }}</h2>
+    {% if profile.user_type == 'entrepreneur' %}
+        <h3>Tus Proyectos</h3>
+        <a href="{% url 'project_create' %}" class="btn btn-success mb-3">Crear Nuevo Proyecto</a>
+        {% for project in projects %}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">{{ project.title }}</h5>
+                    <p>Meta de Financiación: ${{ project.funding_goal }}</p>
+                    <p>Monto Recaudado: ${{ project.amount_raised }}</p>
+                    <a href="{% url 'project_detail' project.pk %}" class="btn btn-primary">Ver</a>
+                </div>
+            </div>
+        {% empty %}
+            <p>No hay proyectos aún.</p>
+        {% endfor %}
+    {% elif profile.user_type == 'mentor' or profile.user_type == 'investor' %}
+        <h3>Tus Mentorías</h3>
+        {% for mentorship in mentorships %}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">{{ mentorship.project.title }}</h5>
+                    <p>Estado: {{ mentorship.status }}</p>
+                </div>
+            </div>
+        {% empty %}
+            <p>No hay mentorías asignadas.</p>
+        {% endfor %}
+        <h3>Tus Inversiones</h3>
+        {% for investment in investments %}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">{{ investment.project.title }}</h5>
+                    <p>Monto: ${{ investment.amount }}</p>
+                    <p>Participación: {{ investment.equity_percentage }}%</p>
+                </div>
+            </div>
+        {% empty %}
+            <p>No se han realizado inversiones.</p>
+        {% endfor %}
+    {% else %}
+        <h3>Mentores Pendientes</h3>
+        {% for mentor in pending_mentors %}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">{{ mentor.user.username }}</h5>
+                    <p>Biografía: {{ mentor.bio }}</p>
+                    <p>Experiencia: {{ mentor.experience }}</p>
+                    <a href="{% url 'approve_mentor' mentor.pk %}" class="btn btn-success">Aprobar</a>
+                </div>
+            </div>
+        {% empty %}
+            <p>No hay mentores pendientes de aprobación.</p>
+        {% endfor %}
+    {% endif %}
+{% endblock %}
