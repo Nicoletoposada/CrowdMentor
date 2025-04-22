@@ -5,7 +5,10 @@ from django.contrib.auth.models import User # type: ignore
 from .models import Profile, Project, Investment
 
 class CustomUserCreationForm(UserCreationForm):
-    user_type = forms.ChoiceField(choices=Profile.USER_TYPES)
+    user_type = forms.ChoiceField(
+        choices=Profile.USER_TYPES,
+        widget=forms.Select(attrs={'class': 'form-control custom-select'})
+    )
     bio = forms.CharField(widget=forms.Textarea, required=False)
     experience = forms.CharField(widget=forms.Textarea, required=False)
 

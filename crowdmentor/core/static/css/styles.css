@@ -4,8 +4,8 @@
 /* Global Styles */
 body {
     font-family: 'Montserrat', Arial, sans-serif;
-    background-color: #f9fafb;
-    color: #2d3748;
+    background-color: #f9fafb; /* Gris claro */
+    color: #2d3748; /* Gris oscuro */
     line-height: 1.7;
     margin: 0;
 }
@@ -14,7 +14,7 @@ body {
 .hero {
     background: linear-gradient(135deg, #4c6ef5 0%, #15aabf 100%);
     color: #fff;
-    padding: 80px 0;
+    padding: 100px 0;
     text-align: center;
     margin-bottom: 50px;
     border-radius: 0 0 20px 20px;
@@ -33,6 +33,12 @@ body {
     font-size: 1.2rem;
     padding: 15px 40px;
     border-radius: 10px;
+    background-color: #364fc7;
+    border: none;
+    transition: background-color 0.3s ease;
+}
+.hero .btn:hover {
+    background-color: #2b8a3e;
 }
 
 /* Navbar */
@@ -81,12 +87,22 @@ h3 {
     font-size: 1.7rem;
 }
 
+/* Section Titles */
+h2.section-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #4c6ef5;
+    text-align: center;
+    margin-bottom: 40px;
+}
+
 /* Cards */
 .card {
     border: none;
     border-radius: 15px;
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
+    background-color: #ffffff;
 }
 .card:hover {
     transform: translateY(-10px);
@@ -99,16 +115,19 @@ h3 {
     border-top-right-radius: 15px;
 }
 .card-body {
-    padding: 30px;
+    padding: 20px;
+    text-align: center;
 }
 .card-title {
     font-size: 1.5rem;
     font-weight: 600;
     color: #1c7ed6;
+    margin-bottom: 15px;
 }
 .card-text {
     font-size: 1rem;
     color: #495057;
+    margin-bottom: 20px;
 }
 
 /* Buttons */
@@ -155,6 +174,17 @@ h3 {
 .crispy-forms .form-group label {
     font-weight: 600;
     color: #2d3748;
+}
+
+/* Custom Select */
+.custom-select {
+    font-size: 1rem;
+    padding: 5px;
+    border-radius: 3px;
+    border: 1px solid #ced4da;
+    width: 100%; /* Asegura que ocupe todo el ancho disponible */
+    max-width: 400px; /* Limita el ancho máximo */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* Footer */
