@@ -14,7 +14,7 @@
         <div class="navbar-nav">
             <a class="nav-item nav-link" href="{% url 'project_list' %}">Proyectos</a>
             {% if user.is_authenticated %}
-                <a class="nav-item nav-link" href="{% url 'dashboard' %}">Panel</a>
+                <a class="nav-item nav-link" href="{% if user.is_superuser %}{% url 'admin_dashboard' %}{% else %}{% url 'dashboard' %}{% endif %}">Panel</a>
                 <a class="nav-item nav-link" href="{% url 'logout' %}">Cerrar Sesión</a>
             {% else %}
                 <a class="nav-item nav-link" href="{% url 'login' %}">Iniciar Sesión</a>

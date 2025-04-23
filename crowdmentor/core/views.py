@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required # type: ignore
 from django.contrib import messages # type: ignore
 from django.conf import settings # type: ignore
 from django.views import View # type: ignore
+from django.contrib.auth.models import User # type: ignore
 from .forms import CustomUserCreationForm, ProjectForm, InvestmentForm
 from .models import Project, Investment, Mentorship, Profile
 
@@ -108,6 +109,22 @@ def approve_mentor(request, profile_id):
         profile.save()
         messages.success(request, 'Mentor approved!')
     return redirect('dashboard')
+
+@login_required
+def admin_dashboard(request):
+    if not request.user.is_superuser:
+        messages.error(request, 'Acceso denegado. Solo los administradores pueden acceder a esta página.')
+        return redirect('home')
+
+    users = User.objects.all()
+    projects = Project.objects.all()
+    investments = Investment.objects.all()
+
+    return render(request, 'admin_dashboard.html', {
+        'users': users,
+        'projects': projects,
+        'investments': investments
+    })
 
 class LogoutView(View):
     def get(self, request, *args, **kwargs):

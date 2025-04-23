@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Panel de Administración</h2>
+
+<h3>Usuarios</h3>
+<table class="table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Nombre de Usuario</th>
+            <th>Email</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user in users %}
+        <tr>
+            <td>{{ user.id }}</td>
+            <td>{{ user.username }}</td>
+            <td>{{ user.email }}</td>
+            <td>
+                <a href="#" class="btn btn-danger btn-sm">Eliminar</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h3>Proyectos</h3>
+<table class="table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Título</th>
+            <th>Propietario</th>
+            <th>Meta de Financiación</th>
+            <th>Monto Recaudado</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for project in projects %}
+        <tr>
+            <td>{{ project.id }}</td>
+            <td>{{ project.title }}</td>
+            <td>{{ project.owner.username }}</td>
+            <td>${{ project.funding_goal }}</td>
+            <td>${{ project.amount_raised }}</td>
+            <td>
+                <a href="#" class="btn btn-danger btn-sm">Eliminar</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h3>Inversiones</h3>
+<table class="table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Proyecto</th>
+            <th>Inversionista</th>
+            <th>Monto</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for investment in investments %}
+        <tr>
+            <td>{{ investment.id }}</td>
+            <td>{{ investment.project.title }}</td>
+            <td>{{ investment.investor.username }}</td>
+            <td>${{ investment.amount }}</td>
+            <td>
+                <a href="#" class="btn btn-danger btn-sm">Eliminar</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
