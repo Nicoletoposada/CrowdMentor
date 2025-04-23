@@ -15,4 +15,6 @@ urlpatterns = [
     path('project/create/', views.project_create, name='project_create'),
     path('approve_mentor/<int:profile_id>/', views.approve_mentor, name='approve_mentor'),
     path('admin_dashboard/', views.admin_dashboard, name='admin_dashboard'),
+    path('delete_user/<int:user_id>/', views.delete_user, name='delete_user'),
+    path('delete_project/<int:project_id>/', views.delete_project, name='delete_project'),
 ]

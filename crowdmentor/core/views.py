@@ -6,6 +6,7 @@ from django.contrib import messages # type: ignore
 from django.conf import settings # type: ignore
 from django.views import View # type: ignore
 from django.contrib.auth.models import User # type: ignore
+from django.http import JsonResponse # type: ignore
 from .forms import CustomUserCreationForm, ProjectForm, InvestmentForm
 from .models import Project, Investment, Mentorship, Profile
 
@@ -125,6 +126,30 @@ def admin_dashboard(request):
         'projects': projects,
         'investments': investments
     })
+
+@login_required
+def delete_user(request, user_id):
+    if not request.user.is_superuser:
+        return JsonResponse({'error': 'Acceso denegado'}, status=403)
+
+    try:
+        user = User.objects.get(id=user_id)
+        user.delete()
+        return JsonResponse({'success': 'Usuario eliminado correctamente'})
+    except User.DoesNotExist:
+        return JsonResponse({'error': 'Usuario no encontrado'}, status=404)
+
+@login_required
+def delete_project(request, project_id):
+    if not request.user.is_superuser:
+        return JsonResponse({'error': 'Acceso denegado'}, status=403)
+
+    try:
+        project = Project.objects.get(id=project_id)
+        project.delete()
+        return JsonResponse({'success': 'Proyecto eliminado correctamente'})
+    except Project.DoesNotExist:
+        return JsonResponse({'error': 'Proyecto no encontrado'}, status=404)
 
 class LogoutView(View):
     def get(self, request, *args, **kwargs):

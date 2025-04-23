@@ -19,7 +19,7 @@
             <td>{{ user.username }}</td>
             <td>{{ user.email }}</td>
             <td>
-                <a href="#" class="btn btn-danger btn-sm">Eliminar</a>
+                <button onclick="deleteUser('{{ user.id }}')" class="btn btn-danger btn-sm">Eliminar</button>
             </td>
         </tr>
         {% endfor %}
@@ -47,7 +47,7 @@
             <td>${{ project.funding_goal }}</td>
             <td>${{ project.amount_raised }}</td>
             <td>
-                <a href="#" class="btn btn-danger btn-sm">Eliminar</a>
+                <button onclick="deleteProject('{{ project.id }}')" class="btn btn-danger btn-sm">Eliminar</button>
             </td>
         </tr>
         {% endfor %}
@@ -79,4 +79,46 @@
         {% endfor %}
     </tbody>
 </table>
+
+<script>
+    function deleteUser(userId) {
+        if (confirm('¿Estás seguro de que deseas eliminar este usuario?')) {
+            fetch(`/delete_user/${userId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.success);
+                    location.reload();
+                } else {
+                    alert(data.error);
+                }
+            });
+        }
+    }
+
+    function deleteProject(projectId) {
+        if (confirm('¿Estás seguro de que deseas eliminar este proyecto?')) {
+            fetch(`/delete_project/${projectId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.success);
+                    location.reload();
+                } else {
+                    alert(data.error);
+                }
+            });
+        }
+    }
+</script>
 {% endblock %}
