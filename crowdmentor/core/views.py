@@ -69,13 +69,17 @@ def dashboard(request):
 
 @login_required
 def project_create(request):
+    if not request.user.is_authenticated:
+        messages.warning(request, 'Debes iniciar sesión para crear un proyecto.')
+        return redirect('login')
+
     if request.method == 'POST':
         form = ProjectForm(request.POST, request.FILES)
         if form.is_valid():
             project = form.save(commit=False)
             project.owner = request.user
             project.save()
-            messages.success(request, 'Project created successfully!')
+            messages.success(request, '¡Proyecto creado exitosamente!')
             return redirect('project_list')
     else:
         form = ProjectForm()
