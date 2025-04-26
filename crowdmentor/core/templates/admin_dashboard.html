@@ -54,32 +54,6 @@
     </tbody>
 </table>
 
-<h3>Inversiones</h3>
-<table class="table">
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Proyecto</th>
-            <th>Inversionista</th>
-            <th>Monto</th>
-            <th>Acciones</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for investment in investments %}
-        <tr>
-            <td>{{ investment.id }}</td>
-            <td>{{ investment.project.title }}</td>
-            <td>{{ investment.investor.username }}</td>
-            <td>${{ investment.amount }}</td>
-            <td>
-                <a href="#" class="btn btn-danger btn-sm">Eliminar</a>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-
 <script>
     function deleteUser(userId) {
         if (confirm('¿Estás seguro de que deseas eliminar este usuario?')) {
