@@ -2,59 +2,75 @@
 {% load static %}
 
 {% block content %}
-    <h2>Panel - {{ profile.user_type|title }}</h2>
+    <h2 class="text-center text-primary my-4">Panel - {{ profile.user_type|title }}</h2>
     {% if profile.user_type == 'entrepreneur' %}
-        <h3>Tus Proyectos</h3>
+        <h3 class="text-primary">Tus Proyectos</h3>
         <a href="{% url 'project_create' %}" class="btn btn-success mb-3">Crear Nuevo Proyecto</a>
-        {% for project in projects %}
-            <div class="card mb-3">
-                <div class="card-body">
-                    <h5 class="card-title">{{ project.title }}</h5>
-                    <p>Meta de Financiación: ${{ project.funding_goal }}</p>
-                    <p>Monto Recaudado: ${{ project.amount_raised }}</p>
-                    <a href="{% url 'project_detail' project.pk %}" class="btn btn-primary">Ver</a>
+        <div class="row">
+            {% for project in projects %}
+                <div class="col-md-6 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title text-primary">{{ project.title }}</h5>
+                            <p class="card-text text-muted">Meta de Financiación: ${{ project.funding_goal }}</p>
+                            <p class="card-text text-muted">Monto Recaudado: ${{ project.amount_raised }}</p>
+                            <a href="{% url 'project_detail' project.pk %}" class="btn btn-primary">Ver</a>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        {% empty %}
-            <p>No hay proyectos aún.</p>
-        {% endfor %}
+            {% empty %}
+                <p class="text-muted">No hay proyectos aún.</p>
+            {% endfor %}
+        </div>
     {% elif profile.user_type == 'mentor' or profile.user_type == 'investor' %}
-        <h3>Tus Mentorías</h3>
-        {% for mentorship in mentorships %}
-            <div class="card mb-3">
-                <div class="card-body">
-                    <h5 class="card-title">{{ mentorship.project.title }}</h5>
-                    <p>Estado: {{ mentorship.status }}</p>
+        <h3 class="text-primary">Tus Mentorías</h3>
+        <div class="row">
+            {% for mentorship in mentorships %}
+                <div class="col-md-6 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title text-primary">{{ mentorship.project.title }}</h5>
+                            <p class="card-text text-muted">Estado: {{ mentorship.status }}</p>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        {% empty %}
-            <p>No hay mentorías asignadas.</p>
-        {% endfor %}
-        <h3>Tus Inversiones</h3>
-        {% for investment in investments %}
-            <div class="card mb-3">
-                <div class="card-body">
-                    <h5 class="card-title">{{ investment.project.title }}</h5>
-                    <p>Monto: ${{ investment.amount }}</p>
-                    <p>Participación: {{ investment.equity_percentage }}%</p>
+            {% empty %}
+                <p class="text-muted">No hay mentorías asignadas.</p>
+            {% endfor %}
+        </div>
+        <h3 class="text-primary">Tus Inversiones</h3>
+        <div class="row">
+            {% for investment in investments %}
+                <div class="col-md-6 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title text-primary">{{ investment.project.title }}</h5>
+                            <p class="card-text text-muted">Monto: ${{ investment.amount }}</p>
+                            <p class="card-text text-muted">Participación: {{ investment.equity_percentage }}%</p>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        {% empty %}
-            <p>No se han realizado inversiones.</p>
-        {% endfor %}
+            {% empty %}
+                <p class="text-muted">No se han realizado inversiones.</p>
+            {% endfor %}
+        </div>
     {% else %}
-        <h3>Mentores Pendientes</h3>
-        {% for mentor in pending_mentors %}
-            <div class="card mb-3">
-                <div class="card-body">
-                    <h5 class="card-title">{{ mentor.user.username }}</h5>
-                    <p>Biografía: {{ mentor.bio }}</p>
-                    <p>Experiencia: {{ mentor.experience }}</p>
-                    <a href="{% url 'approve_mentor' mentor.pk %}" class="btn btn-success">Aprobar</a>
+        <h3 class="text-primary">Mentores Pendientes</h3>
+        <div class="row">
+            {% for mentor in pending_mentors %}
+                <div class="col-md-6 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title text-primary">{{ mentor.user.username }}</h5>
+                            <p class="card-text text-muted">Biografía: {{ mentor.bio }}</p>
+                            <p class="card-text text-muted">Experiencia: {{ mentor.experience }}</p>
+                            <a href="{% url 'approve_mentor' mentor.pk %}" class="btn btn-success">Aprobar</a>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        {% empty %}
-            <p>No hay mentores pendientes de aprobación.</p>
-        {% endfor %}
+            {% empty %}
+                <p class="text-muted">No hay mentores pendientes de aprobación.</p>
+            {% endfor %}
+        </div>
     {% endif %}
 {% endblock %}

@@ -3,12 +3,15 @@
 {% load static %}
 
 {% block content %}
-    <div class="col-md-6 mx-auto">
-        <h2>Iniciar Sesión</h2>
-        <form method="post">
+    <div class="col-md-6 mx-auto mt-5">
+        <h2 class="text-center text-primary mb-4">Inicia Sesión</h2>
+        <div class="text-center mb-4">
+            <img src="{% static 'images/login-illustration.png' %}" alt="Login Illustration" class="img-fluid" style="max-height: 200px;">
+        </div>
+        <form method="post" class="p-4 shadow rounded bg-white">
             {% csrf_token %}
             {{ form|crispy }}
-            <button type="submit" class="btn btn-primary">Iniciar Sesión</button>
+            <button type="submit" class="btn btn-primary btn-block">Iniciar Sesión</button>
         </form>
     </div>
 {% endblock %}

@@ -3,16 +3,19 @@
 {% load static %}
 
 {% block content %}
-    <div class="col-md-6 mx-auto">
-        <h2>Registrarse</h2>
-        <form method="post" enctype="multipart/form-data">
+    <div class="col-md-6 mx-auto mt-5">
+        <h2 class="text-center text-primary mb-4">Crea tu Cuenta</h2>
+        <div class="text-center mb-4">
+            <img src="{% static 'images/register-illustration.png' %}" alt="Register Illustration" class="img-fluid" style="max-height: 200px;">
+        </div>
+        <form method="post" enctype="multipart/form-data" class="p-4 shadow rounded bg-white">
             {% csrf_token %}
             {{ form|crispy }}
             <div class="form-group">
-                <label for="id_files">Subir Archivos (Máximo 10):</label>
+                <label for="id_files" class="font-weight-bold">Subir Archivos (Máximo 10):</label>
                 <input type="file" name="files" id="id_files" multiple class="form-control">
             </div>
-            <button type="submit" class="btn btn-primary">Registrarse</button>
+            <button type="submit" class="btn btn-primary btn-block">Registrarse</button>
         </form>
     </div>
 {% endblock %}

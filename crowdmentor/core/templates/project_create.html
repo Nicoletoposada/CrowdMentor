@@ -3,12 +3,12 @@
 {% load static %}
 
 {% block content %}
-    <div class="col-md-8 mx-auto">
-        <h2>Crear un Nuevo Proyecto</h2>
-        <form method="post" enctype="multipart/form-data">
+    <div class="col-md-8 mx-auto mt-5">
+        <h2 class="text-center text-primary mb-4">Crea un Nuevo Proyecto</h2>
+        <form method="post" enctype="multipart/form-data" class="p-4 shadow rounded bg-white">
             {% csrf_token %}
             {{ form|crispy }}
-            <button type="submit" class="btn btn-primary">Crear Proyecto</button>
+            <button type="submit" class="btn btn-primary btn-block">Crear Proyecto</button>
         </form>
     </div>
 {% endblock %}

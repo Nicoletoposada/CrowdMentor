@@ -7,13 +7,13 @@
         <div class="row">
             {% for project in projects %}
                 <div class="col-md-4">
-                    <div class="card mb-4">
+                    <div class="card mb-4 shadow-sm">
                         {% if project.image %}
-                            <img src="{{ project.image.url }}" class="card-img-top" alt="{{ project.title }}">
+                            <img src="{{ project.image.url }}" class="card-img-top rounded-top" alt="{{ project.title }}">
                         {% endif %}
-                        <div class="card-body">
-                            <h5 class="card-title">{{ project.title }}</h5>
-                            <p class="card-text">{{ project.description|truncatewords:20 }}</p>
+                        <div class="card-body text-center">
+                            <h5 class="card-title text-primary">{{ project.title }}</h5>
+                            <p class="card-text text-muted">{{ project.description|truncatewords:20 }}</p>
                             <a href="{% url 'project_detail' project.pk %}" class="btn btn-primary">Ver Proyecto</a>
                         </div>
                     </div>
@@ -26,28 +26,28 @@
         <h2 class="section-title mt-5">Planifica tu Emprendimiento</h2>
         <div class="row text-center">
             <div class="col-md-4">
-                <div class="card mb-4">
+                <div class="card mb-4 shadow-sm">
                     <div class="card-body">
-                        <h5 class="card-title">Encuentra un Mentor</h5>
-                        <p class="card-text">Conecta con mentores experimentados para guiar tu camino emprendedor.</p>
+                        <h5 class="card-title text-primary">Encuentra un Mentor</h5>
+                        <p class="card-text text-muted">Conecta con mentores experimentados para guiar tu camino emprendedor.</p>
                         <a href="{% url 'project_list' %}" class="btn btn-primary">Explorar Mentores</a>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card mb-4">
+                <div class="card mb-4 shadow-sm">
                     <div class="card-body">
-                        <h5 class="card-title">Inicia una Campaña</h5>
-                        <p class="card-text">Presenta tu proyecto y recibe financiación de nuestra comunidad de inversores.</p>
+                        <h5 class="card-title text-primary">Inicia una Campaña</h5>
+                        <p class="card-text text-muted">Presenta tu proyecto y recibe financiación de nuestra comunidad de inversores.</p>
                         <a href="{% url 'project_create' %}" class="btn btn-primary">Comenzar Ahora</a>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card mb-4">
+                <div class="card mb-4 shadow-sm">
                     <div class="card-body">
-                        <h5 class="card-title">Explora Recursos</h5>
-                        <p class="card-text">Accede a herramientas y recursos para impulsar tu emprendimiento.</p>
+                        <h5 class="card-title text-primary">Explora Recursos</h5>
+                        <p class="card-text text-muted">Accede a herramientas y recursos para impulsar tu emprendimiento.</p>
                         <a href="#" class="btn btn-primary">Descubrir Recursos</a>
                     </div>
                 </div>
@@ -57,28 +57,28 @@
         <h2 class="section-title mt-5">Lo que Dicen Nuestros Emprendedores</h2>
         <div class="row">
             <div class="col-md-4">
-                <div class="card testimonial-card mb-4">
+                <div class="card testimonial-card mb-4 shadow-sm">
                     <div class="card-body">
-                        <p class="card-text">"Gracias a CrowdMentor, encontré el mentor perfecto y obtuve la financiación necesaria para lanzar mi startup."</p>
-                        <h5 class="card-title">Juan Correa</h5>
+                        <p class="card-text text-muted">"Gracias a CrowdMentor, encontré el mentor perfecto y obtuve la financiación necesaria para lanzar mi startup."</p>
+                        <h5 class="card-title text-primary">Juan Correa</h5>
                         <p class="card-text"><small>Fundador de EcoSolutions</small></p>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card testimonial-card mb-4">
+                <div class="card testimonial-card mb-4 shadow-sm">
                     <div class="card-body">
-                        <p class="card-text">"La plataforma me conectó con inversores que creyeron en mi visión y me ayudaron a hacerla realidad."</p>
-                        <h5 class="card-title">María González</h5>
+                        <p class="card-text text-muted">"La plataforma me conectó con inversores que creyeron en mi visión y me ayudaron a hacerla realidad."</p>
+                        <h5 class="card-title text-primary">María González</h5>
                         <p class="card-text"><small>Creadora de TechForGood</small></p>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card testimonial-card mb-4">
+                <div class="card testimonial-card mb-4 shadow-sm">
                     <div class="card-body">
-                        <p class="card-text">"Los recursos y la comunidad de CrowdMentor fueron clave para el éxito de mi proyecto."</p>
-                        <h5 class="card-title">Carlos Ramírez</h5>
+                        <p class="card-text text-muted">"Los recursos y la comunidad de CrowdMentor fueron clave para el éxito de mi proyecto."</p>
+                        <h5 class="card-title text-primary">Carlos Ramírez</h5>
                         <p class="card-text"><small>Innovador Social</small></p>
                     </div>
                 </div>
