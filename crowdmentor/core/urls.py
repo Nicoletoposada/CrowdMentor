@@ -2,7 +2,7 @@
 from django.urls import path # type: ignore
 from . import views
 from django.contrib.auth import views as auth_views # type: ignore
-from .views import LogoutView
+from .views import LogoutView, manage_investment
 
 urlpatterns = [
     path('', views.home, name='home'),
@@ -17,4 +17,5 @@ urlpatterns = [
     path('admin_dashboard/', views.admin_dashboard, name='admin_dashboard'),
     path('delete_user/<int:user_id>/', views.delete_user, name='delete_user'),
     path('delete_project/<int:project_id>/', views.delete_project, name='delete_project'),
+    path('manage_investment/<int:investment_id>/', manage_investment, name='manage_investment'),
 ]

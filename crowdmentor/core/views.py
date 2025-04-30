@@ -9,6 +9,7 @@ from django.contrib.auth.models import User # type: ignore
 from django.http import JsonResponse # type: ignore
 from .forms import CustomUserCreationForm, ProjectForm, InvestmentForm
 from .models import Project, Investment, Mentorship, Profile
+from django.views.decorators.http import require_POST # type: ignore
 
 def home(request):
     projects = Project.objects.filter(is_active=True)
@@ -58,7 +59,8 @@ def dashboard(request):
 
     if profile.user_type == 'entrepreneur':
         projects = Project.objects.filter(owner=request.user)
-        return render(request, 'dashboard.html', {'projects': projects, 'profile': profile})
+        investments = Investment.objects.filter(project__owner=request.user, status='pending')
+        return render(request, 'dashboard.html', {'projects': projects, 'investments': investments, 'profile': profile})
     elif profile.user_type in ['mentor', 'investor']:
         mentorships = Mentorship.objects.filter(mentor=request.user)
         investments = Investment.objects.filter(investor=request.user)
@@ -97,10 +99,9 @@ def project_detail(request, pk):
             investment = form.save(commit=False)
             investment.project = project
             investment.investor = request.user
+            investment.status = 'pending'  # Estado inicial de la inversión
             investment.save()
-            project.amount_raised += investment.amount
-            project.save()
-            messages.success(request, 'Investment successful!')
+            messages.success(request, 'Tu inversión está pendiente de aprobación por el emprendedor.')
             return redirect('project_detail', pk=project.pk)
     else:
         form = InvestmentForm()
@@ -154,6 +155,33 @@ def delete_project(request, project_id):
         return JsonResponse({'success': 'Proyecto eliminado correctamente'})
     except Project.DoesNotExist:
         return JsonResponse({'error': 'Proyecto no encontrado'}, status=404)
+
+@login_required
+@require_POST
+def manage_investment(request, investment_id):
+    investment = get_object_or_404(Investment, id=investment_id, project__owner=request.user)
+    action = request.POST.get('action')
+
+    if action == 'accept':
+        investment.status = 'accepted'
+        investment.is_accepted = True
+        investment.save()
+
+        # Sumar el monto de la inversión al proyecto
+        project = investment.project
+        project.amount_raised += investment.amount
+        project.save()
+
+        messages.success(request, 'Has aceptado la inversión. El monto ha sido sumado al proyecto.')
+    elif action == 'reject':
+        investment.status = 'rejected'
+        investment.save()
+
+        messages.success(request, 'Has rechazado la inversión. El dinero será reembolsado al inversionista.')
+    else:
+        messages.error(request, 'Acción no válida.')
+
+    return redirect('dashboard')
 
 class LogoutView(View):
     def get(self, request, *args, **kwargs):

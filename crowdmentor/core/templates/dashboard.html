@@ -22,6 +22,29 @@
                 <p class="text-muted">No hay proyectos aún.</p>
             {% endfor %}
         </div>
+        <h3 class="text-primary">Inversiones Pendientes</h3>
+        <div class="row">
+            {% for investment in investments %}
+                {% if investment.status == 'pending' %}
+                    <div class="col-md-6 mb-4">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <h5 class="card-title text-primary">{{ investment.investor.username }}</h5>
+                                <p class="card-text text-muted">Monto: ${{ investment.amount }}</p>
+                                <p class="card-text text-muted">Porcentaje: {{ investment.equity_percentage }}%</p>
+                                <form method="post" action="{% url 'manage_investment' investment.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" name="action" value="accept" class="btn btn-success">Aceptar</button>
+                                    <button type="submit" name="action" value="reject" class="btn btn-danger">Rechazar</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            {% empty %}
+                <p class="text-muted">No hay inversiones pendientes.</p>
+            {% endfor %}
+        </div>
     {% elif profile.user_type == 'mentor' or profile.user_type == 'investor' %}
         <h3 class="text-primary">Tus Mentorías</h3>
         <div class="row">

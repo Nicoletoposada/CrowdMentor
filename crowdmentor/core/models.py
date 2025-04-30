@@ -38,6 +38,13 @@ class Investment(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     equity_percentage = models.FloatField()  # Percentage of project ownership
     invested_at = models.DateTimeField(default=timezone.now)
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected'),
+    ]
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    is_accepted = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.investor.username} invested {self.amount} in {self.project.title}"
