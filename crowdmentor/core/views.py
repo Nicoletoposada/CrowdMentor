@@ -10,6 +10,8 @@ from django.http import JsonResponse # type: ignore
 from .forms import CustomUserCreationForm, ProjectForm, InvestmentForm
 from .models import Project, Investment, Mentorship, Profile
 from django.views.decorators.http import require_POST # type: ignore
+from django.core.files.storage import default_storage # type: ignore
+from django.core.files.base import ContentFile # type: ignore
 
 def home(request):
     projects = Project.objects.filter(is_active=True)
@@ -150,11 +152,21 @@ def admin_dashboard(request):
     investments = Investment.objects.all()
     profiles_pending_approval = Profile.objects.filter(user_type='evaluator', is_approved_by_admin=False)
 
+    evaluators_with_files = []
+    for evaluator in profiles_pending_approval:
+        uploaded_files = []
+        if hasattr(evaluator, 'uploaded_files'):
+            uploaded_files = [default_storage.url(file.file.name) for file in evaluator.uploaded_files.all()]
+        evaluators_with_files.append({
+            'evaluator': evaluator,
+            'files': uploaded_files
+        })
+
     return render(request, 'admin_dashboard.html', {
         'users': users,
         'projects': projects,
         'investments': investments,
-        'profiles_pending_approval': profiles_pending_approval
+        'profiles_pending_approval': evaluators_with_files
     })
 
 @login_required

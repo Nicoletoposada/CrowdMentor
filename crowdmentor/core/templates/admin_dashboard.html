@@ -55,16 +55,30 @@
 </table>
 
 <h3 class="text-primary">Evaluadores pendientes</h3>
-<ul>
-    {% for evaluator in profiles_pending_approval %}
-        <li>
-            {{ evaluator.user.username }} - 
-            <a href="{% url 'approve_evaluator' evaluator.id %}">Aprobar</a>
-        </li>
+<div class="row">
+    {% for evaluator_data in profiles_pending_approval %}
+    <div class="col-md-4">
+        <div class="card mb-4 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title text-primary">{{ evaluator_data.evaluator.user.username }}</h5>
+                <p><strong>Descripción:</strong> {{ evaluator_data.evaluator.bio }}</p>
+                <p><strong>Experiencia:</strong> {{ evaluator_data.evaluator.experience }}</p>
+                <p><strong>Archivos Subidos:</strong></p>
+                <ul>
+                    {% for file_url in evaluator_data.files %}
+                        <li><a href="{{ file_url }}" target="_blank">Ver archivo</a></li>
+                    {% empty %}
+                        <li>No hay archivos subidos.</li>
+                    {% endfor %}
+                </ul>
+                <a href="{% url 'approve_evaluator' evaluator_data.evaluator.id %}" class="btn btn-success btn-sm mt-2">Aprobar</a>
+            </div>
+        </div>
+    </div>
     {% empty %}
-        <li>No hay evaluadores pendientes.</li>
+        <p class="text-muted">No hay evaluadores pendientes.</p>
     {% endfor %}
-</ul>
+</div>
 
 <script>
     function deleteUser(userId) {
