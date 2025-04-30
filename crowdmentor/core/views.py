@@ -54,6 +54,10 @@ def dashboard(request):
         messages.error(request, 'No se encontró un perfil asociado a este usuario.')
         return redirect('home')
 
+    if profile.user_type == 'evaluator' and not profile.is_approved_by_admin:
+        messages.error(request, 'Tu cuenta aún no ha sido aprobada por el Administrador.')
+        return redirect('home')
+
     if request.user.is_superuser:  # Verificar si el usuario es administrador
         return render(request, 'admin_dashboard.html', {'profile': profile})
 
@@ -117,6 +121,18 @@ def approve_mentor(request, profile_id):
     return redirect('dashboard')
 
 @login_required
+def approve_evaluator(request, profile_id):
+    if not request.user.is_superuser:
+        messages.error(request, 'Acceso denegado. Solo los administradores pueden realizar esta acción.')
+        return redirect('home')
+
+    profile = get_object_or_404(Profile, pk=profile_id, user_type='evaluator')
+    profile.is_approved_by_admin = True
+    profile.save()
+    messages.success(request, 'Evaluador aprobado exitosamente.')
+    return redirect('admin_dashboard')
+
+@login_required
 def admin_dashboard(request):
     if not request.user.is_superuser:
         messages.error(request, 'Acceso denegado. Solo los administradores pueden acceder a esta página.')
@@ -125,11 +141,13 @@ def admin_dashboard(request):
     users = User.objects.all()
     projects = Project.objects.all()
     investments = Investment.objects.all()
+    profiles_pending_approval = Profile.objects.filter(user_type='evaluator', is_approved_by_admin=False)
 
     return render(request, 'admin_dashboard.html', {
         'users': users,
         'projects': projects,
-        'investments': investments
+        'investments': investments,
+        'profiles_pending_approval': profiles_pending_approval
     })
 
 @login_required

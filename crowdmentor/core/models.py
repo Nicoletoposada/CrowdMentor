@@ -15,6 +15,7 @@ class Profile(models.Model):
     bio = models.TextField(blank=True)
     experience = models.TextField(blank=True)
     is_approved = models.BooleanField(default=False)  # For mentors/evaluators
+    is_approved_by_admin = models.BooleanField(default=False)  # Para evaluadores aprobados por el administrador
 
     def __str__(self):
         return f"{self.user.username} - {self.user_type}"

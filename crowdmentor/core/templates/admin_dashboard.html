@@ -56,11 +56,10 @@
 
 <h3 class="text-primary">Evaluadores pendientes</h3>
 <ul>
-    {% for evaluator in evaluators_pending %}
+    {% for evaluator in profiles_pending_approval %}
         <li>
             {{ evaluator.user.username }} - 
-            <a href="{% url 'approve_evaluator' evaluator.id %}">Aprobar</a> |
-            <a href="{% url 'reject_evaluator' evaluator.id %}">Rechazar</a>
+            <a href="{% url 'approve_evaluator' evaluator.id %}">Aprobar</a>
         </li>
     {% empty %}
         <li>No hay evaluadores pendientes.</li>
