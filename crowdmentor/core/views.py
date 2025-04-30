@@ -58,6 +58,10 @@ def dashboard(request):
         messages.error(request, 'Tu cuenta aún no ha sido aprobada por el Administrador.')
         return redirect('home')
 
+    if profile.user_type == 'mentor' and not profile.is_approved:
+        messages.error(request, 'Tu cuenta aún no ha sido aprobada por un Evaluador.')
+        return redirect('home')
+
     if request.user.is_superuser:  # Verificar si el usuario es administrador
         return render(request, 'admin_dashboard.html', {'profile': profile})
 
@@ -66,6 +70,9 @@ def dashboard(request):
         investments = Investment.objects.filter(project__owner=request.user, status='pending')
         return render(request, 'dashboard.html', {'projects': projects, 'investments': investments, 'profile': profile})
     elif profile.user_type in ['mentor', 'investor']:
+        if profile.user_type == 'mentor' and not profile.is_approved:
+            messages.error(request, 'Tu cuenta aún no ha sido aprobada por un Evaluador.')
+            return redirect('home')
         mentorships = Mentorship.objects.filter(mentor=request.user)
         investments = Investment.objects.filter(investor=request.user)
         return render(request, 'dashboard.html', {'mentorships': mentorships, 'investments': investments, 'profile': profile})
