@@ -54,6 +54,19 @@
     </tbody>
 </table>
 
+<h3 class="text-primary">Evaluadores pendientes</h3>
+<ul>
+    {% for evaluator in evaluators_pending %}
+        <li>
+            {{ evaluator.user.username }} - 
+            <a href="{% url 'approve_evaluator' evaluator.id %}">Aprobar</a> |
+            <a href="{% url 'reject_evaluator' evaluator.id %}">Rechazar</a>
+        </li>
+    {% empty %}
+        <li>No hay evaluadores pendientes.</li>
+    {% endfor %}
+</ul>
+
 <script>
     function deleteUser(userId) {
         if (confirm('¿Estás seguro de que deseas eliminar este usuario?')) {
