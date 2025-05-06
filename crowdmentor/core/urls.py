@@ -2,13 +2,13 @@
 from django.urls import path # type: ignore
 from . import views
 from django.contrib.auth import views as auth_views # type: ignore
-from .views import LogoutView, manage_investment
+from .views import LogoutView, manage_investment, login_view
 from .views import request_mentorship_by_mentor, request_mentorship_by_entrepreneur, respond_to_mentorship_request
 
 urlpatterns = [
     path('', views.home, name='home'),
     path('register/', views.register, name='register'),
-    path('login/', auth_views.LoginView.as_view(template_name='login.html'), name='login'),
+    path('login/', login_view, name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('dashboard/', views.dashboard, name='dashboard'),
     path('projects/', views.project_list, name='project_list'),

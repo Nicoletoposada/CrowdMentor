@@ -42,15 +42,33 @@ class CustomUserCreationForm(UserCreationForm):
         widget=MultipleFileInput(attrs={'class': 'form-control'}),
         help_text='Sube tus documentos de soporte (máximo 10 archivos)'
     )
+    password1 = forms.CharField(
+        label='Contraseña',
+        strip=False,
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Contraseña',
+            'id': 'id_password1',
+            'autocomplete': 'new-password',
+        })
+    )
+    password2 = forms.CharField(
+        label='Confirmar contraseña',
+        strip=False,
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Confirmar contraseña',
+            'id': 'id_password2',
+            'autocomplete': 'new-password',
+        })
+    )
 
     class Meta:
         model = User
         fields = ['username', 'email', 'password1', 'password2', 'user_type', 'bio', 'experience', 'files']
         widgets = {
-            'username': forms.TextInput(attrs={'class': 'form-control'}),
-            'email': forms.EmailInput(attrs={'class': 'form-control'}),
-            'password1': forms.PasswordInput(attrs={'class': 'form-control'}),
-            'password2': forms.PasswordInput(attrs={'class': 'form-control'}),
+            'username': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre de usuario'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Correo electrónico'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -68,3 +86,21 @@ class InvestmentForm(forms.ModelForm):
     class Meta:
         model = Investment
         fields = ['amount', 'equity_percentage']
+
+class LoginForm(forms.Form):
+    username = forms.CharField(
+        label='Username',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Username',
+            'autocomplete': 'username',
+        })
+    )
+    password = forms.CharField(
+        label='Password',
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Password',
+            'autocomplete': 'current-password',
+        })
+    )

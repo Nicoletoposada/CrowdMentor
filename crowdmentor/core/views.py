@@ -1,13 +1,13 @@
 # core/views.py
 from django.shortcuts import render, redirect, get_object_or_404 # type: ignore
-from django.contrib.auth import login, logout # type: ignore
+from django.contrib.auth import login, logout, authenticate # type: ignore
 from django.contrib.auth.decorators import login_required # type: ignore
 from django.contrib import messages # type: ignore
 from django.conf import settings # type: ignore
 from django.views import View # type: ignore
 from django.contrib.auth.models import User, Group # type: ignore
 from django.http import JsonResponse # type: ignore
-from .forms import CustomUserCreationForm, ProjectForm, InvestmentForm
+from .forms import CustomUserCreationForm, ProjectForm, InvestmentForm, LoginForm
 from .models import Project, Investment, Mentorship, Profile, Message, UploadedFile
 from django.views.decorators.http import require_POST # type: ignore
 from django.core.files.storage import default_storage # type: ignore
@@ -330,8 +330,12 @@ def request_mentorship_by_entrepreneur(request, mentor_id):
         messages.error(request, 'Solo los emprendedores pueden solicitar mentorías.')
         return redirect('mentor_list')
 
-    # Get the entrepreneur's active project
-    project = get_object_or_404(Project, owner=request.user, is_active=True)
+    # Get the entrepreneur's most recent active project
+    try:
+        project = Project.objects.filter(owner=request.user, is_active=True).latest('created_at')
+    except Project.DoesNotExist:
+        messages.error(request, 'No tienes ningún proyecto activo para solicitar mentoría.')
+        return redirect('project_list')
     
     # Check if there's an active mentorship
     active_mentorship = Mentorship.objects.filter(
@@ -466,3 +470,19 @@ def get_unread_messages_count(request):
         unread_count += mentorship.messages.filter(sender__id__ne=request.user.id, is_read=False).count()
     
     return JsonResponse({'unread_count': unread_count})
+
+def login_view(request):
+    if request.method == 'POST':
+        form = LoginForm(request.POST)
+        if form.is_valid():
+            username = form.cleaned_data['username']
+            password = form.cleaned_data['password']
+            user = authenticate(request, username=username, password=password)
+            if user is not None:
+                login(request, user)
+                return redirect('dashboard')
+            else:
+                form.add_error(None, 'Usuario o contraseña incorrectos.')
+    else:
+        form = LoginForm()
+    return render(request, 'login.html', {'form': form})
