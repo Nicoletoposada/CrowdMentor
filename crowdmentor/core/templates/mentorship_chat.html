@@ -43,6 +43,17 @@
         color: #6c757d;
         margin-top: 0.25rem;
     }
+    .sender-name {
+        font-size: 0.8rem;
+        font-weight: bold;
+        margin-bottom: 0.25rem;
+    }
+    .message.sent .sender-name {
+        color: #e9ecef;
+    }
+    .message.received .sender-name {
+        color: #495057;
+    }
 </style>
 {% endblock %}
 
@@ -60,9 +71,12 @@
                         <div class="chat-messages" id="chat-messages">
                             {% for message in messages %}
                             <div class="message {% if message.sender == request.user %}sent{% else %}received{% endif %}">
+                                <div class="sender-name">
+                                    {{ message.sender.get_full_name|default:message.sender.username }}
+                                </div>
                                 <div class="message-content">{{ message.content }}</div>
                                 <div class="timestamp">
-                                    {{ message.timestamp|date:"d/m/Y H:i" }}
+                                    {{ message.timestamp|time:"H:i" }}
                                     {% if message.sender == request.user and message.is_read %}
                                     <i class="fas fa-check-double text-info"></i>
                                     {% endif %}

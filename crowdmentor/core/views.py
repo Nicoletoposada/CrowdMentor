@@ -12,6 +12,7 @@ from .models import Project, Investment, Mentorship, Profile, Message, UploadedF
 from django.views.decorators.http import require_POST # type: ignore
 from django.core.files.storage import default_storage # type: ignore
 from django.core.files.base import ContentFile # type: ignore
+from django.utils import timezone # type: ignore
 
 def home(request):
     projects = Project.objects.filter(is_active=True)
@@ -393,10 +394,15 @@ def mentorship_chat(request, mentorship_id):
             )
             return redirect('mentorship_chat', mentorship_id=mentorship_id)
 
-    messages = mentorship.messages.all()
+    # Solo obtener los mensajes del día actual
+    today = timezone.now().date()
+    chat_messages = mentorship.messages.filter(
+        timestamp__date=today
+    ).order_by('timestamp')
+
     return render(request, 'mentorship_chat.html', {
         'mentorship': mentorship,
-        'messages': messages,
+        'messages': chat_messages,
         'other_user': mentorship.mentor if request.user == mentorship.project.owner else mentorship.project.owner
     })
 

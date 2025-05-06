@@ -93,4 +93,4 @@ class Message(models.Model):
         ordering = ['timestamp']
 
     def __str__(self):
-        return f'Message from {self.sender.username} at {self.timestamp}'
+        return self.sender.username
