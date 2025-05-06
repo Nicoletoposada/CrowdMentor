@@ -1,0 +1,55 @@
+/* Project Image */
+.project-image-wrapper {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--border-radius);
+}
+
+.project-image-wrapper img {
+    transition: transform var(--transition-speed) ease;
+}
+
+.project-image-wrapper:hover img {
+    transform: scale(1.02);
+}
+
+/* Stat Cards */
+.stat-card {
+    transition: all var(--transition-speed) ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--box-shadow);
+}
+
+/* Progress Bar */
+.progress {
+    background-color: #e9ecef;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+}
+
+.progress-bar {
+    transition: width 1s ease;
+}
+
+/* Investment Section */
+.investment-section .card {
+    transition: all var(--transition-speed) ease;
+}
+
+.investment-section .card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--box-shadow);
+}
+
+/* Buttons */
+.btn-primary {
+    transition: all var(--transition-speed) ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--box-shadow);
+} 

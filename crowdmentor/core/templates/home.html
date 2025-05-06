@@ -1,88 +1,189 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load custom_filters %}
 
 {% block content %}
-    <div class="container">
-        <h2 class="section-title">Proyectos Destacados</h2>
-        <div class="row">
+<div class="container py-5">
+    <!-- Featured Projects Section -->
+    <section class="mb-5">
+        <h2 class="section-title text-center mb-5">
+            <span class="text-primary">Proyectos</span> Destacados
+        </h2>
+        <div class="row g-4">
             {% for project in projects %}
                 <div class="col-md-4">
-                    <div class="card mb-4 shadow-sm">
+                    <div class="card h-100 border-0 shadow-sm project-card animate__animated animate__fadeInUp delay-{{ forloop.counter0 }}">
                         {% if project.image %}
-                            <img src="{{ project.image.url }}" class="card-img-top rounded-top" alt="{{ project.title }}">
+                            <div class="card-img-wrapper">
+                                <img src="{{ project.image.url }}" class="card-img-top" alt="{{ project.title }}">
+                                <div class="card-img-overlay d-flex align-items-end">
+                                    <div class="w-100 text-center">
+                                        <a href="{% url 'project_detail' project.pk %}" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-eye me-2"></i>Ver Detalles
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
                         {% endif %}
-                        <div class="card-body text-center">
-                            <h5 class="card-title text-primary">{{ project.title }}</h5>
+                        <div class="card-body">
+                            <h5 class="card-title text-primary fw-bold">{{ project.title }}</h5>
                             <p class="card-text text-muted">{{ project.description|truncatewords:20 }}</p>
-                            <a href="{% url 'project_detail' project.pk %}" class="btn btn-primary">Ver Proyecto</a>
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <div class="project-stats">
+                                    <span class="badge bg-primary me-2">
+                                        <i class="fas fa-users me-1"></i>{{ project.mentors.count }}
+                                    </span>
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-chart-line me-1"></i>{{ project.funding_progress }}%
+                                    </span>
+                                </div>
+                                <a href="{% url 'project_detail' project.pk %}" class="btn btn-outline-primary btn-sm">
+                                    Ver Proyecto
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
             {% empty %}
-                <p class="text-muted">No hay proyectos disponibles.</p>
+                <div class="col-12 text-center">
+                    <div class="empty-state animate__animated animate__fadeIn">
+                        <i class="fas fa-project-diagram fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No hay proyectos disponibles en este momento.</p>
+                    </div>
+                </div>
             {% endfor %}
         </div>
+    </section>
 
-        <h2 class="section-title mt-5">Planifica tu Emprendimiento</h2>
-        <div class="row text-center">
+    <!-- Planning Section -->
+    <section class="mb-5">
+        <h2 class="section-title text-center mb-5">
+            Planifica tu <span class="text-primary">Emprendimiento</span>
+        </h2>
+        <div class="row g-4">
             <div class="col-md-4">
-                <div class="card mb-4 shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title text-primary">Encuentra un Mentor</h5>
+                <div class="card h-100 border-0 shadow-sm feature-card animate__animated animate__fadeInUp">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon mb-4">
+                            <i class="fas fa-user-tie fa-3x text-primary"></i>
+                        </div>
+                        <h5 class="card-title text-primary fw-bold">Encuentra un Mentor</h5>
                         <p class="card-text text-muted">Conecta con mentores experimentados para guiar tu camino emprendedor.</p>
-                        <a href="{% url 'project_list' %}" class="btn btn-primary">Explorar Mentores</a>
+                        <a href="{% url 'project_list' %}" class="btn btn-primary mt-3">
+                            <i class="fas fa-search me-2"></i>Explorar Mentores
+                        </a>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card mb-4 shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title text-primary">Inicia una Campaña</h5>
+                <div class="card h-100 border-0 shadow-sm feature-card animate__animated animate__fadeInUp delay-1">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon mb-4">
+                            <i class="fas fa-rocket fa-3x text-primary"></i>
+                        </div>
+                        <h5 class="card-title text-primary fw-bold">Inicia una Campaña</h5>
                         <p class="card-text text-muted">Presenta tu proyecto y recibe financiación de nuestra comunidad de inversores.</p>
-                        <a href="{% url 'project_create' %}" class="btn btn-primary">Comenzar Ahora</a>
+                        <a href="{% url 'project_create' %}" class="btn btn-primary mt-3">
+                            <i class="fas fa-plus me-2"></i>Comenzar Ahora
+                        </a>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card mb-4 shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title text-primary">Explora Recursos</h5>
+                <div class="card h-100 border-0 shadow-sm feature-card animate__animated animate__fadeInUp delay-2">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon mb-4">
+                            <i class="fas fa-tools fa-3x text-primary"></i>
+                        </div>
+                        <h5 class="card-title text-primary fw-bold">Explora Recursos</h5>
                         <p class="card-text text-muted">Accede a herramientas y recursos para impulsar tu emprendimiento.</p>
-                        <a href="#" class="btn btn-primary">Descubrir Recursos</a>
+                        <a href="#" class="btn btn-primary mt-3">
+                            <i class="fas fa-compass me-2"></i>Descubrir Recursos
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
+    </section>
 
-        <h2 class="section-title mt-5">Lo que Dicen Nuestros Emprendedores</h2>
-        <div class="row">
+    <!-- Testimonials Section -->
+    <section>
+        <h2 class="section-title text-center mb-5">
+            Lo que Dicen Nuestros <span class="text-primary">Emprendedores</span>
+        </h2>
+        <div class="row g-4">
             <div class="col-md-4">
-                <div class="card testimonial-card mb-4 shadow-sm">
-                    <div class="card-body">
+                <div class="card h-100 border-0 shadow-sm testimonial-card animate__animated animate__fadeInUp">
+                    <div class="card-body p-4">
+                        <div class="testimonial-icon mb-3">
+                            <i class="fas fa-quote-left fa-2x text-primary"></i>
+                        </div>
                         <p class="card-text text-muted">"Gracias a CrowdMentor, encontré el mentor perfecto y obtuve la financiación necesaria para lanzar mi startup."</p>
-                        <h5 class="card-title text-primary">Juan Correa</h5>
-                        <p class="card-text"><small>Fundador de EcoSolutions</small></p>
+                        <div class="testimonial-author mt-4">
+                            <h5 class="card-title text-primary fw-bold mb-1">Juan Correa</h5>
+                            <p class="card-text"><small class="text-muted">Fundador de EcoSolutions</small></p>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card testimonial-card mb-4 shadow-sm">
-                    <div class="card-body">
+                <div class="card h-100 border-0 shadow-sm testimonial-card animate__animated animate__fadeInUp delay-1">
+                    <div class="card-body p-4">
+                        <div class="testimonial-icon mb-3">
+                            <i class="fas fa-quote-left fa-2x text-primary"></i>
+                        </div>
                         <p class="card-text text-muted">"La plataforma me conectó con inversores que creyeron en mi visión y me ayudaron a hacerla realidad."</p>
-                        <h5 class="card-title text-primary">María González</h5>
-                        <p class="card-text"><small>Creadora de TechForGood</small></p>
+                        <div class="testimonial-author mt-4">
+                            <h5 class="card-title text-primary fw-bold mb-1">María González</h5>
+                            <p class="card-text"><small class="text-muted">Creadora de TechForGood</small></p>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card testimonial-card mb-4 shadow-sm">
-                    <div class="card-body">
+                <div class="card h-100 border-0 shadow-sm testimonial-card animate__animated animate__fadeInUp delay-2">
+                    <div class="card-body p-4">
+                        <div class="testimonial-icon mb-3">
+                            <i class="fas fa-quote-left fa-2x text-primary"></i>
+                        </div>
                         <p class="card-text text-muted">"Los recursos y la comunidad de CrowdMentor fueron clave para el éxito de mi proyecto."</p>
-                        <h5 class="card-title text-primary">Carlos Ramírez</h5>
-                        <p class="card-text"><small>Innovador Social</small></p>
+                        <div class="testimonial-author mt-4">
+                            <h5 class="card-title text-primary fw-bold mb-1">Carlos Ramírez</h5>
+                            <p class="card-text"><small class="text-muted">Innovador Social</small></p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+    </section>
+</div>
+
+<style>
+    .delay-0 { animation-delay: 0s; }
+    .delay-1 { animation-delay: 0.2s; }
+    .delay-2 { animation-delay: 0.4s; }
+</style>
+
+<script>
+    // Intersection Observer for animations
+    const observerOptions = {
+        root: null,
+        rootMargin: '0px',
+        threshold: 0.1
+    };
+
+    const observer = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.visibility = 'visible';
+                observer.unobserve(entry.target);
+            }
+        });
+    }, observerOptions);
+
+    document.querySelectorAll('.animate__animated').forEach(element => {
+        element.style.visibility = 'hidden';
+        observer.observe(element);
+    });
+</script>
 {% endblock %}

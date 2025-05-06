@@ -3,12 +3,104 @@
 {% load static %}
 
 {% block content %}
-    <div class="col-md-8 mx-auto mt-5">
-        <h2 class="text-center text-primary mb-4">Crea un Nuevo Proyecto</h2>
-        <form method="post" enctype="multipart/form-data" class="p-4 shadow rounded bg-white">
-            {% csrf_token %}
-            {{ form|crispy }}
-            <button type="submit" class="btn btn-primary btn-block">Crear Proyecto</button>
-        </form>
+<div class="container py-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="project-create-header animate__animated animate__fadeIn text-center mb-5">
+                <h1 class="text-primary mb-3">Crea un Nuevo Proyecto</h1>
+                <p class="text-muted">Comparte tu visión y comienza tu viaje emprendedor</p>
+            </div>
+
+            <div class="card border-0 shadow-sm animate__animated animate__fadeInUp">
+                <div class="card-body p-4">
+                    <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="form-section mb-4">
+                            <h3 class="text-primary mb-3">
+                                <i class="fas fa-info-circle me-2"></i>Información Básica
+                            </h3>
+                            <div class="row g-3">
+                                <div class="col-md-12">
+                                    {{ form.title|as_crispy_field }}
+                                </div>
+                                <div class="col-md-12">
+                                    {{ form.description|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section mb-4">
+                            <h3 class="text-primary mb-3">
+                                <i class="fas fa-chart-line me-2"></i>Financiación
+                            </h3>
+                            <div class="row g-3">
+                                <div class="col-md-12">
+                                    {{ form.funding_goal|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section mb-4">
+                            <h3 class="text-primary mb-3">
+                                <i class="fas fa-image me-2"></i>Imagen del Proyecto
+                            </h3>
+                            <div class="row g-3">
+                                <div class="col-md-12">
+                                    {{ form.image|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-actions mt-5">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-rocket me-2"></i>Crear Proyecto
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
+</div>
+
+<script>
+    // Form validation
+    (function() {
+        'use strict';
+        
+        const forms = document.querySelectorAll('.needs-validation');
+        
+        Array.from(forms).forEach(form => {
+            form.addEventListener('submit', event => {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    })();
+
+    // Intersection Observer for animations
+    const observerOptions = {
+        root: null,
+        rootMargin: '0px',
+        threshold: 0.1
+    };
+
+    const observer = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.visibility = 'visible';
+                observer.unobserve(entry.target);
+            }
+        });
+    }, observerOptions);
+
+    document.querySelectorAll('.animate__animated').forEach(element => {
+        element.style.visibility = 'hidden';
+        observer.observe(element);
+    });
+</script>
 {% endblock %}

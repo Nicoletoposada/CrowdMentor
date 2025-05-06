@@ -1,27 +1,94 @@
 {% extends 'base.html' %}
+{% load static %}
+
 {% block content %}
-    <h2 class="text-center text-primary my-5">Explora Todos los Proyectos</h2>
-    <div class="row">
+<div class="container py-5">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="text-primary mb-3">Proyectos</h1>
+            <p class="text-muted">Explora los proyectos emprendedores y encuentra tu próxima oportunidad</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'project_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Crear Proyecto
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
         {% for project in projects %}
-            <div class="col-md-4 mb-4">
-                <div class="card shadow-sm h-100">
+            <div class="col-md-6 col-lg-4 animate__animated animate__fadeInUp delay-{{ forloop.counter0 }}">
+                <div class="card h-100 border-0 shadow-sm">
                     {% if project.image %}
-                        <img src="{{ project.image.url }}" class="card-img-top rounded-top" alt="{{ project.title }}">
+                        <img src="{{ project.image.url }}" class="card-img-top" alt="{{ project.title }}">
+                    {% else %}
+                        <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                            <i class="fas fa-image fa-3x text-muted"></i>
+                        </div>
                     {% endif %}
-                    <div class="card-body d-flex flex-column">
+                    <div class="card-body">
                         <h5 class="card-title text-primary">{{ project.title }}</h5>
-                        <p class="card-text text-muted">{{ project.description|truncatewords:20 }}</p>
-                        <p><strong>Meta de Financiación:</strong> ${{ project.funding_goal }}</p>
-                        <p><strong>Monto Recaudado:</strong> ${{ project.amount_raised }}</p>
-                        <a href="{% url 'project_detail' project.pk %}" class="btn btn-primary mt-auto">Ver Proyecto</a>
-                        {% if user.is_authenticated and user.profile.user_type == 'mentor' %}
-                            <a href="{% url 'request_mentorship_by_mentor' project.pk %}" class="btn btn-success mt-2">Solicitar Mentoría</a>
-                        {% endif %}
+                        <p class="card-text text-muted">{{ project.description|truncatewords:30 }}</p>
+                        <div class="progress mb-3" style="height: 8px;">
+                            <div class="progress-bar bg-success" role="progressbar" 
+                                 style="width: {% widthratio project.amount_raised|default:0 project.funding_goal 100 %}%">
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted">
+                                <i class="fas fa-coins me-1"></i>${{ project.amount_raised|default:0 }} / ${{ project.funding_goal }}
+                            </span>
+                            <a href="{% url 'project_detail' project.id %}" class="btn btn-outline-primary btn-sm">
+                                Ver Proyecto
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
         {% empty %}
-            <p class="text-muted text-center w-100">No hay proyectos disponibles.</p>
+            <div class="col-12">
+                <div class="text-center py-5">
+                    <i class="fas fa-lightbulb fa-3x text-muted mb-3"></i>
+                    <h3 class="text-muted">No hay proyectos disponibles</h3>
+                    <p class="text-muted">Sé el primero en crear un proyecto</p>
+                    <a href="{% url 'project_create' %}" class="btn btn-primary mt-3">
+                        <i class="fas fa-plus me-2"></i>Crear Proyecto
+                    </a>
+                </div>
+            </div>
         {% endfor %}
     </div>
+</div>
+
+<style>
+    .delay-0 { animation-delay: 0s; }
+    .delay-1 { animation-delay: 0.2s; }
+    .delay-2 { animation-delay: 0.4s; }
+    .delay-3 { animation-delay: 0.6s; }
+    .delay-4 { animation-delay: 0.8s; }
+    .delay-5 { animation-delay: 1s; }
+</style>
+
+<script>
+    // Intersection Observer for animations
+    const observerOptions = {
+        root: null,
+        rootMargin: '0px',
+        threshold: 0.1
+    };
+
+    const observer = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.visibility = 'visible';
+                observer.unobserve(entry.target);
+            }
+        });
+    }, observerOptions);
+
+    document.querySelectorAll('.animate__animated').forEach(element => {
+        element.style.visibility = 'hidden';
+        observer.observe(element);
+    });
+</script>
 {% endblock %}

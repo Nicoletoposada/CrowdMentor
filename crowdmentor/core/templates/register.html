@@ -3,30 +3,189 @@
 {% load static %}
 
 {% block content %}
-    <div class="col-md-6 mx-auto mt-5">
-        <h2 class="text-center text-primary mb-4">Crea tu Cuenta</h2>
-        <div class="text-center mb-4">
-            <img src="{% static 'images/register-illustration.png' %}" alt="Register Illustration" class="img-fluid" style="max-height: 200px;">
-        </div>
-        <form method="post" enctype="multipart/form-data" class="p-4 shadow rounded bg-white">
-            {% csrf_token %}
-            {{ form|crispy }}
-            <div class="alert alert-info" role="alert">
-                <i class="fas fa-info-circle"></i> Puedes seleccionar hasta 10 archivos a la vez.
+<div class="container">
+    <div class="row justify-content-center align-items-center min-vh-75">
+        <div class="col-md-8 col-lg-6">
+            <div class="card border-0 shadow-lg animate__animated animate__fadeIn">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <img src="{% static 'images/register-illustration.png' %}" alt="Register Illustration" class="img-fluid mb-4" style="max-height: 180px;">
+                        <h2 class="text-primary fw-bold">Únete a CrowdMentor</h2>
+                        <p class="text-muted">Crea tu cuenta y comienza tu viaje emprendedor</p>
+                    </div>
+                    
+                    <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        {% for field in form %}
+                            <div class="form-floating mb-3">
+                                {{ field }}
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {% if field.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ field.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                        
+                        <div class="alert alert-info d-flex align-items-center" role="alert">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <div>Puedes seleccionar hasta 10 archivos a la vez.</div>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-user-plus me-2"></i>Crear Cuenta
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div class="text-center mt-4">
+                        <p class="mb-0">¿Ya tienes una cuenta? 
+                            <a href="{% url 'login' %}" class="text-primary text-decoration-none">
+                                Inicia sesión aquí
+                            </a>
+                        </p>
+                    </div>
+                </div>
             </div>
-            <button type="submit" class="btn btn-primary btn-block mt-4">Registrarse</button>
-        </form>
+        </div>
     </div>
+</div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const fileInput = document.querySelector('input[type="file"]');
+<style>
+    .min-vh-75 {
+        min-height: 75vh;
+    }
+    
+    .card {
+        border-radius: 15px;
+        overflow: hidden;
+        transition: transform 0.3s ease;
+    }
+    
+    .card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .form-floating > .form-control {
+        padding: 1rem 0.75rem;
+        height: calc(3.5rem + 2px);
+        line-height: 1.25;
+    }
+    
+    .form-floating > label {
+        padding: 1rem 0.75rem;
+    }
+    
+    .btn-primary {
+        padding: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+    }
+    
+    .invalid-feedback {
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+    
+    .alert-info {
+        background-color: rgba(52, 152, 219, 0.1);
+        border: none;
+        border-radius: 10px;
+        color: var(--primary-color);
+    }
+    
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .animate__fadeIn {
+        animation: fadeInUp 0.5s ease-out;
+    }
+    
+    /* Custom file input styling */
+    .custom-file-input {
+        position: relative;
+        display: inline-block;
+        width: 100%;
+    }
+    
+    .custom-file-input input[type="file"] {
+        position: absolute;
+        left: 0;
+        top: 0;
+        opacity: 0;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+    }
+    
+    .custom-file-label {
+        display: block;
+        padding: 0.5rem 1rem;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .custom-file-label:hover {
+        background-color: #e9ecef;
+    }
+</style>
+
+<script>
+    // Form validation
+    (function () {
+        'use strict'
+        var forms = document.querySelectorAll('.needs-validation')
+        Array.prototype.slice.call(forms).forEach(function (form) {
+            form.addEventListener('submit', function (event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault()
+                    event.stopPropagation()
+                }
+                form.classList.add('was-validated')
+            }, false)
+        })
+    })()
+    
+    // File input handling
+    document.addEventListener('DOMContentLoaded', function() {
+        const fileInput = document.querySelector('input[type="file"]');
+        if (fileInput) {
             fileInput.addEventListener('change', function() {
                 if (this.files.length > 10) {
                     alert('No puedes subir más de 10 archivos.');
                     this.value = '';
                 }
+                
+                // Update custom file label
+                const label = this.nextElementSibling;
+                if (label && label.classList.contains('custom-file-label')) {
+                    if (this.files.length > 0) {
+                        label.textContent = `${this.files.length} archivo(s) seleccionado(s)`;
+                    } else {
+                        label.textContent = 'Seleccionar archivos';
+                    }
+                }
             });
-        });
-    </script>
+        }
+    });
+</script>
 {% endblock %}

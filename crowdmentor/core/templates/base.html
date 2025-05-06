@@ -4,47 +4,316 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CrowdMentor</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <title>CrowdMentor - {% block title %}{% endblock %}</title>
+    <!-- Modern CSS Frameworks -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <link rel="stylesheet" href="{% static 'css/home.css' %}">
+    <link rel="stylesheet" href="{% static 'css/project_list.css' %}">
+    <link rel="stylesheet" href="{% static 'css/project_detail.css' %}">
+    <link rel="stylesheet" href="{% static 'css/project_create.css' %}">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --background-color: #f8f9fa;
+            --text-color: #2c3e50;
+            --border-radius: 10px;
+            --transition-speed: 0.3s;
+            --box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .navbar {
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 1rem 2rem;
+            transition: all var(--transition-speed) ease;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            color: var(--primary-color) !important;
+            font-size: 1.5rem;
+            transition: transform var(--transition-speed) ease;
+        }
+
+        .navbar-brand:hover {
+            transform: scale(1.05);
+        }
+
+        .nav-link {
+            color: var(--primary-color) !important;
+            font-weight: 500;
+            margin: 0 0.5rem;
+            position: relative;
+            transition: color var(--transition-speed) ease;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: 0;
+            left: 0;
+            background-color: var(--secondary-color);
+            transition: width var(--transition-speed) ease;
+        }
+
+        .nav-link:hover::after {
+            width: 100%;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            padding: 6rem 0;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('{% static "images/pattern.png" %}') repeat;
+            opacity: 0.1;
+            animation: slide 20s linear infinite;
+        }
+
+        @keyframes slide {
+            from { background-position: 0 0; }
+            to { background-position: 100% 100%; }
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            animation: fadeInUp 1s ease;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            animation: fadeInUp 1s ease 0.2s;
+            animation-fill-mode: both;
+        }
+
+        .btn-primary {
+            background-color: var(--secondary-color);
+            border: none;
+            padding: 0.8rem 2rem;
+            font-weight: 600;
+            border-radius: 50px;
+            transition: all var(--transition-speed) ease;
+            animation: fadeInUp 1s ease 0.4s;
+            animation-fill-mode: both;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--box-shadow);
+        }
+
+        .alert {
+            border-radius: var(--border-radius);
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            animation: slideInDown 0.5s ease;
+        }
+
+        footer {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 2rem 0;
+            margin-top: auto;
+        }
+
+        footer a {
+            color: var(--secondary-color);
+            text-decoration: none;
+            transition: color var(--transition-speed) ease;
+        }
+
+        footer a:hover {
+            color: var(--accent-color);
+        }
+
+        /* Loading Animation */
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all var(--transition-speed) ease;
+        }
+
+        .loading.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--secondary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
+    <!-- Loading Animation -->
+    <div class="loading">
+        <div class="loading-spinner"></div>
+    </div>
+
     <nav class="navbar navbar-expand-lg navbar-light">
-        <a class="navbar-brand" href="{% url 'home' %}">CrowdMentor</a>
-        <div class="navbar-nav">
-            <a class="nav-item nav-link" href="{% url 'project_list' %}">Proyectos</a>
-            {% if user.is_authenticated %}
-                <a class="nav-item nav-link" href="{% if user.is_superuser %}{% url 'admin_dashboard' %}{% else %}{% url 'dashboard' %}{% endif %}">Panel</a>
-                <a class="nav-item nav-link" href="{% url 'logout' %}">Cerrar Sesión</a>
-            {% else %}
-                <a class="nav-item nav-link" href="{% url 'login' %}">Iniciar Sesión</a>
-                <a class="nav-item nav-link" href="{% url 'register' %}">Registrarse</a>
-            {% endif %}
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'home' %}">
+                <i class="fas fa-lightbulb me-2"></i>CrowdMentor
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a href="{% url 'project_list' %}" class="btn btn-outline-success me-2">
+                            <i class="fas fa-project-diagram me-2"></i>Proyectos
+                        </a>
+                    </li>
+                    <div class="d-flex align-items-center">
+                        {% if user.is_authenticated %}
+                            <a href="{% url 'dashboard' %}" class="btn btn-outline-primary me-2">
+                                <i class="fas fa-tachometer-alt me-2"></i>Panel
+                            </a>
+                            <a href="{% url 'project_list' %}" class="btn btn-outline-success me-2">
+                                <i class="fas fa-lightbulb me-2"></i>Proyectos
+                            </a>
+                            <a href="{% url 'mentor_list' %}" class="btn btn-outline-info me-2">
+                                <i class="fas fa-users me-2"></i>Mentores
+                            </a>
+                            <a href="{% url 'logout' %}" class="btn btn-outline-danger">
+                                <i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión
+                            </a>
+                        {% else %}
+                            <a href="{% url 'login' %}" class="btn btn-primary me-2">
+                                <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
+                            </a>
+                            <a href="{% url 'register' %}" class="btn btn-success">
+                                <i class="fas fa-user-plus me-2"></i>Registrarse
+                            </a>
+                        {% endif %}
+                    </div>
+                </ul>
+            </div>
         </div>
     </nav>
+
     {% if request.path == '/' %}
         <div class="hero">
-            <div class="container">
+            <div class="container text-center">
                 <h1 class="text-light">¡Afina tu idea, y a emprender!</h1>
-                <p>Conecta con mentores, encuentra financiación y accede a recursos para lanzar tu emprendimiento social.</p>
-                <a href="{% url 'project_list' %}" class="btn btn-primary">Explora Proyectos</a>
+                <p class="text-light">Conecta con mentores, encuentra financiación y accede a recursos para lanzar tu emprendimiento social.</p>
+                <a href="{% url 'project_list' %}" class="btn btn-primary">
+                    <i class="fas fa-rocket me-2"></i>Explora Proyectos
+                </a>
             </div>
         </div>
     {% endif %}
-    <div class="container">
+
+    <div class="container py-4">
         {% if messages %}
             {% for message in messages %}
-                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                <div class="alert alert-{{ message.tags }} animate__animated animate__fadeIn">
+                    <i class="fas fa-info-circle me-2"></i>{{ message }}
+                </div>
             {% endfor %}
         {% endif %}
         {% block content %}
         {% endblock %}
     </div>
-    <footer>
-        <p>Contáctanos: <a href="mailto:BrayanPosada@ucun.com">BrayanPosada@ucun.com</a> | Teléfono: 3213658765</p>
-        <p>Calle 21 #17-11, El Poblado</p>
+
+    <footer class="text-center">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Contáctanos</h5>
+                    <p><i class="fas fa-envelope me-2"></i><a href="mailto:BrayanPosada@ucun.com">BrayanPosada@ucun.com</a></p>
+                    <p><i class="fas fa-phone me-2"></i>3213658765</p>
+                </div>
+                <div class="col-md-6">
+                    <h5>Ubicación</h5>
+                    <p><i class="fas fa-map-marker-alt me-2"></i>Calle 21 #17-11, El Poblado</p>
+                </div>
+            </div>
+        </div>
     </footer>
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Modern JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Loading animation
+        document.addEventListener('DOMContentLoaded', function() {
+            const loading = document.querySelector('.loading');
+            loading.classList.add('active');
+            setTimeout(() => {
+                loading.classList.remove('active');
+            }, 500);
+        });
+
+        // Smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Navbar scroll effect
+        window.addEventListener('scroll', function() {
+            const navbar = document.querySelector('.navbar');
+            if (window.scrollY > 50) {
+                navbar.style.padding = '0.5rem 2rem';
+                navbar.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+            } else {
+                navbar.style.padding = '1rem 2rem';
+                navbar.style.backgroundColor = 'white';
+            }
+        });
+    </script>
 </body>
 </html>

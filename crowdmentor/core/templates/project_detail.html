@@ -3,24 +3,111 @@
 {% load static %}
 
 {% block content %}
-    <div class="container mt-5">
-        <h2 class="text-center text-primary mb-4">{{ project.title }}</h2>
-        {% if project.image %}
-            <img src="{{ project.image.url }}" class="img-fluid mb-4 rounded shadow" alt="{{ project.title }}">
-        {% endif %}
-        <div class="bg-white p-4 shadow rounded">
-            <p class="text-muted">{{ project.description }}</p>
-            <p><strong>Meta de Financiación:</strong> ${{ project.funding_goal }}</p>
-            <p><strong>Monto Recaudado:</strong> ${{ project.amount_raised }}</p>
-            <p><strong>Propietario:</strong> {{ project.owner.username }}</p>
-            {% if user.is_authenticated and user.profile.user_type == 'investor' %}
-                <h3 class="text-primary mt-4">Invertir en este Proyecto</h3>
-                <form method="post" class="p-3 bg-light rounded">
-                    {% csrf_token %}
-                    {{ form|crispy }}
-                    <button type="submit" class="btn btn-primary btn-block">Invertir</button>
-                </form>
-            {% endif %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="project-header animate__animated animate__fadeIn">
+                <h1 class="text-center text-primary mb-4">{{ project.title }}</h1>
+                {% if project.image %}
+                    <div class="project-image-wrapper mb-4">
+                        <img src="{{ project.image.url }}" class="img-fluid rounded shadow" alt="{{ project.title }}">
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="project-content bg-white p-4 shadow rounded animate__animated animate__fadeInUp">
+                <div class="project-description mb-4">
+                    <h3 class="text-primary mb-3">Descripción del Proyecto</h3>
+                    <p class="text-muted">{{ project.description }}</p>
+                </div>
+
+                <div class="project-stats mb-4">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="stat-card text-center p-3 bg-light rounded">
+                                <i class="fas fa-bullseye text-primary fa-2x mb-2"></i>
+                                <h4 class="mb-0">${{ project.funding_goal }}</h4>
+                                <p class="text-muted mb-0">Meta de Financiación</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-card text-center p-3 bg-light rounded">
+                                <i class="fas fa-chart-line text-success fa-2x mb-2"></i>
+                                <h4 class="mb-0">${{ project.amount_raised }}</h4>
+                                <p class="text-muted mb-0">Monto Recaudado</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-card text-center p-3 bg-light rounded">
+                                <i class="fas fa-users text-info fa-2x mb-2"></i>
+                                <h4 class="mb-0">{{ project.mentors.count }}</h4>
+                                <p class="text-muted mb-0">Mentores</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="progress mb-4" style="height: 10px;">
+                    <div class="progress-bar bg-primary" role="progressbar" 
+                         style="width: {{ project.funding_progress }}%;" 
+                         aria-valuenow="{{ project.funding_progress }}" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100">
+                    </div>
+                </div>
+
+                <div class="project-owner mb-4">
+                    <h3 class="text-primary mb-3">Propietario del Proyecto</h3>
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-user-circle fa-3x text-primary me-3"></i>
+                        <div>
+                            <h5 class="mb-0">{{ project.owner.username }}</h5>
+                            <p class="text-muted mb-0">Emprendedor</p>
+                        </div>
+                    </div>
+                </div>
+
+                {% if user.is_authenticated and user.profile.user_type == 'investor' %}
+                    <div class="investment-section mt-5 animate__animated animate__fadeInUp">
+                        <h3 class="text-primary mb-4">Invertir en este Proyecto</h3>
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body p-4">
+                                <form method="post">
+                                    {% csrf_token %}
+                                    {{ form|crispy }}
+                                    <button type="submit" class="btn btn-primary w-100 mt-3">
+                                        <i class="fas fa-hand-holding-usd me-2"></i>Invertir Ahora
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
         </div>
     </div>
+</div>
+
+<script>
+    // Intersection Observer for animations
+    const observerOptions = {
+        root: null,
+        rootMargin: '0px',
+        threshold: 0.1
+    };
+
+    const observer = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.visibility = 'visible';
+                observer.unobserve(entry.target);
+            }
+        });
+    }, observerOptions);
+
+    document.querySelectorAll('.animate__animated').forEach(element => {
+        element.style.visibility = 'hidden';
+        observer.observe(element);
+    });
+</script>
 {% endblock %}
