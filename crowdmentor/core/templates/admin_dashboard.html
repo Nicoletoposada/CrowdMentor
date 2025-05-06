@@ -6,58 +6,96 @@
     <div class="row mb-4">
         <div class="col-12">
             <h1 class="text-primary mb-3">Panel de Administrador</h1>
-            <p class="text-muted">Gestiona usuarios y proyectos desde aquí</p>
         </div>
     </div>
 
     <div class="row">
-        <!-- Usuarios -->
-        <div class="col-lg-6 mb-4">
+        <!-- Evaluadores Pendientes -->
+        <div class="col-12 mb-4">
             <div class="card border-0 shadow-sm">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h3 class="mb-0">Usuarios Registrados</h3>
-                    <span class="badge bg-light text-primary">{{ users|length }} usuarios</span>
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Evaluadores Pendientes</h3>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-hover">
+                        <table class="table">
                             <thead>
                                 <tr>
                                     <th>Usuario</th>
-                                    <th>Tipo</th>
+                                    <th>Email</th>
+                                    <th>Biografía</th>
+                                    <th>Experiencia</th>
+                                    <th>Documentos</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for evaluator in pending_evaluators %}
+                                    <tr>
+                                        <td>{{ evaluator.user.username }}</td>
+                                        <td>{{ evaluator.user.email }}</td>
+                                        <td>{{ evaluator.bio|truncatechars:50 }}</td>
+                                        <td>{{ evaluator.experience|truncatechars:50 }}</td>
+                                        <td>
+                                            {% if evaluator.documents %}
+                                                <a href="{{ evaluator.documents.url }}" target="_blank" class="btn btn-sm btn-info">
+                                                    Ver Documentos
+                                                </a>
+                                            {% else %}
+                                                No hay documentos
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <button class="btn btn-sm btn-success" onclick="approveEvaluator({{ evaluator.user.id }})">
+                                                    Aprobar
+                                                </button>
+                                                <button class="btn btn-sm btn-danger" onclick="rejectEvaluator({{ evaluator.user.id }})">
+                                                    Rechazar
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="6" class="text-center">No hay evaluadores pendientes</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Usuarios -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Usuarios</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Usuario</th>
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for user in users %}
                                     <tr>
-                                        <td>
-                                            <div class="d-flex align-items-center">
-                                                <i class="fas fa-user-circle fa-2x text-primary me-2"></i>
-                                                <div>
-                                                    <strong>{{ user.username }}</strong>
-                                                    <br>
-                                                    <small class="text-muted">{{ user.email }}</small>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span class="badge {% if user.profile.user_type == 'entrepreneur' %}bg-success{% elif user.profile.user_type == 'mentor' %}bg-info{% else %}bg-warning{% endif %}">
-                                                {{ user.profile.user_type|title }}
-                                            </span>
-                                        </td>
+                                        <td>{{ user.username }}</td>
                                         <td>
                                             <button class="btn btn-sm btn-danger" onclick="deleteUser({{ user.id }})">
-                                                <i class="fas fa-trash me-1"></i>Eliminar
+                                                Eliminar
                                             </button>
                                         </td>
                                     </tr>
                                 {% empty %}
                                     <tr>
-                                        <td colspan="3" class="text-center text-muted py-4">
-                                            <i class="fas fa-users fa-2x mb-2"></i>
-                                            <p>No hay usuarios registrados</p>
-                                        </td>
+                                        <td colspan="2" class="text-center">No hay usuarios registrados</td>
                                     </tr>
                                 {% endfor %}
                             </tbody>
@@ -70,57 +108,31 @@
         <!-- Proyectos -->
         <div class="col-lg-6 mb-4">
             <div class="card border-0 shadow-sm">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h3 class="mb-0">Proyectos Registrados</h3>
-                    <span class="badge bg-light text-primary">{{ projects|length }} proyectos</span>
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Proyectos</h3>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-hover">
+                        <table class="table">
                             <thead>
                                 <tr>
-                                    <th>Proyecto</th>
-                                    <th>Dueño</th>
+                                    <th>Título</th>
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for project in projects %}
                                     <tr>
+                                        <td>{{ project.title }}</td>
                                         <td>
-                                            <div class="d-flex align-items-center">
-                                                {% if project.image %}
-                                                    <img src="{{ project.image.url }}" class="rounded me-2" style="width: 40px; height: 40px; object-fit: cover;">
-                                                {% else %}
-                                                    <i class="fas fa-project-diagram fa-2x text-primary me-2"></i>
-                                                {% endif %}
-                                                <div>
-                                                    <strong>{{ project.title }}</strong>
-                                                    <br>
-                                                    <small class="text-muted">Meta: ${{ project.funding_goal }}</small>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span class="badge bg-info">{{ project.owner.username }}</span>
-                                        </td>
-                                        <td>
-                                            <div class="btn-group">
-                                                <a href="{% url 'project_detail' project.id %}" class="btn btn-sm btn-outline-primary">
-                                                    <i class="fas fa-eye me-1"></i>Ver
-                                                </a>
-                                                <button class="btn btn-sm btn-danger" onclick="deleteProject({{ project.id }})">
-                                                    <i class="fas fa-trash me-1"></i>Eliminar
-                                                </button>
-                                            </div>
+                                            <button class="btn btn-sm btn-danger" onclick="deleteProject({{ project.id }})">
+                                                Eliminar
+                                            </button>
                                         </td>
                                     </tr>
                                 {% empty %}
                                     <tr>
-                                        <td colspan="3" class="text-center text-muted py-4">
-                                            <i class="fas fa-project-diagram fa-2x mb-2"></i>
-                                            <p>No hay proyectos registrados</p>
-                                        </td>
+                                        <td colspan="2" class="text-center">No hay proyectos registrados</td>
                                     </tr>
                                 {% endfor %}
                             </tbody>
@@ -134,8 +146,8 @@
 
 <script>
 function deleteUser(userId) {
-    if (confirm('¿Estás seguro de que deseas eliminar este usuario? Esta acción no se puede deshacer.')) {
-        fetch(`/admin/delete_user/${userId}/`, {
+    if (confirm('¿Estás seguro de que deseas eliminar este usuario?')) {
+        fetch(`/delete_user/${userId}/`, {
             method: 'POST',
             headers: {
                 'X-CSRFToken': getCookie('csrftoken')
@@ -153,8 +165,8 @@ function deleteUser(userId) {
 }
 
 function deleteProject(projectId) {
-    if (confirm('¿Estás seguro de que deseas eliminar este proyecto? Esta acción no se puede deshacer.')) {
-        fetch(`/admin/delete_project/${projectId}/`, {
+    if (confirm('¿Estás seguro de que deseas eliminar este proyecto?')) {
+        fetch(`/delete_project/${projectId}/`, {
             method: 'POST',
             headers: {
                 'X-CSRFToken': getCookie('csrftoken')
@@ -166,6 +178,46 @@ function deleteProject(projectId) {
                 location.reload();
             } else {
                 alert('Error al eliminar el proyecto');
+            }
+        });
+    }
+}
+
+function approveEvaluator(userId) {
+    if (confirm('¿Estás seguro de que deseas aprobar este evaluador? Se habilitará su acceso al panel de evaluador.')) {
+        fetch(`/approve_evaluator/${userId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Evaluador aprobado exitosamente');
+                location.reload();
+            } else {
+                alert('Error al aprobar el evaluador');
+            }
+        });
+    }
+}
+
+function rejectEvaluator(userId) {
+    if (confirm('¿Estás seguro de que deseas rechazar este evaluador? Su perfil será eliminado.')) {
+        fetch(`/reject_evaluator/${userId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Evaluador rechazado y perfil eliminado');
+                location.reload();
+            } else {
+                alert('Error al rechazar el evaluador');
             }
         });
     }

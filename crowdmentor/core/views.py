@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required # type: ignore
 from django.contrib import messages # type: ignore
 from django.conf import settings # type: ignore
 from django.views import View # type: ignore
-from django.contrib.auth.models import User # type: ignore
+from django.contrib.auth.models import User, Group # type: ignore
 from django.http import JsonResponse # type: ignore
 from .forms import CustomUserCreationForm, ProjectForm, InvestmentForm
 from .models import Project, Investment, Mentorship, Profile, Message, UploadedFile
@@ -162,16 +162,52 @@ def approve_mentor(request, profile_id):
     return redirect('dashboard')
 
 @login_required
-def approve_evaluator(request, profile_id):
-    if not request.user.is_superuser:
-        messages.error(request, 'Acceso denegado. Solo los administradores pueden realizar esta acción.')
-        return redirect('home')
+def approve_evaluator(request, user_id):
+    if not request.user.is_staff:
+        return JsonResponse({'success': False})
+    
+    if request.method == 'POST':
+        try:
+            user = User.objects.get(id=user_id)
+            profile = user.profile
+            
+            # Verificar que el usuario sea un evaluador pendiente
+            if profile.user_type == 'evaluator' and not profile.is_approved_by_admin:
+                # Marcar como aprobado
+                profile.is_approved_by_admin = True
+                profile.save()
+                
+                # Asignar permisos de evaluador
+                evaluator_group, created = Group.objects.get_or_create(name='Evaluadores')
+                user.groups.add(evaluator_group)
+                
+                return JsonResponse({'success': True})
+            else:
+                return JsonResponse({'success': False, 'error': 'Usuario no es un evaluador pendiente'})
+        except User.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Usuario no encontrado'})
+    return JsonResponse({'success': False})
 
-    profile = get_object_or_404(Profile, pk=profile_id, user_type='evaluator')
-    profile.is_approved_by_admin = True
-    profile.save()
-    messages.success(request, 'Evaluador aprobado exitosamente.')
-    return redirect('admin_dashboard')
+@login_required
+def reject_evaluator(request, user_id):
+    if not request.user.is_staff:
+        return JsonResponse({'success': False})
+    
+    if request.method == 'POST':
+        try:
+            user = User.objects.get(id=user_id)
+            profile = user.profile
+            
+            # Verificar que el usuario sea un evaluador pendiente
+            if profile.user_type == 'evaluator' and not profile.is_approved_by_admin:
+                # Eliminar el usuario y su perfil
+                user.delete()  # Esto también eliminará el perfil debido a CASCADE
+                return JsonResponse({'success': True})
+            else:
+                return JsonResponse({'success': False, 'error': 'Usuario no es un evaluador pendiente'})
+        except User.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Usuario no encontrado'})
+    return JsonResponse({'success': False})
 
 @login_required
 def admin_dashboard(request):
@@ -181,22 +217,12 @@ def admin_dashboard(request):
 
     users = User.objects.all()
     projects = Project.objects.all()
-    investments = Investment.objects.all()
-    profiles_pending_approval = Profile.objects.filter(user_type='evaluator', is_approved_by_admin=False)
-
-    evaluators_with_files = []
-    for evaluator in profiles_pending_approval:
-        files = UploadedFile.objects.filter(profile=evaluator)
-        evaluators_with_files.append({
-            'evaluator': evaluator,
-            'files': files
-        })
+    pending_evaluators = Profile.objects.filter(user_type='evaluator', is_approved_by_admin=False)
 
     return render(request, 'admin_dashboard.html', {
         'users': users,
         'projects': projects,
-        'investments': investments,
-        'profiles_pending_approval': evaluators_with_files
+        'pending_evaluators': pending_evaluators
     })
 
 @login_required
