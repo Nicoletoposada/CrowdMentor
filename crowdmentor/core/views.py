@@ -224,3 +224,125 @@ class LogoutView(View):
     def get(self, request, *args, **kwargs):
         logout(request)
         return redirect('/')
+
+@login_required
+def request_mentorship_by_mentor(request, project_id):
+    project = get_object_or_404(Project, id=project_id)
+    if request.user.profile.user_type != 'mentor':
+        messages.error(request, 'Solo los mentores pueden solicitar mentorías.')
+        return redirect('project_list')
+
+    # Check if there's an active mentorship
+    active_mentorship = Mentorship.objects.filter(
+        project=project,
+        mentor=request.user,
+        status='accepted'
+    ).exists()
+
+    if active_mentorship:
+        messages.error(request, 'Ya tienes una mentoría activa para este proyecto.')
+        return redirect('project_list')
+
+    # Check if there's a pending request
+    pending_mentorship = Mentorship.objects.filter(
+        project=project,
+        mentor=request.user,
+        status='pending'
+    ).exists()
+
+    if pending_mentorship:
+        messages.info(request, f'Ya tienes una solicitud de mentoría pendiente para el proyecto {project.title}.')
+        return redirect('project_list')
+
+    # Create new mentorship request
+    mentorship = Mentorship.objects.create(
+        project=project,
+        mentor=request.user,
+        initiated_by='mentor',
+        status='pending'
+    )
+
+    messages.success(request, f'Solicitud de mentoría enviada para el proyecto {project.title}.')
+    return redirect('project_list')
+
+@login_required
+def request_mentorship_by_entrepreneur(request, mentor_id):
+    mentor = get_object_or_404(Profile, user_id=mentor_id, user_type='mentor')
+    if request.user.profile.user_type != 'entrepreneur':
+        messages.error(request, 'Solo los emprendedores pueden solicitar mentorías.')
+        return redirect('mentor_list')
+
+    # Get the entrepreneur's active project
+    project = get_object_or_404(Project, owner=request.user, is_active=True)
+    
+    # Check if there's an active mentorship
+    active_mentorship = Mentorship.objects.filter(
+        project=project,
+        mentor=mentor.user,
+        status='accepted'
+    ).exists()
+
+    if active_mentorship:
+        messages.error(request, 'Ya tienes una mentoría activa con este mentor.')
+        return redirect('mentor_list')
+
+    # Check if there's a pending request
+    pending_mentorship = Mentorship.objects.filter(
+        project=project,
+        mentor=mentor.user,
+        status='pending'
+    ).exists()
+
+    if pending_mentorship:
+        messages.info(request, f'Ya tienes una solicitud de mentoría pendiente con {mentor.user.username}.')
+        return redirect('mentor_list')
+
+    # Create new mentorship request
+    mentorship = Mentorship.objects.create(
+        project=project,
+        mentor=mentor.user,
+        initiated_by='entrepreneur',
+        status='pending'
+    )
+
+    messages.success(request, f'Solicitud de mentoría enviada al mentor {mentor.user.username}.')
+    return redirect('mentor_list')
+
+@login_required
+def respond_to_mentorship_request(request, mentorship_id, action):
+    mentorship = get_object_or_404(Mentorship, id=mentorship_id)
+    
+    if mentorship.initiated_by == 'mentor':
+        # If mentor initiated, entrepreneur responds
+        if request.user != mentorship.project.owner:
+            messages.error(request, 'No tienes permiso para responder a esta solicitud.')
+            return redirect('dashboard')
+    else:
+        # If entrepreneur initiated, mentor responds
+        if request.user != mentorship.mentor:
+            messages.error(request, 'No tienes permiso para responder a esta solicitud.')
+            return redirect('dashboard')
+
+    if action == 'accept':
+        mentorship.status = 'accepted'
+        messages.success(request, 'Has aceptado la solicitud de mentoría.')
+        mentorship.save()
+    elif action == 'reject':
+        # Delete the mentorship request instead of marking it as rejected
+        mentorship.delete()
+        messages.info(request, 'Has rechazado la solicitud de mentoría.')
+    else:
+        messages.error(request, 'Acción no válida.')
+        return redirect('dashboard')
+
+    return redirect('dashboard')
+
+@login_required
+def mentor_list(request):
+    mentors = Profile.objects.filter(user_type='mentor', is_approved=True)
+    return render(request, 'mentor_list.html', {'mentors': mentors})
+
+@login_required
+def project_list_for_mentors(request):
+    projects = Project.objects.filter(is_active=True)
+    return render(request, 'project_list_for_mentors.html', {'projects': projects})

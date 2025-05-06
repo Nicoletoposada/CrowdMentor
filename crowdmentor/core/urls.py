@@ -3,6 +3,7 @@ from django.urls import path # type: ignore
 from . import views
 from django.contrib.auth import views as auth_views # type: ignore
 from .views import LogoutView, manage_investment
+from .views import request_mentorship_by_mentor, request_mentorship_by_entrepreneur, respond_to_mentorship_request
 
 urlpatterns = [
     path('', views.home, name='home'),
@@ -19,4 +20,9 @@ urlpatterns = [
     path('delete_user/<int:user_id>/', views.delete_user, name='delete_user'),
     path('delete_project/<int:project_id>/', views.delete_project, name='delete_project'),
     path('manage_investment/<int:investment_id>/', manage_investment, name='manage_investment'),
+    path('mentorship/request-by-mentor/<int:project_id>/', views.request_mentorship_by_mentor, name='request_mentorship_by_mentor'),
+    path('mentorship/request-by-entrepreneur/<int:mentor_id>/', views.request_mentorship_by_entrepreneur, name='request_mentorship_by_entrepreneur'),
+    path('mentorship/respond/<int:mentorship_id>/<str:action>/', views.respond_to_mentorship_request, name='respond_to_mentorship_request'),
+    path('mentors/', views.mentor_list, name='mentor_list'),
+    path('projects-for-mentors/', views.project_list_for_mentors, name='project_list_for_mentors'),
 ]

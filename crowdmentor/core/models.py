@@ -51,10 +51,24 @@ class Investment(models.Model):
         return f"{self.investor.username} invested {self.amount} in {self.project.title}"
 
 class Mentorship(models.Model):
+    INITIATED_BY_CHOICES = [
+        ('mentor', 'Mentor'),
+        ('entrepreneur', 'Entrepreneur'),
+    ]
+
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='mentorships')
     mentor = models.ForeignKey(User, on_delete=models.CASCADE)
     assigned_at = models.DateTimeField(default=timezone.now)
-    status = models.CharField(max_length=20, choices=(('active', 'Active'), ('completed', 'Completed')), default='active')
+    status = models.CharField(
+        max_length=20,
+        choices=[('pending', 'Pending'), ('accepted', 'Accepted'), ('rejected', 'Rejected')],
+        default='pending'
+    )
+    initiated_by = models.CharField(
+        max_length=20,
+        choices=INITIATED_BY_CHOICES,
+        default='mentor'
+    )
 
     def __str__(self):
-        return f"{self.mentor.username} mentoring {self.project.title}"
+        return f"{self.mentor.username} mentoring {self.project.title} ({self.status})"

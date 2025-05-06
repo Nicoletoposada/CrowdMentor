@@ -7,7 +7,7 @@
         <h3 class="text-primary">Tus Proyectos</h3>
         <a href="{% url 'project_create' %}" class="btn btn-success mb-3">Crear Nuevo Proyecto</a>
         <div class="row">
-            {% for project in projects %}
+            {% for project in projects %} 
                 <div class="col-md-6 mb-4">
                     <div class="card shadow-sm">
                         <div class="card-body">
@@ -43,6 +43,47 @@
                 {% endif %}
             {% empty %}
                 <p class="text-muted">No hay inversiones pendientes.</p>
+            {% endfor %}
+        </div>
+        <h3 class="text-primary">Mentores Disponibles</h3>
+        <div class="row">
+            {% for mentor in mentors %}
+                <div class="col-md-4 mb-4">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <h5 class="card-title text-primary">{{ mentor.user.username }}</h5>
+                            <p class="card-text text-muted">{{ mentor.bio|truncatewords:20 }}</p>
+                            <a href="{% url 'request_mentorship_by_entrepreneur' mentor.user.id %}" class="btn btn-success">Solicitar Mentoría</a>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <p class="text-muted">No hay mentores disponibles en este momento.</p>
+            {% endfor %}
+        </div>
+        <h3 class="text-primary">Solicitudes de Mentoría Pendientes</h3>
+        <div class="row">
+            {% for mentorship in user.projects.all %}
+                {% for mentorship_request in mentorship.mentorships.all %}
+                    {% if mentorship_request.status == 'pending' and mentorship_request.initiated_by == 'mentor' %}
+                    <div class="col-md-4 mb-4">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Mentor: {{ mentorship_request.mentor.get_full_name|default:mentorship_request.mentor.username }}</h5>
+                                <p class="card-text">Proyecto: {{ mentorship_request.project.title }}</p>
+                                <div class="btn-group">
+                                    <a href="{% url 'respond_to_mentorship_request' mentorship_request.id 'accept' %}" class="btn btn-success">Aceptar</a>
+                                    <a href="{% url 'respond_to_mentorship_request' mentorship_request.id 'reject' %}" class="btn btn-danger">Rechazar</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            {% empty %}
+            <div class="col-12">
+                <p>No hay solicitudes de mentoría pendientes.</p>
+            </div>
             {% endfor %}
         </div>
     {% elif profile.user_type == 'mentor' or profile.user_type == 'investor' %}

@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Mentores Disponibles</h2>
+    <div class="row">
+        {% for mentor in mentors %}
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">{{ mentor.user.get_full_name|default:mentor.user.username }}</h5>
+                    <p class="card-text">
+                        <strong>Experiencia:</strong><br>
+                        {{ mentor.experience|linebreaks }}
+                    </p>
+                    <p class="card-text">
+                        <strong>Biografía:</strong><br>
+                        {{ mentor.bio|linebreaks }}
+                    </p>
+                    {% if user.profile.user_type == 'entrepreneur' %}
+                    <a href="{% url 'request_mentorship_by_entrepreneur' mentor.user.id %}" class="btn btn-primary">
+                        Solicitar Mentoría
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <p>No hay mentores disponibles en este momento.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %} 
