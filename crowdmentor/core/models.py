@@ -12,13 +12,22 @@ class Profile(models.Model):
     )
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     user_type = models.CharField(max_length=20, choices=USER_TYPES)
-    bio = models.TextField(blank=True)
-    experience = models.TextField(blank=True)
+    bio = models.TextField()
+    experience = models.TextField()
     is_approved = models.BooleanField(default=False)  # For mentors/evaluators
     is_approved_by_admin = models.BooleanField(default=False)  # Para evaluadores aprobados por el administrador
 
     def __str__(self):
         return f"{self.user.username} - {self.user_type}"
+
+class UploadedFile(models.Model):
+    profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='uploaded_files')
+    file = models.FileField(upload_to='uploads/%Y/%m/%d/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    description = models.CharField(max_length=255, blank=True)
+
+    def __str__(self):
+        return f"{self.file.name} - {self.profile.user.username}"
 
 class Project(models.Model):
     title = models.CharField(max_length=200)

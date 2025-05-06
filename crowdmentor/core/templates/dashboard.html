@@ -23,6 +23,36 @@
             {% endfor %}
         </div>
 
+        <h3 class="text-primary mt-4">Solicitudes de Mentoría Pendientes</h3>
+        <div class="row">
+            {% for mentorship in pending_mentorships %}
+                <div class="col-md-6 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title text-primary">Mentor: {{ mentorship.mentor.get_full_name|default:mentorship.mentor.username }}</h5>
+                            <p class="card-text text-muted">Proyecto: {{ mentorship.project.title }}</p>
+                            <div class="mt-3">
+                                <form method="post" action="{% url 'respond_to_mentorship_request' mentorship.id 'accept' %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="fas fa-check"></i> Aceptar
+                                    </button>
+                                </form>
+                                <form method="post" action="{% url 'respond_to_mentorship_request' mentorship.id 'reject' %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger">
+                                        <i class="fas fa-times"></i> Rechazar
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <p class="text-muted">No hay solicitudes de mentoría pendientes.</p>
+            {% endfor %}
+        </div>
+
         <h3 class="text-primary mt-4">Mentorías Activas</h3>
         <div class="row">
             {% for mentorship in mentorships %}
@@ -110,14 +140,26 @@
     {% else %}
         <h3 class="text-primary">Mentores Pendientes</h3>
         <div class="row">
-            {% for mentor in pending_mentors %}
+            {% for mentor_data in mentor_files %}
                 <div class="col-md-6 mb-4">
                     <div class="card shadow-sm">
                         <div class="card-body">
-                            <h5 class="card-title text-primary">{{ mentor.user.username }}</h5>
-                            <p class="card-text text-muted">Biografía: {{ mentor.bio }}</p>
-                            <p class="card-text text-muted">Experiencia: {{ mentor.experience }}</p>
-                            <a href="{% url 'approve_mentor' mentor.pk %}" class="btn btn-success">Aprobar</a>
+                            <h5 class="card-title text-primary">{{ mentor_data.mentor.user.username }}</h5>
+                            <p class="card-text text-muted">Biografía: {{ mentor_data.mentor.bio }}</p>
+                            <p class="card-text text-muted">Experiencia: {{ mentor_data.mentor.experience }}</p>
+                            
+                            <h6 class="mt-3">Documentos:</h6>
+                            <ul class="list-unstyled">
+                                {% for file in mentor_data.files %}
+                                    <li>
+                                        <a href="{{ file.file.url }}" target="_blank" class="btn btn-sm btn-outline-primary mb-2">
+                                            <i class="fas fa-file"></i> {{ file.file.name|cut:"uploads/"|cut:"/" }}
+                                        </a>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                            
+                            <a href="{% url 'approve_mentor' mentor_data.mentor.pk %}" class="btn btn-success">Aprobar</a>
                         </div>
                     </div>
                 </div>

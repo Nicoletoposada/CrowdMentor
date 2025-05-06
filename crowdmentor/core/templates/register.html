@@ -11,11 +11,22 @@
         <form method="post" enctype="multipart/form-data" class="p-4 shadow rounded bg-white">
             {% csrf_token %}
             {{ form|crispy }}
-            <div class="form-group">
-                <label for="id_files" class="font-weight-bold">Subir Archivos (Máximo 10):</label>
-                <input type="file" name="files" id="id_files" multiple class="form-control">
+            <div class="alert alert-info" role="alert">
+                <i class="fas fa-info-circle"></i> Puedes seleccionar hasta 10 archivos a la vez.
             </div>
-            <button type="submit" class="btn btn-primary btn-block">Registrarse</button>
+            <button type="submit" class="btn btn-primary btn-block mt-4">Registrarse</button>
         </form>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileInput = document.querySelector('input[type="file"]');
+            fileInput.addEventListener('change', function() {
+                if (this.files.length > 10) {
+                    alert('No puedes subir más de 10 archivos.');
+                    this.value = '';
+                }
+            });
+        });
+    </script>
 {% endblock %}

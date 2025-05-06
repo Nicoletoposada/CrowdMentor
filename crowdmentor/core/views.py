@@ -8,7 +8,7 @@ from django.views import View # type: ignore
 from django.contrib.auth.models import User # type: ignore
 from django.http import JsonResponse # type: ignore
 from .forms import CustomUserCreationForm, ProjectForm, InvestmentForm
-from .models import Project, Investment, Mentorship, Profile, Message
+from .models import Project, Investment, Mentorship, Profile, Message, UploadedFile
 from django.views.decorators.http import require_POST # type: ignore
 from django.core.files.storage import default_storage # type: ignore
 from django.core.files.base import ContentFile # type: ignore
@@ -30,16 +30,18 @@ def register(request):
                 is_approved=form.cleaned_data['user_type'] in ['entrepreneur', 'investor']
             )
 
-            # Manejar los archivos subidos
+            # Handle multiple file uploads
             files = request.FILES.getlist('files')
             if len(files) > 10:
                 messages.error(request, 'No puedes subir más de 10 archivos.')
+                user.delete()  # Eliminar el usuario si hay error
                 return redirect('register')
 
-            # Guardar los archivos en el sistema de archivos o base de datos según sea necesario
             for file in files:
-                # Aquí puedes implementar la lógica para guardar los archivos
-                pass
+                UploadedFile.objects.create(
+                    profile=profile,
+                    file=file
+                )
 
             login(request, user)
             messages.success(request, 'Registration successful!')
@@ -70,16 +72,20 @@ def dashboard(request):
     if profile.user_type == 'entrepreneur':
         projects = Project.objects.filter(owner=request.user)
         investments = Investment.objects.filter(project__owner=request.user, status='pending')
-        # Obtener las mentorías aceptadas para los proyectos del emprendedor
         accepted_mentorships = Mentorship.objects.filter(
             project__owner=request.user,
             status='accepted'
+        )
+        pending_mentorships = Mentorship.objects.filter(
+            project__owner=request.user,
+            status='pending'
         )
         return render(request, 'dashboard.html', {
             'projects': projects,
             'investments': investments,
             'profile': profile,
-            'mentorships': accepted_mentorships
+            'mentorships': accepted_mentorships,
+            'pending_mentorships': pending_mentorships
         })
     elif profile.user_type in ['mentor', 'investor']:
         if profile.user_type == 'mentor' and not profile.is_approved:
@@ -94,8 +100,16 @@ def dashboard(request):
         })
     else:  # Evaluator
         pending_mentors = Profile.objects.filter(user_type='mentor', is_approved=False)
+        mentor_files = []
+        for mentor in pending_mentors:
+            files = UploadedFile.objects.filter(profile=mentor)
+            mentor_files.append({
+                'mentor': mentor,
+                'files': files
+            })
         return render(request, 'dashboard.html', {
             'pending_mentors': pending_mentors,
+            'mentor_files': mentor_files,
             'profile': profile
         })
 
@@ -171,12 +185,10 @@ def admin_dashboard(request):
 
     evaluators_with_files = []
     for evaluator in profiles_pending_approval:
-        uploaded_files = []
-        if hasattr(evaluator, 'uploaded_files'):
-            uploaded_files = [default_storage.url(file.file.name) for file in evaluator.uploaded_files.all()]
+        files = UploadedFile.objects.filter(profile=evaluator)
         evaluators_with_files.append({
             'evaluator': evaluator,
-            'files': uploaded_files
+            'files': files
         })
 
     return render(request, 'admin_dashboard.html', {
@@ -329,23 +341,16 @@ def request_mentorship_by_entrepreneur(request, mentor_id):
 def respond_to_mentorship_request(request, mentorship_id, action):
     mentorship = get_object_or_404(Mentorship, id=mentorship_id)
     
-    if mentorship.initiated_by == 'mentor':
-        # If mentor initiated, entrepreneur responds
-        if request.user != mentorship.project.owner:
-            messages.error(request, 'No tienes permiso para responder a esta solicitud.')
-            return redirect('dashboard')
-    else:
-        # If entrepreneur initiated, mentor responds
-        if request.user != mentorship.mentor:
-            messages.error(request, 'No tienes permiso para responder a esta solicitud.')
-            return redirect('dashboard')
+    # Verificar que el usuario sea el dueño del proyecto
+    if request.user != mentorship.project.owner:
+        messages.error(request, 'No tienes permiso para responder a esta solicitud.')
+        return redirect('dashboard')
 
     if action == 'accept':
         mentorship.status = 'accepted'
         messages.success(request, 'Has aceptado la solicitud de mentoría.')
         mentorship.save()
     elif action == 'reject':
-        # Delete the mentorship request instead of marking it as rejected
         mentorship.delete()
         messages.info(request, 'Has rechazado la solicitud de mentoría.')
     else:

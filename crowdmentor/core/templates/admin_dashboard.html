@@ -1,124 +1,170 @@
 {% extends 'base.html' %}
+{% load static %}
+
 {% block content %}
-<h2 class="text-center text-primary my-4">Panel de Administración</h2>
+<div class="container mt-4">
+    <h2 class="text-center text-primary mb-4">Panel de Administrador</h2>
 
-<h3 class="text-primary">Usuarios</h3>
-<table class="table table-hover shadow-sm">
-    <thead class="thead-light">
-        <tr>
-            <th>ID</th>
-            <th>Nombre de Usuario</th>
-            <th>Email</th>
-            <th>Acciones</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for user in users %}
-        <tr>
-            <td>{{ user.id }}</td>
-            <td>{{ user.username }}</td>
-            <td>{{ user.email }}</td>
-            <td>
-                <button onclick="deleteUser('{{ user.id }}')" class="btn btn-danger btn-sm">Eliminar</button>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-
-<h3 class="text-primary">Proyectos</h3>
-<table class="table table-hover shadow-sm">
-    <thead class="thead-light">
-        <tr>
-            <th>ID</th>
-            <th>Título</th>
-            <th>Propietario</th>
-            <th>Meta de Financiación</th>
-            <th>Monto Recaudado</th>
-            <th>Acciones</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for project in projects %}
-        <tr>
-            <td>{{ project.id }}</td>
-            <td>{{ project.title }}</td>
-            <td>{{ project.owner.username }}</td>
-            <td>${{ project.funding_goal }}</td>
-            <td>${{ project.amount_raised }}</td>
-            <td>
-                <button onclick="deleteProject('{{ project.id }}')" class="btn btn-danger btn-sm">Eliminar</button>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-
-<h3 class="text-primary">Evaluadores pendientes</h3>
-<div class="row">
-    {% for evaluator_data in profiles_pending_approval %}
-    <div class="col-md-4">
-        <div class="card mb-4 shadow-sm">
-            <div class="card-body">
-                <h5 class="card-title text-primary">{{ evaluator_data.evaluator.user.username }}</h5>
-                <p><strong>Descripción:</strong> {{ evaluator_data.evaluator.bio }}</p>
-                <p><strong>Experiencia:</strong> {{ evaluator_data.evaluator.experience }}</p>
-                <p><strong>Archivos Subidos:</strong></p>
-                <ul>
-                    {% for file_url in evaluator_data.files %}
-                        <li><a href="{{ file_url }}" target="_blank">Ver archivo</a></li>
+    <div class="row">
+        <!-- Evaluadores Pendientes -->
+        <div class="col-12 mb-4">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Evaluadores Pendientes de Aprobación</h3>
+                </div>
+                <div class="card-body">
+                    {% for evaluator_data in profiles_pending_approval %}
+                        <div class="border-bottom mb-3 pb-3">
+                            <h4>{{ evaluator_data.evaluator.user.username }}</h4>
+                            <p><strong>Biografía:</strong> {{ evaluator_data.evaluator.bio }}</p>
+                            <p><strong>Experiencia:</strong> {{ evaluator_data.evaluator.experience }}</p>
+                            
+                            <h5 class="mt-3">Documentos:</h5>
+                            <div class="mb-3">
+                                {% for file in evaluator_data.files %}
+                                    <a href="{{ file.file.url }}" target="_blank" class="btn btn-sm btn-outline-primary me-2 mb-2">
+                                        <i class="fas fa-file"></i> {{ file.file.name|cut:"uploads/"|cut:"/" }}
+                                    </a>
+                                {% empty %}
+                                    <p class="text-muted">No hay documentos adjuntos.</p>
+                                {% endfor %}
+                            </div>
+                            
+                            <a href="{% url 'approve_evaluator' evaluator_data.evaluator.pk %}" class="btn btn-success">
+                                Aprobar Evaluador
+                            </a>
+                        </div>
                     {% empty %}
-                        <li>No hay archivos subidos.</li>
+                        <p class="text-muted">No hay evaluadores pendientes de aprobación.</p>
                     {% endfor %}
-                </ul>
-                <a href="{% url 'approve_evaluator' evaluator_data.evaluator.id %}" class="btn btn-success btn-sm mt-2">Aprobar</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Usuarios -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Usuarios</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Usuario</th>
+                                    <th>Tipo</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in users %}
+                                    <tr>
+                                        <td>{{ user.username }}</td>
+                                        <td>{{ user.profile.user_type }}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-danger" onclick="deleteUser({{ user.id }})">
+                                                Eliminar
+                                            </button>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Proyectos -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Proyectos</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Título</th>
+                                    <th>Dueño</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for project in projects %}
+                                    <tr>
+                                        <td>{{ project.title }}</td>
+                                        <td>{{ project.owner.username }}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-danger" onclick="deleteProject({{ project.id }})">
+                                                Eliminar
+                                            </button>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    {% empty %}
-        <p class="text-muted">No hay evaluadores pendientes.</p>
-    {% endfor %}
 </div>
 
 <script>
-    function deleteUser(userId) {
-        if (confirm('¿Estás seguro de que deseas eliminar este usuario?')) {
-            fetch(`/delete_user/${userId}/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}',
-                },
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert(data.success);
-                    location.reload();
-                } else {
-                    alert(data.error);
-                }
-            });
-        }
+function deleteUser(userId) {
+    if (confirm('¿Estás seguro de que deseas eliminar este usuario?')) {
+        fetch(`/delete_user/${userId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error al eliminar el usuario');
+            }
+        });
     }
+}
 
-    function deleteProject(projectId) {
-        if (confirm('¿Estás seguro de que deseas eliminar este proyecto?')) {
-            fetch(`/delete_project/${projectId}/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}',
-                },
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert(data.success);
-                    location.reload();
-                } else {
-                    alert(data.error);
-                }
-            });
+function deleteProject(projectId) {
+    if (confirm('¿Estás seguro de que deseas eliminar este proyecto?')) {
+        fetch(`/delete_project/${projectId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error al eliminar el proyecto');
+            }
+        });
+    }
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
         }
     }
+    return cookieValue;
+}
 </script>
 {% endblock %}
