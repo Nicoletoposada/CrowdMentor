@@ -118,12 +118,23 @@
         .btn-primary {
             background-color: var(--secondary-color);
             border: none;
-            padding: 0.8rem 2rem;
-            font-weight: 600;
-            border-radius: 50px;
             transition: all var(--transition-speed) ease;
             animation: fadeInUp 1s ease 0.4s;
             animation-fill-mode: both;
+        }
+        .btn-success {
+            background-color: #37b24d;
+            border: none;
+            transition: all var(--transition-speed) ease;
+        }
+        .auth-btn {
+            min-width: 160px;
+            text-align: center;
+            padding: 0.8rem 2rem;
+            font-weight: 600;
+            border-radius: 50px;
+            font-size: 1rem;
+            display: inline-block;
         }
 
         .btn-primary:hover {
@@ -208,11 +219,6 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a href="{% url 'project_list' %}" class="btn btn-outline-success me-2">
-                            <i class="fas fa-project-diagram me-2"></i>Proyectos
-                        </a>
-                    </li>
                     <div class="d-flex align-items-center">
                         {% if user.is_authenticated %}
                             {% if user.is_staff %}
@@ -234,10 +240,10 @@
                                 <i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión
                             </a>
                         {% else %}
-                            <a href="{% url 'login' %}" class="btn btn-primary me-2">
+                            <a href="{% url 'login' %}" class="btn btn-primary me-2 auth-btn">
                                 <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
                             </a>
-                            <a href="{% url 'register' %}" class="btn btn-success">
+                            <a href="{% url 'register' %}" class="btn btn-success auth-btn">
                                 <i class="fas fa-user-plus me-2"></i>Registrarse
                             </a>
                         {% endif %}

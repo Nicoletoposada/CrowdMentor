@@ -93,11 +93,13 @@ def dashboard(request):
             messages.error(request, 'Tu cuenta aún no ha sido aprobada por un Evaluador.')
             return redirect('home')
         mentorships = Mentorship.objects.filter(mentor=request.user)
+        pending_mentorships = mentorships.filter(status='pending')
         investments = Investment.objects.filter(investor=request.user)
         return render(request, 'dashboard.html', {
             'mentorships': mentorships,
+            'pending_mentorships': pending_mentorships,
             'investments': investments,
-            'profile': profile
+            'profile': profile,
         })
     else:  # Evaluator
         pending_mentors = Profile.objects.filter(user_type='mentor', is_approved=False)
@@ -368,10 +370,15 @@ def request_mentorship_by_entrepreneur(request, mentor_id):
 def respond_to_mentorship_request(request, mentorship_id, action):
     mentorship = get_object_or_404(Mentorship, id=mentorship_id)
     
-    # Verificar que el usuario sea el dueño del proyecto
-    if request.user != mentorship.project.owner:
-        messages.error(request, 'No tienes permiso para responder a esta solicitud.')
-        return redirect('dashboard')
+    # Verificar que el usuario sea el dueño del proyecto o el mentor, dependiendo de quién inició la solicitud
+    if mentorship.initiated_by == 'mentor':
+        if request.user != mentorship.project.owner:
+            messages.error(request, 'No tienes permiso para responder a esta solicitud.')
+            return redirect('dashboard')
+    else:  # initiated_by == 'entrepreneur'
+        if request.user != mentorship.mentor:
+            messages.error(request, 'No tienes permiso para responder a esta solicitud.')
+            return redirect('dashboard')
 
     if action == 'accept':
         mentorship.status = 'accepted'
