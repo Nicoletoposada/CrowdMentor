@@ -8,7 +8,7 @@ from django.views import View # type: ignore
 from django.contrib.auth.models import User # type: ignore
 from django.http import JsonResponse # type: ignore
 from .forms import CustomUserCreationForm, ProjectForm, InvestmentForm
-from .models import Project, Investment, Mentorship, Profile
+from .models import Project, Investment, Mentorship, Profile, Message
 from django.views.decorators.http import require_POST # type: ignore
 from django.core.files.storage import default_storage # type: ignore
 from django.core.files.base import ContentFile # type: ignore
@@ -70,17 +70,34 @@ def dashboard(request):
     if profile.user_type == 'entrepreneur':
         projects = Project.objects.filter(owner=request.user)
         investments = Investment.objects.filter(project__owner=request.user, status='pending')
-        return render(request, 'dashboard.html', {'projects': projects, 'investments': investments, 'profile': profile})
+        # Obtener las mentorías aceptadas para los proyectos del emprendedor
+        accepted_mentorships = Mentorship.objects.filter(
+            project__owner=request.user,
+            status='accepted'
+        )
+        return render(request, 'dashboard.html', {
+            'projects': projects,
+            'investments': investments,
+            'profile': profile,
+            'mentorships': accepted_mentorships
+        })
     elif profile.user_type in ['mentor', 'investor']:
         if profile.user_type == 'mentor' and not profile.is_approved:
             messages.error(request, 'Tu cuenta aún no ha sido aprobada por un Evaluador.')
             return redirect('home')
         mentorships = Mentorship.objects.filter(mentor=request.user)
         investments = Investment.objects.filter(investor=request.user)
-        return render(request, 'dashboard.html', {'mentorships': mentorships, 'investments': investments, 'profile': profile})
+        return render(request, 'dashboard.html', {
+            'mentorships': mentorships,
+            'investments': investments,
+            'profile': profile
+        })
     else:  # Evaluator
         pending_mentors = Profile.objects.filter(user_type='mentor', is_approved=False)
-        return render(request, 'dashboard.html', {'pending_mentors': pending_mentors, 'profile': profile})
+        return render(request, 'dashboard.html', {
+            'pending_mentors': pending_mentors,
+            'profile': profile
+        })
 
 @login_required
 def project_create(request):
@@ -346,3 +363,62 @@ def mentor_list(request):
 def project_list_for_mentors(request):
     projects = Project.objects.filter(is_active=True)
     return render(request, 'project_list_for_mentors.html', {'projects': projects})
+
+@login_required
+def mentorship_chat(request, mentorship_id):
+    mentorship = get_object_or_404(Mentorship, id=mentorship_id)
+    
+    # Verificar que el usuario sea el mentor o el dueño del proyecto
+    if request.user != mentorship.mentor and request.user != mentorship.project.owner:
+        messages.error(request, 'No tienes permiso para acceder a este chat.')
+        return redirect('dashboard')
+    
+    # Verificar que la mentoría esté aceptada
+    if mentorship.status != 'accepted':
+        messages.error(request, 'Esta mentoría no está activa.')
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        content = request.POST.get('content', '').strip()
+        if content:
+            Message.objects.create(
+                mentorship=mentorship,
+                sender=request.user,
+                content=content
+            )
+            return redirect('mentorship_chat', mentorship_id=mentorship_id)
+
+    messages = mentorship.messages.all()
+    return render(request, 'mentorship_chat.html', {
+        'mentorship': mentorship,
+        'messages': messages,
+        'other_user': mentorship.mentor if request.user == mentorship.project.owner else mentorship.project.owner
+    })
+
+@login_required
+def mark_messages_as_read(request, mentorship_id):
+    mentorship = get_object_or_404(Mentorship, id=mentorship_id)
+    
+    # Verificar que el usuario sea el mentor o el dueño del proyecto
+    if request.user != mentorship.mentor and request.user != mentorship.project.owner:
+        return JsonResponse({'error': 'No tienes permiso para realizar esta acción.'}, status=403)
+    
+    # Marcar como leídos los mensajes que no fueron enviados por el usuario actual
+    mentorship.messages.filter(sender__id__ne=request.user.id, is_read=False).update(is_read=True)
+    
+    return JsonResponse({'success': True})
+
+@login_required
+def get_unread_messages_count(request):
+    # Obtener todas las mentorías activas del usuario
+    if request.user.profile.user_type == 'mentor':
+        mentorships = Mentorship.objects.filter(mentor=request.user, status='accepted')
+    else:
+        mentorships = Mentorship.objects.filter(project__owner=request.user, status='accepted')
+    
+    # Contar mensajes no leídos
+    unread_count = 0
+    for mentorship in mentorships:
+        unread_count += mentorship.messages.filter(sender__id__ne=request.user.id, is_read=False).count()
+    
+    return JsonResponse({'unread_count': unread_count})

@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    .chat-container {
+        height: 70vh;
+        display: flex;
+        flex-direction: column;
+    }
+    .chat-messages {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 1rem;
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    .message {
+        margin-bottom: 1rem;
+        padding: 0.5rem 1rem;
+        border-radius: 1rem;
+        max-width: 70%;
+    }
+    .message.sent {
+        background-color: #007bff;
+        color: white;
+        margin-left: auto;
+    }
+    .message.received {
+        background-color: #e9ecef;
+        color: black;
+    }
+    .message-form {
+        display: flex;
+        gap: 1rem;
+    }
+    .message-input {
+        flex-grow: 1;
+    }
+    .timestamp {
+        font-size: 0.8rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Chat con {{ other_user.get_full_name|default:other_user.username }}</h4>
+                    <small class="text-muted">Proyecto: {{ mentorship.project.title }}</small>
+                </div>
+                <div class="card-body">
+                    <div class="chat-container">
+                        <div class="chat-messages" id="chat-messages">
+                            {% for message in messages %}
+                            <div class="message {% if message.sender == request.user %}sent{% else %}received{% endif %}">
+                                <div class="message-content">{{ message.content }}</div>
+                                <div class="timestamp">
+                                    {{ message.timestamp|date:"d/m/Y H:i" }}
+                                    {% if message.sender == request.user and message.is_read %}
+                                    <i class="fas fa-check-double text-info"></i>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div class="text-center text-muted">
+                                No hay mensajes aún. ¡Inicia la conversación!
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <form method="post" class="message-form">
+                            {% csrf_token %}
+                            <div class="input-group message-input">
+                                <input type="text" name="content" class="form-control" placeholder="Escribe tu mensaje..." required>
+                                <button type="submit" class="btn btn-primary">Enviar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Scroll to bottom of chat
+    const chatMessages = document.getElementById('chat-messages');
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    // Mark messages as read
+    fetch("{% url 'mark_messages_as_read' mentorship.id %}", {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    });
+
+    // Auto-refresh chat every 30 seconds
+    setInterval(function() {
+        location.reload();
+    }, 30000);
+</script>
+{% endblock %} 

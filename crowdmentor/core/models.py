@@ -72,3 +72,16 @@ class Mentorship(models.Model):
 
     def __str__(self):
         return f"{self.mentor.username} mentoring {self.project.title} ({self.status})"
+
+class Message(models.Model):
+    mentorship = models.ForeignKey(Mentorship, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE)
+    content = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['timestamp']
+
+    def __str__(self):
+        return f'Message from {self.sender.username} at {self.timestamp}'

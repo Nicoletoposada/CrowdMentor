@@ -25,4 +25,7 @@ urlpatterns = [
     path('mentorship/respond/<int:mentorship_id>/<str:action>/', views.respond_to_mentorship_request, name='respond_to_mentorship_request'),
     path('mentors/', views.mentor_list, name='mentor_list'),
     path('projects-for-mentors/', views.project_list_for_mentors, name='project_list_for_mentors'),
+    path('mentorship/chat/<int:mentorship_id>/', views.mentorship_chat, name='mentorship_chat'),
+    path('mentorship/mark-read/<int:mentorship_id>/', views.mark_messages_as_read, name='mark_messages_as_read'),
+    path('mentorship/unread-count/', views.get_unread_messages_count, name='get_unread_messages_count'),
 ]
