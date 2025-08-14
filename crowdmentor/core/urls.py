@@ -2,7 +2,7 @@
 from django.urls import path # type: ignore
 from . import views
 from django.contrib.auth import views as auth_views # type: ignore
-from .views import LogoutView, manage_investment, login_view
+from .views import LogoutView, manage_investment, login_view, resources
 from .views import request_mentorship_by_mentor, request_mentorship_by_entrepreneur, respond_to_mentorship_request
 
 urlpatterns = [
@@ -29,4 +29,5 @@ urlpatterns = [
     path('mentorship/chat/<int:mentorship_id>/', views.mentorship_chat, name='mentorship_chat'),
     path('mentorship/mark-read/<int:mentorship_id>/', views.mark_messages_as_read, name='mark_messages_as_read'),
     path('mentorship/unread-count/', views.get_unread_messages_count, name='get_unread_messages_count'),
+    path('resources/', resources, name='resources'),
 ]

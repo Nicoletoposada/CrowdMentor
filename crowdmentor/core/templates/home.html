@@ -97,9 +97,15 @@
                         </div>
                         <h5 class="card-title text-primary fw-bold">Explora Recursos</h5>
                         <p class="card-text text-muted">Accede a herramientas y recursos para impulsar tu emprendimiento.</p>
-                        <a href="#" class="btn btn-primary mt-3">
+                        {% if user.is_authenticated %}
+                        <a href="{% url 'resources' %}" class="btn btn-primary mt-3">
                             <i class="fas fa-compass me-2"></i>Descubrir Recursos
                         </a>
+                        {% else %}
+                        <a href="{% url 'login' %}?next={% url 'resources' %}" class="btn btn-primary mt-3" title="Inicia sesión para acceder a los recursos">
+                            <i class="fas fa-compass me-2"></i>Descubrir Recursos
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>

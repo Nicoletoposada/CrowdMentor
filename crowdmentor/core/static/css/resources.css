@@ -1,0 +1,97 @@
+/* resources.css */
+
+/* Hero visual */
+.resources-hero {
+    background: linear-gradient(120deg, #e3f2fd 60%, #fff 100%);
+    padding: 48px 0 24px 0;
+    border-radius: 0 0 32px 32px;
+    box-shadow: 0 4px 24px rgba(25, 118, 210, 0.07);
+}
+.resources-hero-bg {
+    max-width: 600px;
+    margin: 0 auto;
+}
+.resources-hero h1 {
+    color: #1976d2;
+    font-size: 2.7rem;
+    margin-bottom: 10px;
+}
+.resources-hero p {
+    color: #555;
+    font-size: 1.2rem;
+}
+
+/* Contenedor principal */
+.resources-container {
+    max-width: 1100px;
+    margin: 0 auto 40px auto;
+}
+
+/* Tarjetas de recurso */
+.resource-card {
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 2px 16px rgba(25, 118, 210, 0.08);
+    transition: transform 0.18s, box-shadow 0.18s;
+    border: none;
+    min-height: 320px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+}
+.resource-card:hover {
+    transform: translateY(-6px) scale(1.03);
+    box-shadow: 0 8px 32px rgba(25, 118, 210, 0.13);
+}
+.resource-icon {
+    background: #e3f2fd;
+    border-radius: 50%;
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 10px auto;
+    font-size: 2.2rem;
+    box-shadow: 0 2px 8px rgba(25, 118, 210, 0.07);
+}
+.resource-card h5 {
+    color: #1976d2;
+    font-size: 1.18rem;
+}
+.resource-card ul {
+    margin-top: 18px;
+    padding-left: 0;
+    list-style: none;
+}
+.resource-card ul li {
+    margin-bottom: 12px;
+    font-size: 1.05rem;
+}
+.resource-card ul li a {
+    color: #1976d2;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+.resource-card ul li a:hover {
+    color: #0d47a1;
+    text-decoration: underline;
+}
+
+@media (max-width: 900px) {
+    .resources-container {
+        padding: 0 10px;
+    }
+}
+
+@media (max-width: 600px) {
+    .resources-hero h1 {
+        font-size: 1.5rem;
+    }
+    .resource-card {
+        min-height: 220px;
+        padding: 18px 5px;
+    }
+}

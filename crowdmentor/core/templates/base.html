@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="{% static 'css/project_list.css' %}">
     <link rel="stylesheet" href="{% static 'css/project_detail.css' %}">
     <link rel="stylesheet" href="{% static 'css/project_create.css' %}">
+        <link rel="stylesheet" href="{% static 'css/resources.css' %}">
     <style>
         :root {
             --primary-color: #2c3e50;
@@ -235,6 +236,9 @@
                             </a>
                             <a href="{% url 'mentor_list' %}" class="btn btn-outline-info me-2">
                                 <i class="fas fa-users me-2"></i>Mentores
+                            </a>
+                            <a href="{% url 'resources' %}" class="btn btn-outline-secondary me-2">
+                                <i class="fas fa-tools me-2"></i>Recursos
                             </a>
                             <a href="{% url 'logout' %}" class="btn btn-outline-danger">
                                 <i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión

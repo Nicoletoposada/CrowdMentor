@@ -2,7 +2,17 @@
 {% load static %}
 
 {% block content %}
-    <h2 class="text-center text-primary my-4">Panel - {{ profile.user_type|title }}</h2>
+    <h2 class="text-center text-primary my-4">Panel - 
+    {% if profile.user_type == 'entrepreneur' %}
+        Emprendedor
+    {% elif profile.user_type == 'mentor' %}
+        Mentor
+    {% elif profile.user_type == 'investor' %}
+        Inversionista
+    {% else %}
+        {{ profile.user_type|title }}
+    {% endif %}
+    </h2>
     {% if profile.user_type == 'entrepreneur' %}
         <h3 class="text-primary">Tus Proyectos</h3>
         <a href="{% url 'project_create' %}" class="btn btn-success mb-3">Crear Nuevo Proyecto</a>

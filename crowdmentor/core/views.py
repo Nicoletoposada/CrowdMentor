@@ -12,7 +12,12 @@ from .models import Project, Investment, Mentorship, Profile, Message, UploadedF
 from django.views.decorators.http import require_POST # type: ignore
 from django.core.files.storage import default_storage # type: ignore
 from django.core.files.base import ContentFile # type: ignore
+
 from django.utils import timezone # type: ignore
+
+def resources(request):
+    """Vista para mostrar la página de recursos para emprendedores."""
+    return render(request, 'resources.html')
 
 def home(request):
     projects = Project.objects.filter(is_active=True)
