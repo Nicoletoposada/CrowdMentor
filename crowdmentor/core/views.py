@@ -7,8 +7,8 @@ from django.conf import settings # type: ignore
 from django.views import View # type: ignore
 from django.contrib.auth.models import User, Group # type: ignore
 from django.http import JsonResponse # type: ignore
-from .forms import CustomUserCreationForm, ProjectForm, InvestmentForm, LoginForm
-from .models import Project, Investment, Mentorship, Profile, Message, UploadedFile
+from .forms import CustomUserCreationForm, ProjectForm, InvestmentForm, LoginForm, ResourceForm, ResourceCategoryForm
+from .models import Project, Investment, Mentorship, Profile, Message, UploadedFile, Resource, ResourceCategory
 from django.views.decorators.http import require_POST # type: ignore
 from django.core.files.storage import default_storage # type: ignore
 from django.core.files.base import ContentFile # type: ignore
@@ -17,7 +17,19 @@ from django.utils import timezone # type: ignore
 
 def resources(request):
     """Vista para mostrar la página de recursos para emprendedores."""
-    return render(request, 'resources.html')
+    categories = ResourceCategory.objects.all()
+    resources_by_category = {}
+    
+    for category in categories:
+        resources_by_category[category] = Resource.objects.filter(
+            category=category, 
+            is_active=True
+        ).order_by('-is_featured', '-created_at')[:10]  # Máximo 10 recursos por categoría
+    
+    return render(request, 'resources.html', {
+        'categories': categories,
+        'resources_by_category': resources_by_category
+    })
 
 def home(request):
     projects = Project.objects.filter(is_active=True)
@@ -491,3 +503,170 @@ def login_view(request):
     else:
         form = LoginForm()
     return render(request, 'login.html', {'form': form})
+
+# ========== VISTAS DE ADMINISTRACIÓN DE RECURSOS ==========
+
+@login_required
+def admin_resources(request):
+    """Vista principal para gestionar recursos desde el panel de administrador"""
+    if not request.user.is_superuser:
+        messages.error(request, 'Acceso denegado. Solo los administradores pueden acceder a esta página.')
+        return redirect('home')
+
+    categories = ResourceCategory.objects.all()
+    resources = Resource.objects.all().order_by('-created_at')
+    
+    context = {
+        'categories': categories,
+        'resources': resources,
+    }
+    return render(request, 'admin_resources.html', context)
+
+@login_required
+def create_resource_category(request):
+    """Vista para crear una nueva categoría de recursos"""
+    if not request.user.is_superuser:
+        messages.error(request, 'Acceso denegado.')
+        return redirect('home')
+
+    if request.method == 'POST':
+        form = ResourceCategoryForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Categoría creada exitosamente.')
+            return redirect('admin_resources')
+    else:
+        form = ResourceCategoryForm()
+    
+    return render(request, 'create_resource_category.html', {'form': form})
+
+@login_required
+def edit_resource_category(request, category_id):
+    """Vista para editar una categoría de recursos"""
+    if not request.user.is_superuser:
+        messages.error(request, 'Acceso denegado.')
+        return redirect('home')
+
+    category = get_object_or_404(ResourceCategory, id=category_id)
+    
+    if request.method == 'POST':
+        form = ResourceCategoryForm(request.POST, instance=category)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Categoría actualizada exitosamente.')
+            return redirect('admin_resources')
+    else:
+        form = ResourceCategoryForm(instance=category)
+    
+    return render(request, 'edit_resource_category.html', {'form': form, 'category': category})
+
+@login_required
+def delete_resource_category(request, category_id):
+    """Vista para eliminar una categoría de recursos"""
+    if not request.user.is_superuser:
+        return JsonResponse({'error': 'Acceso denegado'}, status=403)
+
+    try:
+        category = ResourceCategory.objects.get(id=category_id)
+        
+        # Verificar si tiene recursos asociados
+        if category.resources.exists():
+            return JsonResponse({
+                'error': 'No se puede eliminar la categoría porque tiene recursos asociados'
+            }, status=400)
+        
+        category.delete()
+        return JsonResponse({'success': 'Categoría eliminada correctamente'})
+    except ResourceCategory.DoesNotExist:
+        return JsonResponse({'error': 'Categoría no encontrada'}, status=404)
+
+@login_required
+def create_resource(request):
+    """Vista para crear un nuevo recurso"""
+    if not request.user.is_superuser:
+        messages.error(request, 'Acceso denegado.')
+        return redirect('home')
+
+    if request.method == 'POST':
+        form = ResourceForm(request.POST, request.FILES)
+        if form.is_valid():
+            resource = form.save(commit=False)
+            resource.created_by = request.user
+            resource.save()
+            messages.success(request, 'Recurso creado exitosamente.')
+            return redirect('admin_resources')
+    else:
+        form = ResourceForm()
+    
+    return render(request, 'create_resource.html', {'form': form})
+
+@login_required
+def edit_resource(request, resource_id):
+    """Vista para editar un recurso"""
+    if not request.user.is_superuser:
+        messages.error(request, 'Acceso denegado.')
+        return redirect('home')
+
+    resource = get_object_or_404(Resource, id=resource_id)
+    
+    if request.method == 'POST':
+        form = ResourceForm(request.POST, request.FILES, instance=resource)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Recurso actualizado exitosamente.')
+            return redirect('admin_resources')
+    else:
+        form = ResourceForm(instance=resource)
+    
+    return render(request, 'edit_resource.html', {'form': form, 'resource': resource})
+
+@login_required
+def delete_resource(request, resource_id):
+    """Vista para eliminar un recurso"""
+    if not request.user.is_superuser:
+        return JsonResponse({'error': 'Acceso denegado'}, status=403)
+
+    try:
+        resource = Resource.objects.get(id=resource_id)
+        resource.delete()
+        return JsonResponse({'success': 'Recurso eliminado correctamente'})
+    except Resource.DoesNotExist:
+        return JsonResponse({'error': 'Recurso no encontrado'}, status=404)
+
+@login_required
+def toggle_resource_status(request, resource_id):
+    """Vista para activar/desactivar un recurso"""
+    if not request.user.is_superuser:
+        return JsonResponse({'error': 'Acceso denegado'}, status=403)
+
+    try:
+        resource = Resource.objects.get(id=resource_id)
+        resource.is_active = not resource.is_active
+        resource.save()
+        
+        status = 'activado' if resource.is_active else 'desactivado'
+        return JsonResponse({
+            'success': f'Recurso {status} correctamente',
+            'is_active': resource.is_active
+        })
+    except Resource.DoesNotExist:
+        return JsonResponse({'error': 'Recurso no encontrado'}, status=404)
+
+@login_required
+def toggle_resource_featured(request, resource_id):
+    """Vista para destacar/no destacar un recurso"""
+    if not request.user.is_superuser:
+        return JsonResponse({'error': 'Acceso denegado'}, status=403)
+
+    try:
+        resource = Resource.objects.get(id=resource_id)
+        resource.is_featured = not resource.is_featured
+        resource.save()
+        
+        status = 'destacado' if resource.is_featured else 'no destacado'
+        return JsonResponse({
+            'success': f'Recurso marcado como {status}',
+            'is_featured': resource.is_featured
+        })
+    except Resource.DoesNotExist:
+        return JsonResponse({'error': 'Recurso no encontrado'}, status=404)

@@ -1,0 +1,363 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/admin_resources.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="text-primary mb-0">Gestión de Recursos</h1>
+                <div>
+                    <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-secondary me-2">
+                        <i class="fas fa-arrow-left"></i> Volver al Panel
+                    </a>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
+                            <i class="fas fa-plus"></i> Crear Nuevo
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'create_resource_category' %}">
+                                <i class="fas fa-folder"></i> Nueva Categoría
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'create_resource' %}">
+                                <i class="fas fa-file"></i> Nuevo Recurso
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Total Categorías</h6>
+                            <h2 class="mb-0">{{ categories.count }}</h2>
+                        </div>
+                        <div>
+                            <i class="fas fa-folder fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Total Recursos</h6>
+                            <h2 class="mb-0">{{ resources.count }}</h2>
+                        </div>
+                        <div>
+                            <i class="fas fa-file fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Recursos Activos</h6>
+                            <h2 class="mb-0">{{ resources|length|add:"-1" }}</h2>
+                        </div>
+                        <div>
+                            <i class="fas fa-check-circle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Recursos Destacados</h6>
+                            <h2 class="mb-0">0</h2>
+                        </div>
+                        <div>
+                            <i class="fas fa-star fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Categorías -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Categorías de Recursos</h4>
+                    <a href="{% url 'create_resource_category' %}" class="btn btn-light btn-sm">
+                        <i class="fas fa-plus"></i> Nueva Categoría
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if categories %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Icono</th>
+                                        <th>Nombre</th>
+                                        <th>Descripción</th>
+                                        <th>Recursos</th>
+                                        <th>Creado</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for category in categories %}
+                                        <tr>
+                                            <td>
+                                                <i class="{{ category.icon }} fa-lg text-primary"></i>
+                                            </td>
+                                            <td><strong>{{ category.name }}</strong></td>
+                                            <td>{{ category.description|truncatechars:50 }}</td>
+                                            <td>
+                                                <span class="badge bg-primary">{{ category.resources.count }}</span>
+                                            </td>
+                                            <td>{{ category.created_at|date:"d/m/Y" }}</td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <a href="{% url 'edit_resource_category' category.id %}" 
+                                                       class="btn btn-outline-primary" title="Editar">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <button class="btn btn-outline-danger" 
+                                                            data-category-id="{{ category.id }}" onclick="deleteCategory(this.dataset.categoryId)" title="Eliminar">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No hay categorías creadas aún.</p>
+                            <a href="{% url 'create_resource_category' %}" class="btn btn-primary">
+                                Crear Primera Categoría
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recursos -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Recursos</h4>
+                    <a href="{% url 'create_resource' %}" class="btn btn-light btn-sm">
+                        <i class="fas fa-plus"></i> Nuevo Recurso
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if resources %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Icono</th>
+                                        <th>Título</th>
+                                        <th>Tipo</th>
+                                        <th>Categoría</th>
+                                        <th>Estado</th>
+                                        <th>Destacado</th>
+                                        <th>Creado</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for resource in resources %}
+                                        <tr>
+                                            <td>
+                                                <i class="{{ resource.icon }} fa-lg text-primary"></i>
+                                            </td>
+                                            <td>
+                                                <strong>{{ resource.title }}</strong>
+                                                <br>
+                                                <small class="text-muted">{{ resource.description|truncatechars:40 }}</small>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-secondary">{{ resource.get_resource_type_display }}</span>
+                                            </td>
+                                            <td>{{ resource.category.name }}</td>
+                                            <td>
+                                                {% if resource.is_active %}
+                                                    <span class="badge bg-success">Activo</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Inactivo</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if resource.is_featured %}
+                                                    <i class="fas fa-star text-warning" title="Destacado"></i>
+                                                {% else %}
+                                                    <i class="far fa-star text-muted" title="No destacado"></i>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ resource.created_at|date:"d/m/Y" }}</td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <a href="{% url 'edit_resource' resource.id %}" 
+                                                       class="btn btn-outline-primary" title="Editar">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <button class="btn btn-outline-warning" 
+                                                            data-resource-id="{{ resource.id }}" onclick="toggleResourceStatus(this.dataset.resourceId)" title="Cambiar estado">
+                                                        <i class="fas fa-toggle-on"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-info" 
+                                                            data-resource-id="{{ resource.id }}" onclick="toggleResourceFeatured(this.dataset.resourceId)" title="Destacar">
+                                                        <i class="fas fa-star"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-danger" 
+                                                            data-resource-id="{{ resource.id }}" onclick="deleteResource(this.dataset.resourceId)" title="Eliminar">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No hay recursos creados aún.</p>
+                            <a href="{% url 'create_resource' %}" class="btn btn-success">
+                                Crear Primer Recurso
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function deleteCategory(categoryId) {
+    if (confirm('¿Estás seguro de que deseas eliminar esta categoría? Esta acción no se puede deshacer.')) {
+        fetch(`/manage-resources/category/${categoryId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.error || 'Error al eliminar la categoría');
+            }
+        })
+        .catch(error => {
+            alert('Error al procesar la solicitud');
+        });
+    }
+}
+
+function deleteResource(resourceId) {
+    if (confirm('¿Estás seguro de que deseas eliminar este recurso? Esta acción no se puede deshacer.')) {
+        fetch(`/manage-resources/${resourceId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.error || 'Error al eliminar el recurso');
+            }
+        })
+        .catch(error => {
+            alert('Error al procesar la solicitud');
+        });
+    }
+}
+
+function toggleResourceStatus(resourceId) {
+    fetch(`/manage-resources/${resourceId}/toggle-status/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error || 'Error al cambiar el estado del recurso');
+        }
+    })
+    .catch(error => {
+        alert('Error al procesar la solicitud');
+    });
+}
+
+function toggleResourceFeatured(resourceId) {
+    fetch(`/manage-resources/${resourceId}/toggle-featured/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error || 'Error al cambiar el estado destacado del recurso');
+        }
+    })
+    .catch(error => {
+        alert('Error al procesar la solicitud');
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

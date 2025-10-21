@@ -30,4 +30,15 @@ urlpatterns = [
     path('mentorship/mark-read/<int:mentorship_id>/', views.mark_messages_as_read, name='mark_messages_as_read'),
     path('mentorship/unread-count/', views.get_unread_messages_count, name='get_unread_messages_count'),
     path('resources/', resources, name='resources'),
+    
+    # URLs para administración de recursos
+    path('manage-resources/', views.admin_resources, name='admin_resources'),
+    path('manage-resources/category/create/', views.create_resource_category, name='create_resource_category'),
+    path('manage-resources/category/<int:category_id>/edit/', views.edit_resource_category, name='edit_resource_category'),
+    path('manage-resources/category/<int:category_id>/delete/', views.delete_resource_category, name='delete_resource_category'),
+    path('manage-resources/create/', views.create_resource, name='create_resource'),
+    path('manage-resources/<int:resource_id>/edit/', views.edit_resource, name='edit_resource'),
+    path('manage-resources/<int:resource_id>/delete/', views.delete_resource, name='delete_resource'),
+    path('manage-resources/<int:resource_id>/toggle-status/', views.toggle_resource_status, name='toggle_resource_status'),
+    path('manage-resources/<int:resource_id>/toggle-featured/', views.toggle_resource_featured, name='toggle_resource_featured'),
 ]

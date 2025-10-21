@@ -10,8 +10,49 @@
     </div>
 
     <div class="row">
-        <!-- Evaluadores Pendientes -->
+        <!-- Menú de Administración -->
         <div class="col-12 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h3 class="mb-0">Menú de Administración</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 col-lg-3 mb-3">
+                            <a href="{% url 'admin_resources' %}" class="btn btn-primary w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3" style="min-height: 120px;">
+                                <i class="fas fa-folder-open fa-3x mb-2 text-white"></i>
+                                <span class="fw-bold text-white">Gestionar Recursos</span>
+                                <small class="text-light">Categorías y recursos</small>
+                            </a>
+                        </div>
+                        <div class="col-md-6 col-lg-3 mb-3">
+                            <a href="#evaluadores-section" class="btn btn-outline-success w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3">
+                                <i class="fas fa-user-check fa-2x mb-2"></i>
+                                <span>Evaluadores</span>
+                                <small class="text-muted">Aprobar/rechazar</small>
+                            </a>
+                        </div>
+                        <div class="col-md-6 col-lg-3 mb-3">
+                            <a href="#usuarios-section" class="btn btn-outline-info w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3">
+                                <i class="fas fa-users fa-2x mb-2"></i>
+                                <span>Usuarios</span>
+                                <small class="text-muted">Gestionar usuarios</small>
+                            </a>
+                        </div>
+                        <div class="col-md-6 col-lg-3 mb-3">
+                            <a href="#proyectos-section" class="btn btn-outline-warning w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3">
+                                <i class="fas fa-project-diagram fa-2x mb-2"></i>
+                                <span>Proyectos</span>
+                                <small class="text-muted">Gestionar proyectos</small>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Evaluadores Pendientes -->
+        <div class="col-12 mb-4" id="evaluadores-section">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-primary text-white">
                     <h3 class="mb-0">Evaluadores Pendientes</h3>
@@ -47,10 +88,10 @@
                                         </td>
                                         <td>
                                             <div class="btn-group">
-                                                <button class="btn btn-sm btn-success" onclick="approveEvaluator({{ evaluator.user.id }})">
+                                                <button class="btn btn-sm btn-success" data-user-id="{{ evaluator.user.id }}" onclick="approveEvaluator(this.dataset.userId)">
                                                     Aprobar
                                                 </button>
-                                                <button class="btn btn-sm btn-danger" onclick="rejectEvaluator({{ evaluator.user.id }})">
+                                                <button class="btn btn-sm btn-danger" data-user-id="{{ evaluator.user.id }}" onclick="rejectEvaluator(this.dataset.userId)">
                                                     Rechazar
                                                 </button>
                                             </div>
@@ -69,7 +110,7 @@
         </div>
 
         <!-- Usuarios -->
-        <div class="col-lg-6 mb-4">
+        <div class="col-lg-6 mb-4" id="usuarios-section">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-primary text-white">
                     <h3 class="mb-0">Usuarios</h3>
@@ -88,7 +129,7 @@
                                     <tr>
                                         <td>{{ user.username }}</td>
                                         <td>
-                                            <button class="btn btn-sm btn-danger" onclick="deleteUser({{ user.id }})">
+                                            <button class="btn btn-sm btn-danger" data-user-id="{{ user.id }}" onclick="deleteUser(this.dataset.userId)">
                                                 Eliminar
                                             </button>
                                         </td>
@@ -106,7 +147,7 @@
         </div>
 
         <!-- Proyectos -->
-        <div class="col-lg-6 mb-4">
+        <div class="col-lg-6 mb-4" id="proyectos-section">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-primary text-white">
                     <h3 class="mb-0">Proyectos</h3>
@@ -125,7 +166,7 @@
                                     <tr>
                                         <td>{{ project.title }}</td>
                                         <td>
-                                            <button class="btn btn-sm btn-danger" onclick="deleteProject({{ project.id }})">
+                                            <button class="btn btn-sm btn-danger" data-project-id="{{ project.id }}" onclick="deleteProject(this.dataset.projectId)">
                                                 Eliminar
                                             </button>
                                         </td>

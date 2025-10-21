@@ -94,3 +94,58 @@ class Message(models.Model):
 
     def __str__(self):
         return self.sender.username
+
+class ResourceCategory(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True)
+    icon = models.CharField(max_length=50, default='fas fa-folder')  # FontAwesome icon class
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name_plural = "Resource Categories"
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+class Resource(models.Model):
+    RESOURCE_TYPES = (
+        ('document', 'Documento'),
+        ('link', 'Enlace'),
+        ('video', 'Video'),
+        ('tool', 'Herramienta'),
+        ('template', 'Plantilla'),
+        ('guide', 'Guía'),
+    )
+
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    resource_type = models.CharField(max_length=20, choices=RESOURCE_TYPES)
+    category = models.ForeignKey(ResourceCategory, on_delete=models.CASCADE, related_name='resources')
+    
+    # Para documentos/archivos
+    file = models.FileField(upload_to='resources/files/', blank=True, null=True)
+    
+    # Para enlaces externos
+    url = models.URLField(blank=True, null=True)
+    
+    # Metadatos
+    icon = models.CharField(max_length=50, default='fas fa-file')  # FontAwesome icon class
+    is_active = models.BooleanField(default=True)
+    is_featured = models.BooleanField(default=False)  # Para destacar recursos importantes
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    class Meta:
+        ordering = ['-is_featured', '-created_at']
+
+    def __str__(self):
+        return self.title
+
+    def get_resource_url(self):
+        """Retorna la URL del recurso (archivo o enlace externo)"""
+        if self.file:
+            return self.file.url
+        return self.url or '#'

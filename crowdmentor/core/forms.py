@@ -2,7 +2,7 @@
 from django import forms # type: ignore
 from django.contrib.auth.forms import UserCreationForm # type: ignore
 from django.contrib.auth.models import User # type: ignore
-from .models import Profile, Project, Investment
+from .models import Profile, Project, Investment, Resource, ResourceCategory
 
 class MultipleFileInput(forms.ClearableFileInput):
     allow_multiple_selected = True
@@ -104,3 +104,85 @@ class LoginForm(forms.Form):
             'autocomplete': 'current-password',
         })
     )
+
+class ResourceCategoryForm(forms.ModelForm):
+    class Meta:
+        model = ResourceCategory
+        fields = ['name', 'description', 'icon']
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Nombre de la categoría'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Descripción de la categoría'
+            }),
+            'icon': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Clase de icono (ej: fas fa-book)',
+                'value': 'fas fa-folder'
+            })
+        }
+
+class ResourceForm(forms.ModelForm):
+    class Meta:
+        model = Resource
+        fields = ['title', 'description', 'resource_type', 'category', 'file', 'url', 'icon', 'is_featured']
+        widgets = {
+            'title': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Título del recurso'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': 'Descripción detallada del recurso'
+            }),
+            'resource_type': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'category': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'file': forms.FileInput(attrs={
+                'class': 'form-control'
+            }),
+            'url': forms.URLInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'https://ejemplo.com'
+            }),
+            'icon': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Clase de icono (ej: fas fa-file-pdf)',
+                'value': 'fas fa-file'
+            }),
+            'is_featured': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            })
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Agregar ayuda para los campos
+        self.fields['file'].help_text = 'Sube un archivo si es un documento o plantilla'
+        self.fields['url'].help_text = 'Ingresa una URL si es un enlace externo'
+        self.fields['icon'].help_text = 'Clase de FontAwesome para el icono'
+        self.fields['is_featured'].help_text = 'Marcar para destacar este recurso'
+
+    def clean(self):
+        cleaned_data = super().clean()
+        file = cleaned_data.get('file')
+        url = cleaned_data.get('url')
+        resource_type = cleaned_data.get('resource_type')
+
+        # Validar que al menos uno de file o url esté presente
+        if not file and not url:
+            raise forms.ValidationError('Debes proporcionar un archivo o una URL.')
+
+        # Si es un enlace o herramienta, debe tener URL
+        if resource_type in ['link', 'tool'] and not url:
+            raise forms.ValidationError(f'Para el tipo "{resource_type}" es obligatorio proporcionar una URL.')
+
+        return cleaned_data
