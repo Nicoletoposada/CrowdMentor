@@ -1,0 +1,62 @@
+/* Mentorship chat styles */
+.chat-container {
+    height: 70vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-messages {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.message {
+    margin-bottom: 1rem;
+    padding: 0.5rem 1rem;
+    border-radius: 1rem;
+    max-width: 70%;
+}
+
+.message.sent {
+    background-color: #007bff;
+    color: white;
+    margin-left: auto;
+}
+
+.message.received {
+    background-color: #e9ecef;
+    color: black;
+}
+
+.message-form {
+    display: flex;
+    gap: 1rem;
+}
+
+.message-input {
+    flex-grow: 1;
+}
+
+.timestamp {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+.sender-name {
+    font-size: 0.8rem;
+    font-weight: bold;
+    margin-bottom: 0.25rem;
+}
+
+.message.sent .sender-name {
+    color: #e9ecef;
+}
+
+.message.received .sender-name {
+    color: #495057;
+}

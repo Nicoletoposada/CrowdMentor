@@ -1,0 +1,36 @@
+/* Custom styles for resources page */
+.featured-resource {
+    border: 2px solid #ffc107 !important;
+    background: linear-gradient(135deg, #fff9e6 0%, #ffffff 100%);
+}
+
+.featured-resource::before {
+    content: "";
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 20px;
+    height: 20px;
+    background: #ffc107;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.resource-card {
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.resource-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.category-header {
+    border-bottom: 2px solid #e9ecef;
+    padding-bottom: 1rem;
+}

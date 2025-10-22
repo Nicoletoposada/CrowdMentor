@@ -2,7 +2,7 @@
 
 /* Hero visual */
 .resources-hero {
-    background: linear-gradient(120deg, #e3f2fd 60%, #fff 100%);
+    background: linear-gradient(135deg, #4c6ef5 0%, #15aabf 100%);
     padding: 48px 0 24px 0;
     border-radius: 0 0 32px 32px;
     box-shadow: 0 4px 24px rgba(25, 118, 210, 0.07);

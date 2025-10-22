@@ -47,9 +47,9 @@
                     </div>
                 </div>
 
-                <div class="progress mb-4" style="height: 10px;">
+                <div class="progress mb-4" style="height: 10px; --progress-width: {{ project.funding_progress }}%;">
                     <div class="progress-bar bg-primary" role="progressbar" 
-                         style="width: {{ project.funding_progress }}%;" 
+                         style="width: var(--progress-width);"
                          aria-valuenow="{{ project.funding_progress }}" 
                          aria-valuemin="0" 
                          aria-valuemax="100">
