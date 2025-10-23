@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load custom_filters %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/project_list_custom.css' %}">
@@ -19,33 +20,165 @@
         </div>
     </div>
 
+    <!-- Formulario de búsqueda y filtros -->
+    <div class="search-filters-section mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <button class="btn btn-link w-100 text-start" type="button" data-bs-toggle="collapse" data-bs-target="#searchFilters">
+                        <i class="fas fa-search"></i> Buscar y Filtrar Proyectos
+                    </button>
+                </h5>
+            </div>
+            <div id="searchFilters" class="collapse">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.search.id_for_label }}" class="form-label">Buscar</label>
+                            {{ form.search }}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.category.id_for_label }}" class="form-label">Categoría</label>
+                            {{ form.category }}
+                        </div>
+                        <div class="col-md-3">
+                            <label for="{{ form.min_funding.id_for_label }}" class="form-label">Financiamiento Mínimo</label>
+                            {{ form.min_funding }}
+                        </div>
+                        <div class="col-md-3">
+                            <label for="{{ form.max_funding.id_for_label }}" class="form-label">Financiamiento Máximo</label>
+                            {{ form.max_funding }}
+                        </div>
+                        <div class="col-md-3">
+                            <label for="{{ form.status.id_for_label }}" class="form-label">Estado</label>
+                            {{ form.status }}
+                        </div>
+                        <div class="col-md-3">
+                            <label for="{{ form.sort_by.id_for_label }}" class="form-label">Ordenar por</label>
+                            {{ form.sort_by }}
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search"></i> Buscar
+                            </button>
+                            <a href="{% url 'project_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Limpiar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resultados de búsqueda -->
+    <div class="search-results mb-3">
+        <p class="text-muted">
+            Se encontraron {{ projects|length }} proyecto{{ projects|length|pluralize }}
+            {% if form.is_valid and form.cleaned_data.search %}
+                para "<strong>{{ form.cleaned_data.search }}</strong>"
+            {% endif %}
+        </p>
+    </div>
+
     <div class="row g-4">
         {% for project in projects %}
             <div class="col-md-6 col-lg-4 animate__animated animate__fadeInUp delay-{{ forloop.counter0 }}">
-                <div class="card h-100 border-0 shadow-sm">
+                <div class="card h-100 border-0 shadow-sm project-card">
                     {% if project.image %}
-                        <img src="{{ project.image.url }}" class="card-img-top" alt="{{ project.title }}">
+                        <img src="{{ project.image.url }}" class="card-img-top project-image" alt="{{ project.title }}">
                     {% else %}
-                        <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                        <div class="card-img-top bg-light d-flex align-items-center justify-content-center project-placeholder">
                             <i class="fas fa-image fa-3x text-muted"></i>
                         </div>
                     {% endif %}
-                    <div class="card-body">
+                    
+                    <!-- Insignias de estado -->
+                    <div class="position-absolute top-0 end-0 m-2">
+                        {% if project.status == 'funded' %}
+                            <span class="badge bg-success">Financiado</span>
+                        {% elif project.status == 'completed' %}
+                            <span class="badge bg-info">Completado</span>
+                        {% elif project.is_deadline_approaching %}
+                            <span class="badge bg-warning">Fecha límite próxima</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="card-body d-flex flex-column">
+                        <div class="mb-2">
+                            {% if project.category %}
+                                <span class="badge bg-light text-dark">
+                                    <i class="{{ project.category.icon }}"></i> {{ project.category.name }}
+                                </span>
+                            {% endif %}
+                        </div>
+                        
                         <h5 class="card-title text-primary">{{ project.title }}</h5>
-                        <p class="card-text text-muted">{{ project.description|truncatewords:30 }}</p>
-                        <div class="progress mb-3" style="height: 8px; --progress-width: {% widthratio project.amount_raised|default:0 project.funding_goal 100 %}%;">
-                            <div class="progress-bar bg-success" role="progressbar" 
-                                 style="width: var(--progress-width);">
+                        <p class="card-text text-muted flex-grow-1">{{ project.description|truncatewords:25 }}</p>
+                        
+                        <!-- Rating y estadísticas -->
+                        <div class="project-stats mb-3">
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <div class="rating-stars">
+                                        {% if project.avg_rating %}
+                                            {% for i in "12345" %}
+                                                {% if forloop.counter <= project.avg_rating %}
+                                                    <i class="fas fa-star"></i>
+                                                {% else %}
+                                                    <i class="far fa-star"></i>
+                                                {% endif %}
+                                            {% endfor %}
+                                            <small class="text-muted">({{ project.rating_count }})</small>
+                                        {% else %}
+                                            <small class="text-muted">Sin calificaciones</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <i class="fas fa-eye text-muted"></i> {{ project.views_count }}
+                                </div>
+                                <div class="col-4">
+                                    <i class="fas fa-heart text-muted"></i> {{ project.likes_count }}
+                                </div>
                             </div>
                         </div>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="text-muted">
-                                <i class="fas fa-coins me-1"></i>${{ project.amount_raised|default:0 }} / ${{ project.funding_goal }}
-                            </span>
-                            <a href="{% url 'project_detail' project.id %}" class="btn btn-outline-primary btn-sm">
-                                Ver Proyecto
-                            </a>
+                        
+                        <!-- Progreso de financiamiento -->
+                        <div class="progress mb-3 progress-thin">
+                            <div class="progress-bar bg-success progress-bar-dynamic" role="progressbar" 
+                                 style="--progress-width: {{ project.get_funding_percentage }}%;">
+                            </div>
                         </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <small class="text-muted d-block">
+                                    <i class="fas fa-coins me-1"></i>{{ project.amount_raised|default:0|cop_currency }} / {{ project.funding_goal|cop_currency }}
+                                </small>
+                                <small class="text-success">{{ project.get_funding_percentage|floatformat:1 }}% financiado</small>
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-outline-danger me-1 like-project-btn" 
+                                        data-project-id="{{ project.id }}"
+                                        id="like-btn-{{ project.id }}">
+                                    <i class="fas fa-heart"></i>
+                                </button>
+                                <a href="{% url 'project_detail' project.id %}" class="btn btn-outline-primary btn-sm">
+                                    Ver Proyecto
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <!-- Tags -->
+                        {% if project.tags %}
+                            <div class="mt-2">
+                                {% load custom_filters %}
+                                {% for tag in project.tags|split:"," %}
+                                    <span class="badge bg-secondary me-1">{{ tag|trim }}</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -85,5 +218,57 @@
         element.style.visibility = 'hidden';
         observer.observe(element);
     });
+
+    // Función para dar like a un proyecto
+    function likeProject(projectId) {
+        fetch(`/project/${projectId}/like/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.liked !== undefined) {
+                const button = document.getElementById(`like-btn-${projectId}`);
+                const icon = button.querySelector('i');
+                
+                if (data.liked) {
+                    icon.className = 'fas fa-heart';
+                    button.classList.remove('btn-outline-danger');
+                    button.classList.add('btn-danger');
+                } else {
+                    icon.className = 'far fa-heart';
+                    button.classList.remove('btn-danger');
+                    button.classList.add('btn-outline-danger');
+                }
+                
+                // Actualizar contador si está visible
+                const heartSpan = button.closest('.card-body').querySelector('.fa-heart').nextSibling;
+                if (heartSpan) {
+                    heartSpan.textContent = ` ${data.likes_count}`;
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+    // Configurar event listeners para los botones de like
+    document.addEventListener('DOMContentLoaded', function() {
+        const likeButtons = document.querySelectorAll('.like-project-btn');
+        
+        likeButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const projectId = this.dataset.projectId;
+                likeProject(projectId);
+            });
+        });
+    });
 </script>
+
+<!-- CSRF Token para AJAX -->
+{% csrf_token %}
 {% endblock %}

@@ -209,3 +209,13 @@ footer a:hover {
         transform: translateY(0);
     }
 }
+
+/* Hidden elements */
+.hidden {
+    display: none;
+}
+
+/* Admin dashboard button styles */
+.admin-action-btn {
+    min-height: 120px;
+}

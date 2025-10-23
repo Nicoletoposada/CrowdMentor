@@ -42,7 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'crispy_forms',
-    'crispy_bootstrap4',  # Agrega esta línea
+    'crispy_bootstrap5',  # Cambiado a Bootstrap 5
     'core',  # Add the core app
 ]
 
@@ -132,7 +132,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Crispy Forms
-CRISPY_TEMPLATE_PACK = 'bootstrap4'
+CRISPY_TEMPLATE_PACK = 'bootstrap5'
 
 # Authentication
 LOGIN_REDIRECT_URL = '/dashboard/'

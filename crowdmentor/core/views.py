@@ -7,8 +7,9 @@ from django.conf import settings # type: ignore
 from django.views import View # type: ignore
 from django.contrib.auth.models import User, Group # type: ignore
 from django.http import JsonResponse # type: ignore
-from .forms import CustomUserCreationForm, ProjectForm, InvestmentForm, LoginForm, ResourceForm, ResourceCategoryForm
-from .models import Project, Investment, Mentorship, Profile, Message, UploadedFile, Resource, ResourceCategory
+from .forms import CustomUserCreationForm, ProjectForm, InvestmentForm, LoginForm, ResourceForm, ResourceCategoryForm, ProjectSearchForm, ProjectEvaluationForm, CriterionScoreForm, ProjectRatingForm, ProjectCategoryForm
+from .models import Project, Investment, Mentorship, Profile, Message, UploadedFile, Resource, ResourceCategory, ProjectCategory, ProjectEvaluation, EvaluationCriteria, CriterionScore, ProjectRating, Notification
+from django.db.models import Q, Avg, Count, Sum # type: ignore
 from django.views.decorators.http import require_POST # type: ignore
 from django.core.files.storage import default_storage # type: ignore
 from django.core.files.base import ContentFile # type: ignore
@@ -145,31 +146,187 @@ def project_create(request):
             project = form.save(commit=False)
             project.owner = request.user
             project.save()
+            
+            # Crear notificación para administradores
+            from django.contrib.auth.models import User
+            admins = User.objects.filter(is_superuser=True)
+            for admin in admins:
+                Notification.objects.create(
+                    user=admin,
+                    title='Nuevo proyecto creado',
+                    message=f'{request.user.username} ha creado el proyecto "{project.title}".',
+                    notification_type='project_update',
+                    related_project=project
+                )
+            
             messages.success(request, '¡Proyecto creado exitosamente!')
-            return redirect('project_list')
+            return redirect('project_detail', pk=project.pk)
     else:
         form = ProjectForm()
-    return render(request, 'project_create.html', {'form': form})
+    
+    context = {
+        'form': form,
+        'categories': ProjectCategory.objects.all(),
+    }
+    return render(request, 'project_create.html', context)
 
 def project_list(request):
+    form = ProjectSearchForm(request.GET or None)
     projects = Project.objects.filter(is_active=True)
-    return render(request, 'project_list.html', {'projects': projects})
+    
+    if form.is_valid():
+        # Búsqueda por texto
+        search = form.cleaned_data.get('search')
+        if search:
+            projects = projects.filter(
+                Q(title__icontains=search) | 
+                Q(description__icontains=search) | 
+                Q(tags__icontains=search)
+            )
+        
+        # Filtro por categoría
+        category = form.cleaned_data.get('category')
+        if category:
+            projects = projects.filter(category=category)
+        
+        # Filtro por rango de financiamiento
+        min_funding = form.cleaned_data.get('min_funding')
+        if min_funding:
+            projects = projects.filter(funding_goal__gte=min_funding)
+        
+        max_funding = form.cleaned_data.get('max_funding')
+        if max_funding:
+            projects = projects.filter(funding_goal__lte=max_funding)
+        
+        # Filtro por estado
+        status = form.cleaned_data.get('status')
+        if status:
+            projects = projects.filter(status=status)
+        
+        # Ordenamiento
+        sort_by = form.cleaned_data.get('sort_by', '-created_at')
+        projects = projects.order_by(sort_by)
+    else:
+        projects = projects.order_by('-created_at')
+    
+    # Agregar datos de evaluación y rating
+    projects = projects.annotate(
+        avg_rating=Avg('ratings__rating'),
+        rating_count=Count('ratings')
+    )
+    
+    context = {
+        'projects': projects,
+        'form': form,
+        'categories': ProjectCategory.objects.all()
+    }
+    
+    return render(request, 'project_list.html', context)
 
 def project_detail(request, pk):
     project = get_object_or_404(Project, pk=pk)
-    if request.method == 'POST' and request.user.profile.user_type == 'investor':
-        form = InvestmentForm(request.POST)
-        if form.is_valid():
-            investment = form.save(commit=False)
-            investment.project = project
-            investment.investor = request.user
-            investment.status = 'pending'  # Estado inicial de la inversión
-            investment.save()
-            messages.success(request, 'Tu inversión está pendiente de aprobación por el emprendedor.')
+    
+    # Incrementar contador de vistas
+    project.views_count += 1
+    project.save()
+    
+    # Formularios
+    investment_form = InvestmentForm()
+    rating_form = ProjectRatingForm()
+    
+    # Obtener rating del usuario actual si existe
+    user_rating = None
+    if request.user.is_authenticated:
+        try:
+            user_rating = ProjectRating.objects.get(project=project, user=request.user)
+        except ProjectRating.DoesNotExist:
+            pass
+    
+    if request.method == 'POST':
+        # Verificar que el usuario tenga perfil antes de procesar cualquier acción
+        if not hasattr(request.user, 'profile'):
+            messages.error(request, 'Tu cuenta no tiene un perfil asociado. Contacta al administrador.')
             return redirect('project_detail', pk=project.pk)
-    else:
-        form = InvestmentForm()
-    return render(request, 'project_detail.html', {'project': project, 'form': form})
+            
+        if request.user.profile.user_type == 'investor' and 'invest' in request.POST:
+            investment_form = InvestmentForm(request.POST)
+            if investment_form.is_valid():
+                # Verificar que el usuario no sea el dueño del proyecto
+                if request.user == project.owner:
+                    messages.error(request, 'No puedes invertir en tu propio proyecto.')
+                    return redirect('project_detail', pk=project.pk)
+                
+                # Verificar si ya existe una inversión pendiente o aceptada
+                existing_investment = Investment.objects.filter(
+                    project=project,
+                    investor=request.user,
+                    status__in=['pending', 'accepted']
+                ).first()
+                
+                if existing_investment:
+                    messages.warning(request, 'Ya tienes una inversión pendiente o activa en este proyecto.')
+                    return redirect('project_detail', pk=project.pk)
+                
+                investment = investment_form.save(commit=False)
+                investment.project = project
+                investment.investor = request.user
+                investment.status = 'pending'
+                investment.save()
+                
+                # Crear notificación para el emprendedor
+                Notification.objects.create(
+                    user=project.owner,
+                    title='Nueva propuesta de inversión',
+                    message=f'{request.user.username} ha propuesto invertir ${investment.amount:,.0f} COP en tu proyecto "{project.title}".',
+                    notification_type='investment',
+                    related_project=project,
+                    related_investment=investment
+                )
+                
+                messages.success(request, 'Tu inversión está pendiente de aprobación por el emprendedor.')
+                return redirect('project_detail', pk=project.pk)
+            else:
+                messages.error(request, 'Por favor, corrige los errores en el formulario de inversión.')
+        
+        elif 'rate' in request.POST and request.user.is_authenticated:
+            rating_form = ProjectRatingForm(request.POST)
+            if rating_form.is_valid():
+                rating, created = ProjectRating.objects.get_or_create(
+                    project=project,
+                    user=request.user,
+                    defaults={
+                        'rating': rating_form.cleaned_data['rating'],
+                        'comment': rating_form.cleaned_data['comment']
+                    }
+                )
+                if not created:
+                    rating.rating = rating_form.cleaned_data['rating']
+                    rating.comment = rating_form.cleaned_data['comment']
+                    rating.save()
+                
+                messages.success(request, 'Tu calificación ha sido registrada.')
+                return redirect('project_detail', pk=project.pk)
+    
+    # Obtener estadísticas del proyecto
+    ratings = project.ratings.all()
+    avg_rating = ratings.aggregate(Avg('rating'))['rating__avg'] or 0
+    evaluations = project.evaluations.all()
+    avg_evaluation = evaluations.aggregate(Avg('overall_score'))['overall_score__avg'] or 0
+    
+    context = {
+        'project': project,
+        'investment_form': investment_form,
+        'rating_form': rating_form,
+        'user_rating': user_rating,
+        'ratings': ratings[:5],  # Mostrar solo las primeras 5
+        'avg_rating': avg_rating,
+        'rating_count': ratings.count(),
+        'evaluations': evaluations,
+        'avg_evaluation': avg_evaluation,
+        'funding_percentage': project.get_funding_percentage(),
+    }
+    
+    return render(request, 'project_detail.html', context)
 
 @login_required
 def approve_mentor(request, profile_id):
@@ -670,3 +827,183 @@ def toggle_resource_featured(request, resource_id):
         })
     except Resource.DoesNotExist:
         return JsonResponse({'error': 'Recurso no encontrado'}, status=404)
+
+# ========== VISTAS DE EVALUACIÓN ==========
+
+@login_required
+def evaluate_project(request, project_id):
+    """Vista para evaluar un proyecto"""
+    if request.user.profile.user_type not in ['evaluator', 'mentor']:
+        messages.error(request, 'No tienes permisos para evaluar proyectos.')
+        return redirect('project_detail', pk=project_id)
+
+    project = get_object_or_404(Project, id=project_id)
+    criteria = EvaluationCriteria.objects.filter(is_active=True)
+    
+    # Verificar si ya existe una evaluación
+    try:
+        evaluation = ProjectEvaluation.objects.get(project=project, evaluator=request.user)
+        existing_scores = {cs.criteria.id: cs for cs in evaluation.criterion_scores.all()}
+    except ProjectEvaluation.DoesNotExist:
+        evaluation = None
+        existing_scores = {}
+
+    if request.method == 'POST':
+        evaluation_form = ProjectEvaluationForm(request.POST, instance=evaluation)
+        
+        if evaluation_form.is_valid():
+            if not evaluation:
+                evaluation = evaluation_form.save(commit=False)
+                evaluation.project = project
+                evaluation.evaluator = request.user
+                evaluation.save()
+            else:
+                evaluation = evaluation_form.save()
+            
+            # Procesar puntajes de criterios
+            total_score = 0
+            total_weight = 0
+            
+            for criterion in criteria:
+                score_key = f'score_{criterion.id}'
+                comment_key = f'comment_{criterion.id}'
+                
+                if score_key in request.POST:
+                    score = float(request.POST[score_key])
+                    comment = request.POST.get(comment_key, '')
+                    
+                    criterion_score, created = CriterionScore.objects.get_or_create(
+                        evaluation=evaluation,
+                        criteria=criterion,
+                        defaults={'score': score, 'comments': comment}
+                    )
+                    if not created:
+                        criterion_score.score = score
+                        criterion_score.comments = comment
+                        criterion_score.save()
+                    
+                    total_score += score * criterion.weight
+                    total_weight += criterion.weight
+            
+            # Calcular puntaje general
+            if total_weight > 0:
+                evaluation.overall_score = round(total_score / total_weight, 2)
+                evaluation.save()
+            
+            # Crear notificación para el emprendedor
+            Notification.objects.create(
+                user=project.owner,
+                title='Nueva evaluación de proyecto',
+                message=f'Tu proyecto "{project.title}" ha sido evaluado con un puntaje de {evaluation.overall_score}/10.',
+                notification_type='evaluation',
+                related_project=project
+            )
+            
+            messages.success(request, 'Evaluación guardada exitosamente.')
+            return redirect('project_detail', pk=project_id)
+    else:
+        evaluation_form = ProjectEvaluationForm(instance=evaluation)
+    
+    context = {
+        'project': project,
+        'evaluation_form': evaluation_form,
+        'criteria': criteria,
+        'existing_scores': existing_scores,
+        'evaluation': evaluation
+    }
+    
+    return render(request, 'evaluate_project.html', context)
+
+@login_required
+def notifications(request):
+    """Vista para mostrar notificaciones del usuario"""
+    all_notifications = request.user.notifications.all()
+    unread_count = all_notifications.filter(is_read=False).count()
+    notifications = all_notifications[:20]  # Últimas 20 notificaciones
+    
+    # Marcar como leídas
+    if request.method == 'POST':
+        notification_ids = request.POST.getlist('mark_read')
+        Notification.objects.filter(id__in=notification_ids, user=request.user).update(is_read=True)
+        return redirect('notifications')
+    
+    context = {
+        'notifications': notifications,
+        'unread_count': unread_count
+    }
+    
+    return render(request, 'notifications.html', context)
+
+@login_required
+def mark_notification_read(request, notification_id):
+    """Marcar una notificación como leída"""
+    try:
+        notification = Notification.objects.get(id=notification_id, user=request.user)
+        notification.is_read = True
+        notification.save()
+        return JsonResponse({'success': True})
+    except Notification.DoesNotExist:
+        return JsonResponse({'error': 'Notificación no encontrada'}, status=404)
+
+@login_required
+def analytics_dashboard(request):
+    """Dashboard de analíticas para administradores"""
+    if not request.user.is_superuser:
+        messages.error(request, 'Acceso denegado.')
+        return redirect('home')
+    
+    # Estadísticas generales
+    total_projects = Project.objects.count()
+    active_projects = Project.objects.filter(is_active=True).count()
+    total_investments = Investment.objects.aggregate(
+        total=Sum('amount'),
+        count=Count('id')
+    )
+    total_users = User.objects.count()
+    
+    # Proyectos por categoría
+    projects_by_category = ProjectCategory.objects.annotate(
+        project_count=Count('project')
+    ).order_by('-project_count')
+    
+    # Proyectos más financiados
+    top_funded_projects = Project.objects.order_by('-amount_raised')[:10]
+    
+    # Proyectos más vistos
+    top_viewed_projects = Project.objects.order_by('-views_count')[:10]
+    
+    # Evaluaciones promedio por proyecto
+    best_evaluated_projects = Project.objects.annotate(
+        avg_evaluation=Avg('evaluations__overall_score'),
+        recommended_count=Count('evaluations', filter=Q(evaluations__is_recommended=True))
+    ).filter(avg_evaluation__isnull=False).order_by('-avg_evaluation')[:10]
+    
+    context = {
+        'total_projects': total_projects,
+        'active_projects': active_projects,
+        'total_investments': total_investments,
+        'total_users': total_users,
+        'projects_by_category': projects_by_category,
+        'top_funded_projects': top_funded_projects,
+        'top_viewed_projects': top_viewed_projects,
+        'best_evaluated_projects': best_evaluated_projects,
+    }
+    
+    return render(request, 'analytics_dashboard.html', context)
+
+@login_required
+def like_project(request, project_id):
+    """Toggle like/unlike en un proyecto"""
+    if request.method == 'POST':
+        project = get_object_or_404(Project, id=project_id)
+        
+        # Por simplicidad, incrementamos el contador (después implementaremos likes por usuario)
+        project.likes_count += 1
+        project.save()
+        
+        return JsonResponse({
+            'liked': True,
+            'likes_count': project.likes_count
+        })
+    
+    return JsonResponse({'error': 'Método no permitido'}, status=405)

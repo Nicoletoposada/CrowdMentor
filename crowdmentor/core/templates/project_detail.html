@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load crispy_forms_tags %}
 {% load static %}
+{% load custom_filters %}
 
 {% block content %}
 <div class="container py-5">
@@ -26,14 +27,14 @@
                         <div class="col-md-4">
                             <div class="stat-card text-center p-3 bg-light rounded">
                                 <i class="fas fa-bullseye text-primary fa-2x mb-2"></i>
-                                <h4 class="mb-0">${{ project.funding_goal }}</h4>
+                                <h4 class="mb-0">{{ project.funding_goal|cop_currency }}</h4>
                                 <p class="text-muted mb-0">Meta de Financiación</p>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="stat-card text-center p-3 bg-light rounded">
                                 <i class="fas fa-chart-line text-success fa-2x mb-2"></i>
-                                <h4 class="mb-0">${{ project.amount_raised }}</h4>
+                                <h4 class="mb-0">{{ project.amount_raised|cop_currency }}</h4>
                                 <p class="text-muted mb-0">Monto Recaudado</p>
                             </div>
                         </div>
@@ -47,9 +48,8 @@
                     </div>
                 </div>
 
-                <div class="progress mb-4" style="height: 10px; --progress-width: {{ project.funding_progress }}%;">
-                    <div class="progress-bar bg-primary" role="progressbar" 
-                         style="width: var(--progress-width);"
+                <div class="progress mb-4 progress-detail" style="--progress-width: {{ project.funding_progress }}%;">
+                    <div class="progress-bar bg-primary progress-bar-dynamic" role="progressbar" 
                          aria-valuenow="{{ project.funding_progress }}" 
                          aria-valuemin="0" 
                          aria-valuemax="100">
@@ -67,20 +67,45 @@
                     </div>
                 </div>
 
-                {% if user.is_authenticated and user.profile.user_type == 'investor' %}
+                {% if user.is_authenticated and user.profile.user_type == 'investor' and user != project.owner %}
                     <div class="investment-section mt-5 animate__animated animate__fadeInUp">
-                        <h3 class="text-primary mb-4">Invertir en este Proyecto</h3>
+                        <h3 class="text-primary mb-4">
+                            <i class="fas fa-hand-holding-usd me-2"></i>Invertir en este Proyecto
+                        </h3>
                         <div class="card border-0 shadow-sm">
                             <div class="card-body p-4">
+                                {% if messages %}
+                                    {% for message in messages %}
+                                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                            {{ message }}
+                                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                        </div>
+                                    {% endfor %}
+                                {% endif %}
                                 <form method="post">
                                     {% csrf_token %}
-                                    {{ form|crispy }}
-                                    <button type="submit" class="btn btn-primary w-100 mt-3">
+                                    {{ investment_form|crispy }}
+                                    <button type="submit" name="invest" value="invest" class="btn btn-primary w-100 mt-3">
                                         <i class="fas fa-hand-holding-usd me-2"></i>Invertir Ahora
                                     </button>
                                 </form>
                             </div>
                         </div>
+                    </div>
+                {% elif user.is_authenticated and user == project.owner %}
+                    <div class="alert alert-info mt-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Este es tu proyecto. No puedes invertir en él.
+                    </div>
+                {% elif user.is_authenticated and user.profile.user_type != 'investor' %}
+                    <div class="alert alert-warning mt-4">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Solo los inversores pueden realizar inversiones en proyectos.
+                    </div>
+                {% elif not user.is_authenticated %}
+                    <div class="alert alert-primary mt-4">
+                        <i class="fas fa-sign-in-alt me-2"></i>
+                        <a href="{% url 'login' %}" class="alert-link">Inicia sesión</a> como inversor para poder invertir en este proyecto.
                     </div>
                 {% endif %}
             </div>

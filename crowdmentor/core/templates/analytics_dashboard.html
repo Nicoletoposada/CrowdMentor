@@ -1,0 +1,345 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/analytics_dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="text-primary">
+                <i class="fas fa-chart-bar"></i> Dashboard de Analíticas
+            </h1>
+            <p class="text-muted">Resumen completo de la actividad de la plataforma</p>
+        </div>
+    </div>
+
+    <!-- Estadísticas principales -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card h-100">
+                <div class="card-body text-center">
+                    <div class="stat-icon bg-primary mx-auto mb-3">
+                        <i class="fas fa-lightbulb"></i>
+                    </div>
+                    <div class="stat-number text-primary">{{ total_projects }}</div>
+                    <h6 class="card-title text-muted">Proyectos Totales</h6>
+                    <small class="text-success">
+                        <i class="fas fa-check-circle"></i> {{ active_projects }} activos
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card h-100">
+                <div class="card-body text-center">
+                    <div class="stat-icon bg-success mx-auto mb-3">
+                        <i class="fas fa-coins"></i>
+                    </div>
+                    <div class="stat-number text-success">
+                        ${{ total_investments.total|default:0|floatformat:0 }}
+                    </div>
+                    <h6 class="card-title text-muted">Inversión Total</h6>
+                    <small class="text-info">
+                        <i class="fas fa-hand-holding-usd"></i> {{ total_investments.count }} inversiones
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card h-100">
+                <div class="card-body text-center">
+                    <div class="stat-icon bg-info mx-auto mb-3">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-number text-info">{{ total_users }}</div>
+                    <h6 class="card-title text-muted">Usuarios Registrados</h6>
+                    <small class="text-primary">
+                        <i class="fas fa-user-plus"></i> Creciendo constantemente
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card h-100">
+                <div class="card-body text-center">
+                    <div class="stat-icon bg-warning mx-auto mb-3">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <div class="stat-number text-warning">
+                        {{ best_evaluated_projects|length }}
+                    </div>
+                    <h6 class="card-title text-muted">Proyectos Evaluados</h6>
+                    <small class="text-warning">
+                        <i class="fas fa-clipboard-check"></i> Con evaluaciones
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráficos y tablas -->
+    <div class="row">
+        <!-- Proyectos por categoría -->
+        <div class="col-md-6 mb-4">
+            <div class="chart-container">
+                <h5 class="mb-4">
+                    <i class="fas fa-chart-pie text-primary"></i> Proyectos por Categoría
+                </h5>
+                
+                {% for category_data in projects_by_category %}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="badge badge-category bg-primary">
+                                <i class="{{ category_data.icon }}"></i> {{ category_data.name }}
+                            </span>
+                            <span class="fw-bold">{{ category_data.project_count }}</span>
+                        </div>
+                        <div class="progress progress-analytics">
+                            <div class="progress-bar bg-primary progress-bar-dynamic" 
+                                 style="--progress-width: {% widthratio category_data.project_count total_projects 100 %}%">
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-folder-open fa-2x mb-2"></i>
+                        <p>No hay categorías definidas</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Proyectos más financiados -->
+        <div class="col-md-6 mb-4">
+            <div class="chart-container">
+                <h5 class="mb-4">
+                    <i class="fas fa-trophy text-success"></i> Top Proyectos Financiados
+                </h5>
+                
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Proyecto</th>
+                                <th class="text-end">Recaudado</th>
+                                <th class="text-end">%</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for project in top_funded_projects|slice:":5" %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>
+                                        <a href="{% url 'project_detail' project.id %}" 
+                                           class="text-decoration-none">
+                                            {{ project.title|truncatechars:25 }}
+                                        </a>
+                                    </td>
+                                    <td class="text-end text-success fw-bold">
+                                        ${{ project.amount_raised|floatformat:0 }}
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="badge {% if project.get_funding_percentage >= 100 %}bg-success{% elif project.get_funding_percentage >= 50 %}bg-warning{% else %}bg-secondary{% endif %}">
+                                            {{ project.get_funding_percentage|floatformat:0 }}%
+                                        </span>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-3">
+                                        No hay datos de financiamiento
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Proyectos más vistos -->
+        <div class="col-md-6 mb-4">
+            <div class="table-analytics">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-eye"></i> Proyectos Más Vistos
+                    </h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Proyecto</th>
+                                    <th class="text-center">Vistas</th>
+                                    <th class="text-center">Likes</th>
+                                    <th class="text-center">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for project in top_viewed_projects|slice:":8" %}
+                                    <tr>
+                                        <td>
+                                            <a href="{% url 'project_detail' project.id %}" 
+                                               class="text-decoration-none fw-bold">
+                                                {{ project.title|truncatechars:30 }}
+                                            </a>
+                                            <br>
+                                            <small class="text-muted">por {{ project.owner.username }}</small>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-info">{{ project.views_count }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-danger">{{ project.likes_count }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge {% if project.status == 'active' %}bg-success{% elif project.status == 'funded' %}bg-primary{% else %}bg-secondary{% endif %}">
+                                                {{ project.status|title }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted py-4">
+                                            <i class="fas fa-chart-line fa-2x mb-2"></i>
+                                            <p>No hay datos de visualizaciones</p>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mejores proyectos evaluados -->
+        <div class="col-md-6 mb-4">
+            <div class="table-analytics">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0">
+                        <i class="fas fa-medal"></i> Mejores Proyectos Evaluados
+                    </h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Proyecto</th>
+                                    <th class="text-center">Puntuación</th>
+                                    <th class="text-center">Evaluaciones</th>
+                                    <th class="text-center">Recomendado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for project in best_evaluated_projects|slice:":8" %}
+                                    <tr>
+                                        <td>
+                                            <a href="{% url 'project_detail' project.id %}" 
+                                               class="text-decoration-none fw-bold">
+                                                {{ project.title|truncatechars:25 }}
+                                            </a>
+                                            <br>
+                                            <small class="text-muted">{{ project.owner.username }}</small>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="d-flex align-items-center justify-content-center">
+                                                {% for i in "12345" %}
+                                                    {% if forloop.counter <= project.avg_evaluation|default:0 %}
+                                                        <i class="fas fa-star text-warning"></i>
+                                                    {% else %}
+                                                        <i class="far fa-star text-muted"></i>
+                                                    {% endif %}
+                                                {% endfor %}
+                                                <small class="ms-1">({{ project.avg_evaluation|floatformat:1 }})</small>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-secondary">{{ project.evaluations.count }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            {% if project.recommended_count > 0 %}
+                                                <i class="fas fa-thumbs-up text-success"></i>
+                                                <small>{{ project.recommended_count }}</small>
+                                            {% else %}
+                                                <i class="fas fa-minus text-muted"></i>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted py-4">
+                                            <i class="fas fa-star fa-2x mb-2"></i>
+                                            <p>No hay proyectos evaluados</p>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones rápidas -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-tools"></i> Acciones Rápidas de Administración
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-2">
+                            <a href="{% url 'admin_dashboard' %}" class="btn btn-primary w-100">
+                                <i class="fas fa-users-cog"></i> Panel de Admin
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{% url 'admin_resources' %}" class="btn btn-info w-100">
+                                <i class="fas fa-book"></i> Gestionar Recursos
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{% url 'project_list' %}" class="btn btn-success w-100">
+                                <i class="fas fa-lightbulb"></i> Ver Proyectos
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <button class="btn btn-warning w-100" onclick="generateReport()">
+                                <i class="fas fa-download"></i> Generar Reporte
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Función para generar reporte (placeholder)
+function generateReport() {
+    alert('Funcionalidad de generación de reportes en desarrollo.\n\nEsta función permitirá exportar los datos analíticos en diferentes formatos (PDF, Excel, etc.)');
+}
+
+// Actualizar datos cada 5 minutos
+setInterval(function() {
+    location.reload();
+}, 300000);
+</script>
+{% endblock %}

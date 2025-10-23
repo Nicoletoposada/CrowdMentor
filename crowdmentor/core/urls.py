@@ -41,4 +41,11 @@ urlpatterns = [
     path('manage-resources/<int:resource_id>/delete/', views.delete_resource, name='delete_resource'),
     path('manage-resources/<int:resource_id>/toggle-status/', views.toggle_resource_status, name='toggle_resource_status'),
     path('manage-resources/<int:resource_id>/toggle-featured/', views.toggle_resource_featured, name='toggle_resource_featured'),
+    
+    # URLs para evaluaciones y analíticas
+    path('project/<int:project_id>/evaluate/', views.evaluate_project, name='evaluate_project'),
+    path('project/<int:project_id>/like/', views.like_project, name='like_project'),
+    path('notifications/', views.notifications, name='notifications'),
+    path('notifications/<int:notification_id>/read/', views.mark_notification_read, name='mark_notification_read'),
+    path('analytics/', views.analytics_dashboard, name='analytics_dashboard'),
 ]

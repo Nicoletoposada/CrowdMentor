@@ -1,0 +1,60 @@
+<!-- Formulario de búsqueda y filtros -->
+<div class="search-filters-section mb-4">
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <button class="btn btn-link" type="button" data-bs-toggle="collapse" data-bs-target="#searchFilters">
+                    <i class="fas fa-search"></i> Buscar y Filtrar Proyectos
+                </button>
+            </h5>
+        </div>
+        <div id="searchFilters" class="collapse">
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-6">
+                        {{ form.search.label_tag }}
+                        {{ form.search }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.category.label_tag }}
+                        {{ form.category }}
+                    </div>
+                    <div class="col-md-3">
+                        {{ form.min_funding.label_tag }}
+                        {{ form.min_funding }}
+                    </div>
+                    <div class="col-md-3">
+                        {{ form.max_funding.label_tag }}
+                        {{ form.max_funding }}
+                    </div>
+                    <div class="col-md-3">
+                        {{ form.status.label_tag }}
+                        {{ form.status }}
+                    </div>
+                    <div class="col-md-3">
+                        {{ form.sort_by.label_tag }}
+                        {{ form.sort_by }}
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                        <a href="{% url 'project_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Limpiar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Resultados de búsqueda -->
+<div class="search-results mb-3">
+    <p class="text-muted">
+        Se encontraron {{ projects|length }} proyecto{{ projects|length|pluralize }}
+        {% if form.is_valid and form.cleaned_data.search %}
+            para "<strong>{{ form.cleaned_data.search }}</strong>"
+        {% endif %}
+    </p>
+</div>

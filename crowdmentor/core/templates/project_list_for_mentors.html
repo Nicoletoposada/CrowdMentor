@@ -15,7 +15,7 @@
                     <p class="card-text">{{ project.description|truncatewords:30 }}</p>
                     <p class="card-text">
                         <small class="text-muted">
-                            Meta de financiamiento: ${{ project.funding_goal }}<br>
+                            Meta de financiamiento: ${{ project.funding_goal|floatformat:0 }} COP<br>
                             Recaudado: ${{ project.amount_raised }}
                         </small>
                     </p>

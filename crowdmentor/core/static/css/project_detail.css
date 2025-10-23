@@ -52,4 +52,13 @@
 .btn-primary:hover {
     transform: translateY(-2px);
     box-shadow: var(--box-shadow);
+}
+
+/* Progress styles específicos */
+.progress-detail {
+    height: 10px;
+}
+
+.progress-bar-dynamic {
+    width: var(--progress-width);
 } 

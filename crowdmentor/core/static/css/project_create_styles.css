@@ -1,0 +1,125 @@
+/* Estilos para project_create.html */
+.form-section {
+    background: #f8f9fa;
+    border-radius: 15px;
+    padding: 25px;
+    border-left: 4px solid #007bff;
+}
+
+.form-section h3 {
+    margin-top: 0;
+    font-weight: 600;
+}
+
+.form-label {
+    font-weight: 500;
+    color: #495057;
+    margin-bottom: 8px;
+}
+
+.form-label i {
+    color: #007bff;
+}
+
+.form-control, .form-select {
+    border-radius: 8px;
+    border: 2px solid #e9ecef;
+    padding: 12px 15px;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.form-text {
+    color: #6c757d;
+    font-size: 0.875rem;
+    margin-top: 5px;
+}
+
+.project-create-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+}
+
+.project-create-header h1 {
+    color: white !important;
+    margin-bottom: 10px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    padding: 15px 30px;
+    border-radius: 25px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(0, 123, 255, 0.3);
+}
+
+.card {
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.preview-container {
+    margin-top: 15px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    display: none;
+}
+
+.preview-image {
+    max-width: 200px;
+    max-height: 150px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.categories-info .badge {
+    font-size: 0.85rem;
+    border-radius: 20px;
+    transition: all 0.3s ease;
+}
+
+.categories-info .badge:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(255,255,255,0.3);
+}
+
+.form-control:invalid {
+    border-color: #dc3545;
+}
+
+.form-control:valid {
+    border-color: #198754;
+}
+
+.required-field::after {
+    content: " *";
+    color: #dc3545;
+}
+
+.form-section .card {
+    border: none;
+    border-radius: 15px;
+}
+
+/* Project preview styles */
+.project-preview-hidden {
+    display: none;
+}
+
+.image-placeholder {
+    height: 120px;
+}

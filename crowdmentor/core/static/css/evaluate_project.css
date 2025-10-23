@@ -1,0 +1,46 @@
+/* Estilos para evaluate_project.html */
+.evaluation-form {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.criteria-card {
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    background: white;
+}
+
+.score-input {
+    width: 80px;
+}
+
+.progress-evaluation {
+    height: 25px;
+    background-color: #e9ecef;
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+.progress-bar-evaluation {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    transition: width 0.3s ease;
+}
+
+/* Image placeholder styles */
+.project-image-placeholder {
+    height: 200px;
+}
+
+/* Progress bar initial width */
+.progress-bar-initial {
+    width: 0%;
+}

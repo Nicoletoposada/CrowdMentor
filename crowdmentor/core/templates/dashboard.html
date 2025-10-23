@@ -22,7 +22,7 @@
                     <div class="card shadow-sm">
                         <div class="card-body">
                             <h5 class="card-title text-primary">{{ project.title }}</h5>
-                            <p class="card-text text-muted">Meta de Financiación: ${{ project.funding_goal }}</p>
+                            <p class="card-text text-muted">Meta de Financiación: ${{ project.funding_goal|floatformat:0 }} COP</p>
                             <p class="card-text text-muted">Monto Recaudado: ${{ project.amount_raised }}</p>
                             <a href="{% url 'project_detail' project.pk %}" class="btn btn-primary">Ver</a>
                         </div>

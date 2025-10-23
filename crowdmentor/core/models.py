@@ -30,17 +30,62 @@ class UploadedFile(models.Model):
         return f"{self.file.name} - {self.profile.user.username}"
 
 class Project(models.Model):
+    PROJECT_STATUS = (
+        ('draft', 'Borrador'),
+        ('active', 'Activo'),
+        ('funded', 'Financiado'),
+        ('completed', 'Completado'),
+        ('cancelled', 'Cancelado'),
+    )
+
     title = models.CharField(max_length=200)
     description = models.TextField()
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='projects')
+    category = models.ForeignKey('ProjectCategory', on_delete=models.SET_NULL, null=True, blank=True)
     funding_goal = models.DecimalField(max_digits=10, decimal_places=2)
     amount_raised = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     created_at = models.DateTimeField(default=timezone.now)
     image = models.ImageField(upload_to='projects/', blank=True, null=True)
     is_active = models.BooleanField(default=True)
+    status = models.CharField(max_length=20, choices=PROJECT_STATUS, default='active')
+    
+    # Nuevos campos para métricas
+    views_count = models.IntegerField(default=0)
+    likes_count = models.IntegerField(default=0)
+    deadline = models.DateField(blank=True, null=True)
+    
+    # Tags para búsqueda
+    tags = models.CharField(max_length=500, blank=True, help_text="Separar con comas")
 
     def __str__(self):
         return self.title
+
+    def get_funding_percentage(self):
+        """Calcula el porcentaje de financiamiento alcanzado"""
+        if self.funding_goal > 0:
+            return min((self.amount_raised / self.funding_goal) * 100, 100)
+        return 0
+
+    def get_average_rating(self):
+        """Calcula el promedio de calificaciones"""
+        ratings = self.ratings.all()
+        if ratings:
+            return sum(r.rating for r in ratings) / len(ratings)
+        return 0
+
+    def get_evaluation_score(self):
+        """Calcula el puntaje promedio de evaluaciones"""
+        evaluations = self.evaluations.all()
+        if evaluations:
+            return sum(e.overall_score for e in evaluations) / len(evaluations)
+        return 0
+
+    def is_deadline_approaching(self):
+        """Verifica si la fecha límite está cerca (próximos 7 días)"""
+        if self.deadline:
+            from datetime import date, timedelta
+            return self.deadline <= date.today() + timedelta(days=7)
+        return False
 
 class Investment(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='investments')
@@ -149,3 +194,120 @@ class Resource(models.Model):
         if self.file:
             return self.file.url
         return self.url or '#'
+
+class ProjectCategory(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True)
+    icon = models.CharField(max_length=50, default='fas fa-folder')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = "Project Categories"
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+class EvaluationCriteria(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField()
+    weight = models.FloatField(default=1.0)  # Peso del criterio en la evaluación
+    max_score = models.IntegerField(default=10)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = "Evaluation Criteria"
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+class ProjectEvaluation(models.Model):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='evaluations')
+    evaluator = models.ForeignKey(User, on_delete=models.CASCADE)
+    overall_score = models.FloatField(default=0.0)
+    comments = models.TextField(blank=True)
+    is_recommended = models.BooleanField(default=False)
+    evaluated_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['project', 'evaluator']
+
+    def __str__(self):
+        return f"Evaluación de {self.project.title} por {self.evaluator.username}"
+
+    def calculate_overall_score(self):
+        """Calcula el puntaje general basado en los criterios evaluados"""
+        criterion_scores = self.criterion_scores.all()
+        if not criterion_scores:
+            return 0.0
+        
+        total_weighted_score = 0
+        total_weight = 0
+        
+        for cs in criterion_scores:
+            weighted_score = cs.score * cs.criteria.weight
+            total_weighted_score += weighted_score
+            total_weight += cs.criteria.weight
+        
+        if total_weight == 0:
+            return 0.0
+        
+        # Normalizar a escala de 0-10
+        normalized_score = (total_weighted_score / total_weight)
+        self.overall_score = round(normalized_score, 2)
+        return self.overall_score
+
+class CriterionScore(models.Model):
+    evaluation = models.ForeignKey(ProjectEvaluation, on_delete=models.CASCADE, related_name='criterion_scores')
+    criteria = models.ForeignKey(EvaluationCriteria, on_delete=models.CASCADE)
+    score = models.FloatField()
+    comments = models.TextField(blank=True)
+
+    class Meta:
+        unique_together = ['evaluation', 'criteria']
+
+    def __str__(self):
+        return f"{self.criteria.name}: {self.score}"
+
+class ProjectRating(models.Model):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='ratings')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    rating = models.IntegerField(choices=[(i, i) for i in range(1, 6)])  # 1-5 stars
+    comment = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['project', 'user']
+
+    def __str__(self):
+        return f"{self.project.title} - {self.rating} estrellas"
+
+class Notification(models.Model):
+    NOTIFICATION_TYPES = (
+        ('investment', 'Nueva Inversión'),
+        ('mentorship', 'Solicitud de Mentoría'),
+        ('evaluation', 'Nueva Evaluación'),
+        ('message', 'Nuevo Mensaje'),
+        ('project_update', 'Actualización de Proyecto'),
+        ('system', 'Notificación del Sistema'),
+    )
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    # Enlaces opcionales
+    related_project = models.ForeignKey(Project, on_delete=models.CASCADE, blank=True, null=True)
+    related_investment = models.ForeignKey(Investment, on_delete=models.CASCADE, blank=True, null=True)
+    related_mentorship = models.ForeignKey(Mentorship, on_delete=models.CASCADE, blank=True, null=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.title} - {self.user.username}"

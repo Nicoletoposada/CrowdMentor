@@ -1,6 +1,9 @@
 {% extends 'base.html' %}
-{% load crispy_forms_tags %}
 {% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/project_create_styles.css' %}">
+{% endblock %}
 
 {% block content %}
 <div class="container py-5">
@@ -9,6 +12,22 @@
             <div class="project-create-header animate__animated animate__fadeIn text-center mb-5">
                 <h1 class="text-primary mb-3">Crea un Nuevo Proyecto</h1>
                 <p class="text-muted">Comparte tu visión y comienza tu viaje emprendedor</p>
+                
+                <!-- Categorías disponibles -->
+                {% if categories %}
+                <div class="categories-info mt-4">
+                    <h6 class="text-white mb-3">
+                        <i class="fas fa-info-circle me-1"></i>Categorías Disponibles:
+                    </h6>
+                    <div class="d-flex flex-wrap justify-content-center gap-2">
+                        {% for category in categories %}
+                            <span class="badge bg-light text-dark px-3 py-2">
+                                <i class="{{ category.icon }} me-1"></i>{{ category.name }}
+                            </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
             </div>
 
             <div class="card border-0 shadow-sm animate__animated animate__fadeInUp">
@@ -22,10 +41,45 @@
                             </h3>
                             <div class="row g-3">
                                 <div class="col-md-12">
-                                    {{ form.title|as_crispy_field }}
+                                    <label for="{{ form.title.id_for_label }}" class="form-label required-field">
+                                        <i class="fas fa-heading me-1"></i>{{ form.title.label }}
+                                    </label>
+                                    {{ form.title }}
+                                    <div class="form-text">Un título atractivo y descriptivo para tu proyecto</div>
+                                    {% if form.title.errors %}
+                                        <div class="text-danger small">{{ form.title.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="{{ form.category.id_for_label }}" class="form-label">
+                                        <i class="fas fa-folder me-1"></i>{{ form.category.label }}
+                                    </label>
+                                    {{ form.category }}
+                                    <div class="form-text">Selecciona la categoría que mejor describe tu proyecto</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="{{ form.deadline.id_for_label }}" class="form-label">
+                                        <i class="fas fa-calendar me-1"></i>{{ form.deadline.label }}
+                                    </label>
+                                    {{ form.deadline }}
+                                    <div class="form-text">Fecha límite para alcanzar tu meta (opcional)</div>
                                 </div>
                                 <div class="col-md-12">
-                                    {{ form.description|as_crispy_field }}
+                                    <label for="{{ form.description.id_for_label }}" class="form-label required-field">
+                                        <i class="fas fa-align-left me-1"></i>{{ form.description.label }}
+                                    </label>
+                                    {{ form.description }}
+                                    <div class="form-text">Describe tu proyecto de manera clara y atractiva</div>
+                                    {% if form.description.errors %}
+                                        <div class="text-danger small">{{ form.description.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-12">
+                                    <label for="{{ form.tags.id_for_label }}" class="form-label">
+                                        <i class="fas fa-tags me-1"></i>{{ form.tags.label }}
+                                    </label>
+                                    {{ form.tags }}
+                                    <div class="form-text">{{ form.tags.help_text }}</div>
                                 </div>
                             </div>
                         </div>
@@ -36,7 +90,14 @@
                             </h3>
                             <div class="row g-3">
                                 <div class="col-md-12">
-                                    {{ form.funding_goal|as_crispy_field }}
+                                    <label for="{{ form.funding_goal.id_for_label }}" class="form-label required-field">
+                                        <i class="fas fa-dollar-sign me-1"></i>{{ form.funding_goal.label }}
+                                    </label>
+                                    {{ form.funding_goal }}
+                                    <div class="form-text">¿Cuánto necesitas para hacer realidad tu proyecto?</div>
+                                    {% if form.funding_goal.errors %}
+                                        <div class="text-danger small">{{ form.funding_goal.errors.0 }}</div>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -47,15 +108,56 @@
                             </h3>
                             <div class="row g-3">
                                 <div class="col-md-12">
-                                    {{ form.image|as_crispy_field }}
+                                    <label for="{{ form.image.id_for_label }}" class="form-label">
+                                        <i class="fas fa-camera me-1"></i>{{ form.image.label }}
+                                    </label>
+                                    {{ form.image }}
+                                    <div class="form-text">Sube una imagen que represente tu proyecto (opcional)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Preview del proyecto -->
+                        <div class="form-section mb-4 project-preview-hidden" id="project-preview">
+                            <h3 class="text-success mb-3">
+                                <i class="fas fa-eye me-2"></i>Vista Previa
+                            </h3>
+                            <div class="card border-success">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-3" id="preview-image-container">
+                                            <div class="bg-light d-flex align-items-center justify-content-center rounded image-placeholder">
+                                                <i class="fas fa-image fa-2x text-muted"></i>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-9">
+                                            <h5 id="preview-title" class="text-primary">Título del proyecto</h5>
+                                            <div id="preview-category" class="mb-2"></div>
+                                            <p id="preview-description" class="text-muted">Descripción del proyecto...</p>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span id="preview-funding" class="text-success fw-bold">Meta: $0</span>
+                                                <span id="preview-deadline" class="text-muted small"></span>
+                                            </div>
+                                            <div id="preview-tags" class="mt-2"></div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
                         <div class="form-actions mt-5">
-                            <button type="submit" class="btn btn-primary w-100">
-                                <i class="fas fa-rocket me-2"></i>Crear Proyecto
-                            </button>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <button type="button" class="btn btn-outline-secondary w-100" id="preview-btn">
+                                        <i class="fas fa-eye me-2"></i>Vista Previa
+                                    </button>
+                                </div>
+                                <div class="col-md-6">
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        <i class="fas fa-rocket me-2"></i>Crear Proyecto
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -65,6 +167,7 @@
 </div>
 
 <script>
+document.addEventListener('DOMContentLoaded', function() {
     // Form validation
     (function() {
         'use strict';
@@ -81,6 +184,99 @@
             }, false);
         });
     })();
+
+    // Image preview
+    const imageInput = document.querySelector('input[type="file"]');
+    if (imageInput) {
+        imageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    let previewContainer = document.querySelector('.preview-container');
+                    if (!previewContainer) {
+                        previewContainer = document.createElement('div');
+                        previewContainer.className = 'preview-container';
+                        imageInput.parentNode.appendChild(previewContainer);
+                    }
+                    
+                    previewContainer.innerHTML = `
+                        <div class="d-flex align-items-center">
+                            <img src="${e.target.result}" class="preview-image me-3" alt="Preview">
+                            <div>
+                                <h6 class="mb-1">Vista previa de la imagen</h6>
+                                <small class="text-muted">${file.name}</small>
+                            </div>
+                        </div>
+                    `;
+                    previewContainer.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    // Tags input enhancement
+    const tagsInput = document.querySelector('input[name="tags"]');
+    if (tagsInput) {
+        tagsInput.addEventListener('keyup', function(e) {
+            if (e.key === 'Enter' || e.key === ',') {
+                let value = this.value;
+                if (value.endsWith(',')) {
+                    value = value.slice(0, -1);
+                }
+                // Add visual feedback for tags
+                this.value = value.split(',').map(tag => tag.trim()).filter(tag => tag).join(', ');
+                if (!this.value.endsWith(', ') && this.value.includes(',')) {
+                    this.value += ', ';
+                }
+            }
+        });
+        
+        // Show tag suggestions
+        const tagSuggestions = [
+            'tecnología', 'innovación', 'startup', 'sostenibilidad', 'medio ambiente',
+            'salud', 'educación', 'fintech', 'e-commerce', 'social impact',
+            'inteligencia artificial', 'blockchain', 'mobile app', 'web development'
+        ];
+        
+        tagsInput.setAttribute('list', 'tag-suggestions');
+        const datalist = document.createElement('datalist');
+        datalist.id = 'tag-suggestions';
+        tagSuggestions.forEach(tag => {
+            const option = document.createElement('option');
+            option.value = tag;
+            datalist.appendChild(option);
+        });
+        tagsInput.parentNode.appendChild(datalist);
+    }
+
+    // Category selection enhancement
+    const categorySelect = document.querySelector('select[name="category"]');
+    if (categorySelect) {
+        categorySelect.addEventListener('change', function() {
+            // Add visual feedback when category is selected
+            if (this.value) {
+                this.classList.add('is-valid');
+            } else {
+                this.classList.remove('is-valid');
+            }
+        });
+    }
+
+    // Funding goal formatting
+    const fundingInput = document.querySelector('input[name="funding_goal"]');
+    if (fundingInput) {
+        fundingInput.addEventListener('input', function() {
+            let value = this.value.replace(/[^\d.]/g, '');
+            if (value) {
+                // Add thousand separators for better readability
+                const parts = value.split('.');
+                parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                this.setAttribute('data-formatted', parts.join('.'));
+            }
+        });
+    }
 
     // Intersection Observer for animations
     const observerOptions = {
@@ -102,5 +298,82 @@
         element.style.visibility = 'hidden';
         observer.observe(element);
     });
+
+    // Preview functionality
+    const previewBtn = document.getElementById('preview-btn');
+    const previewSection = document.getElementById('project-preview');
+    let previewVisible = false;
+
+    function updatePreview() {
+        const title = document.querySelector('input[name="title"]').value || 'Título del proyecto';
+        const description = document.querySelector('textarea[name="description"]').value || 'Descripción del proyecto...';
+        const category = document.querySelector('select[name="category"]');
+        const funding = document.querySelector('input[name="funding_goal"]').value || '0';
+        const deadline = document.querySelector('input[name="deadline"]').value;
+        const tags = document.querySelector('input[name="tags"]').value;
+
+        document.getElementById('preview-title').textContent = title;
+        document.getElementById('preview-description').textContent = description.substring(0, 150) + (description.length > 150 ? '...' : '');
+        document.getElementById('preview-funding').textContent = `Meta: $${parseFloat(funding).toLocaleString()}`;
+        
+        // Category preview
+        const categoryContainer = document.getElementById('preview-category');
+        if (category && category.value) {
+            const selectedOption = category.options[category.selectedIndex];
+            categoryContainer.innerHTML = `<span class="badge bg-primary">${selectedOption.text}</span>`;
+        } else {
+            categoryContainer.innerHTML = '';
+        }
+
+        // Deadline preview
+        const deadlineContainer = document.getElementById('preview-deadline');
+        if (deadline) {
+            const deadlineDate = new Date(deadline);
+            deadlineContainer.textContent = `Fecha límite: ${deadlineDate.toLocaleDateString()}`;
+        } else {
+            deadlineContainer.textContent = '';
+        }
+
+        // Tags preview
+        const tagsContainer = document.getElementById('preview-tags');
+        if (tags) {
+            const tagArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+            tagsContainer.innerHTML = tagArray.map(tag => 
+                `<span class="badge bg-secondary me-1">${tag}</span>`
+            ).join('');
+        } else {
+            tagsContainer.innerHTML = '';
+        }
+    }
+
+    if (previewBtn) {
+        previewBtn.addEventListener('click', function() {
+            previewVisible = !previewVisible;
+            if (previewVisible) {
+                updatePreview();
+                previewSection.style.display = 'block';
+                previewSection.scrollIntoView({ behavior: 'smooth' });
+                this.innerHTML = '<i class="fas fa-eye-slash me-2"></i>Ocultar Vista Previa';
+                this.classList.remove('btn-outline-secondary');
+                this.classList.add('btn-outline-success');
+            } else {
+                previewSection.style.display = 'none';
+                this.innerHTML = '<i class="fas fa-eye me-2"></i>Vista Previa';
+                this.classList.remove('btn-outline-success');
+                this.classList.add('btn-outline-secondary');
+            }
+        });
+    }
+
+    // Update preview in real time when form changes
+    const formInputs = document.querySelectorAll('input, textarea, select');
+    formInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            if (previewVisible) {
+                updatePreview();
+            }
+        });
+    });
+});
 </script>
 {% endblock %}

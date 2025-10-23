@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/evaluate_project.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">
+                        <i class="fas fa-clipboard-check"></i> Evaluar Proyecto: {{ project.title }}
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <!-- Información del proyecto -->
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            {% if project.image %}
+                                <img src="{{ project.image.url }}" class="img-fluid rounded" alt="{{ project.title }}">
+                            {% else %}
+                                <div class="bg-light d-flex align-items-center justify-content-center rounded project-image-placeholder">
+                                    <i class="fas fa-image fa-3x text-muted"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-8">
+                            <h5 class="text-primary">{{ project.title }}</h5>
+                            <p class="text-muted">{{ project.description|truncatewords:50 }}</p>
+                            <div class="row">
+                                <div class="col-6">
+                                    <strong>Meta:</strong> ${{ project.funding_goal|floatformat:0 }} COP
+                                </div>
+                                <div class="col-6">
+                                    <strong>Recaudado:</strong> ${{ project.amount_raised|floatformat:0 }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Formulario de evaluación -->
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="evaluation-form">
+                            <h5 class="mb-4">
+                                <i class="fas fa-star"></i> Criterios de Evaluación
+                            </h5>
+                            
+                            {% for criterion in criteria %}
+                                <div class="criteria-card">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <h6 class="text-primary">{{ criterion.name }}</h6>
+                                            <p class="text-muted small">{{ criterion.description }}</p>
+                                            <small class="text-info">
+                                                <i class="fas fa-weight-hanging"></i> Peso: {{ criterion.weight }}
+                                                | Máximo: {{ criterion.max_score }} puntos
+                                            </small>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Puntuación (0-{{ criterion.max_score }})</label>
+                                            <input type="number" 
+                                                   name="score_{{ criterion.id }}" 
+                                                   class="form-control score-input" 
+                                                   min="0" 
+                                                   max="{{ criterion.max_score }}" 
+                                                   step="0.1"
+                                                   value="{% if criterion.id in existing_scores %}{{ existing_scores|get_item:criterion.id.score }}{% endif %}"
+                                                   data-criterion-id="{{ criterion.id }}"
+                                                   data-max-score="{{ criterion.max_score }}">
+                                            
+                                            <!-- Barra de progreso visual -->
+                                            <div class="progress-evaluation mt-2" id="progress-{{ criterion.id }}">
+                                                <div class="progress-bar-evaluation bg-primary progress-bar-initial" 
+                                                     id="progress-bar-{{ criterion.id }}">
+                                                    0%
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mt-3">
+                                        <label class="form-label">Comentarios sobre este criterio</label>
+                                        <input type="text" 
+                                               name="comment_{{ criterion.id }}" 
+                                               class="form-control" 
+                                               placeholder="Comentarios específicos sobre {{ criterion.name|lower }}"
+                                               value="{% if criterion.id in existing_scores %}{{ existing_scores|get_item:criterion.id.comments }}{% endif %}">
+                                    </div>
+                                </div>
+                            {% endfor %}
+
+                            <!-- Evaluación general -->
+                            <div class="criteria-card bg-light">
+                                <h6 class="text-primary">
+                                    <i class="fas fa-clipboard-list"></i> Evaluación General
+                                </h6>
+                                
+                                <div class="mb-3">
+                                    {{ evaluation_form.comments.label_tag }}
+                                    {{ evaluation_form.comments }}
+                                </div>
+                                
+                                <div class="form-check">
+                                    {{ evaluation_form.is_recommended }}
+                                    <label class="form-check-label" for="{{ evaluation_form.is_recommended.id_for_label }}">
+                                        <strong>Recomiendo este proyecto para inversión</strong>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'project_detail' project.id %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Volver al Proyecto
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save"></i> Guardar Evaluación
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateProgress(criterionId, maxScore) {
+    const input = document.querySelector(`input[name="score_${criterionId}"]`);
+    const progressBar = document.getElementById(`progress-bar-${criterionId}`);
+    
+    const value = parseFloat(input.value) || 0;
+    const percentage = Math.min((value / maxScore) * 100, 100);
+    
+    progressBar.style.width = percentage + '%';
+    progressBar.textContent = percentage.toFixed(1) + '%';
+    
+    // Cambiar color según el puntaje
+    progressBar.className = 'progress-bar-evaluation';
+    if (percentage >= 80) {
+        progressBar.classList.add('bg-success');
+    } else if (percentage >= 60) {
+        progressBar.classList.add('bg-warning');
+    } else if (percentage >= 40) {
+        progressBar.classList.add('bg-info');
+    } else {
+        progressBar.classList.add('bg-danger');
+    }
+}
+
+// Inicializar barras de progreso al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    // Encontrar todos los inputs de puntuación y configurar event listeners
+    const scoreInputs = document.querySelectorAll('.score-input');
+    
+    scoreInputs.forEach(input => {
+        const criterionId = input.dataset.criterionId;
+        const maxScore = parseFloat(input.dataset.maxScore);
+        
+        // Configurar event listener
+        input.addEventListener('change', function() {
+            updateProgress(criterionId, maxScore);
+        });
+        
+        // Inicializar la barra de progreso
+        updateProgress(criterionId, maxScore);
+    });
+});
+</script>
+{% endblock %}
