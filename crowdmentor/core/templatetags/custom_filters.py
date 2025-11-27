@@ -34,3 +34,22 @@ def cop_currency(value):
         return formatted
     except (ValueError, TypeError):
         return value
+
+@register.filter
+def get_other_user(connection, current_user):
+    """Obtiene el otro usuario en una conexión mentor-inversionista."""
+    if hasattr(connection, 'get_other_user'):
+        return connection.get_other_user(current_user)
+    return None
+
+@register.filter
+def has_profile(user):
+    """Verifica si el usuario tiene un perfil asociado."""
+    return hasattr(user, 'profile') and user.profile is not None
+
+@register.filter
+def get_user_type(user):
+    """Obtiene el tipo de usuario de forma segura."""
+    if hasattr(user, 'profile') and user.profile:
+        return user.profile.user_type
+    return None

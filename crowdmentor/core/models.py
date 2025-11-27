@@ -311,3 +311,78 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.title} - {self.user.username}"
+
+class MentorInvestorConnection(models.Model):
+    CONNECTION_STATUS = (
+        ('pending', 'Pendiente'),
+        ('accepted', 'Aceptada'),
+        ('rejected', 'Rechazada'),
+        ('blocked', 'Bloqueada'),
+    )
+    
+    INITIATED_BY_CHOICES = [
+        ('mentor', 'Mentor'),
+        ('investor', 'Inversionista'),
+    ]
+
+    mentor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='mentor_connections')
+    investor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='investor_connections')
+    initiated_by = models.CharField(max_length=20, choices=INITIATED_BY_CHOICES)
+    status = models.CharField(max_length=20, choices=CONNECTION_STATUS, default='pending')
+    
+    # Información adicional de la conexión
+    purpose = models.TextField(help_text="Propósito o motivo de la conexión")
+    expertise_areas = models.CharField(max_length=500, blank=True, help_text="Áreas de expertise relevantes")
+    investment_interests = models.CharField(max_length=500, blank=True, help_text="Intereses de inversión")
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    connected_at = models.DateTimeField(null=True, blank=True)  # Cuando se acepta la conexión
+    last_activity = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ['mentor', 'investor']
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Conexión: {self.mentor.username} - {self.investor.username} ({self.status})"
+
+    def get_other_user(self, current_user):
+        """Retorna el otro usuario en la conexión"""
+        if current_user == self.mentor:
+            return self.investor
+        return self.mentor
+
+    def is_active(self):
+        """Verifica si la conexión está activa"""
+        return self.status == 'accepted'
+
+class MentorInvestorMessage(models.Model):
+    connection = models.ForeignKey(MentorInvestorConnection, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE)
+    content = models.TextField()
+    
+    # Tipos de mensaje
+    MESSAGE_TYPES = (
+        ('text', 'Mensaje de texto'),
+        ('opportunity', 'Oportunidad de inversión'),
+        ('collaboration', 'Propuesta de colaboración'),
+        ('knowledge_share', 'Intercambio de conocimientos'),
+        ('system', 'Mensaje del sistema'),
+    )
+    message_type = models.CharField(max_length=20, choices=MESSAGE_TYPES, default='text')
+    
+    # Metadatos
+    timestamp = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+    is_important = models.BooleanField(default=False)  # Para marcar mensajes importantes
+    
+    # Enlaces opcionales a proyectos o inversiones
+    related_project = models.ForeignKey(Project, on_delete=models.SET_NULL, null=True, blank=True)
+    related_investment = models.ForeignKey(Investment, on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        ordering = ['timestamp']
+
+    def __str__(self):
+        return f"{self.sender.username} -> {self.connection.get_other_user(self.sender).username}: {self.content[:50]}..."

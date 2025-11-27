@@ -17,6 +17,8 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    margin: 0;
+    padding: 0;
 }
 
 .navbar {
@@ -24,6 +26,11 @@ body {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     padding: 1rem 2rem;
     transition: all var(--transition-speed) ease;
+    margin: 0;
+    position: relative;
+    top: 0;
+    width: 100%;
+    z-index: 1000;
 }
 
 .navbar-brand {
@@ -111,6 +118,20 @@ body {
     background-color: #37b24d;
     border: none;
     transition: all var(--transition-speed) ease;
+}
+
+.btn-outline-purple {
+    color: #6f42c1;
+    border-color: #6f42c1;
+    transition: all var(--transition-speed) ease;
+}
+
+.btn-outline-purple:hover {
+    background-color: #6f42c1;
+    border-color: #6f42c1;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(111, 66, 193, 0.3);
 }
 
 .auth-btn {

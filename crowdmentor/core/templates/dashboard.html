@@ -159,6 +159,90 @@
             {% endfor %}
         </div>
 
+        <!-- Sección de Conexiones Mentor-Inversionista -->
+        <h3 class="text-primary mt-4">Conexiones con Inversionistas</h3>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h5>{{ connections.count }}</h5>
+                        <p class="mb-0">Conexiones Activas</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card bg-warning text-white">
+                    <div class="card-body text-center">
+                        <h5>{{ unread_connections_messages }}</h5>
+                        <p class="mb-0">Mensajes Sin Leer</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if pending_connections %}
+            <h4 class="text-warning">Solicitudes de Conexión Pendientes</h4>
+            <div class="row">
+                {% for connection in pending_connections %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card border-warning">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    {{ connection.investor.get_full_name|default:connection.investor.username }}
+                                </h6>
+                                <p class="card-text small">{{ connection.purpose|truncatewords:15 }}</p>
+                                {% if connection.initiated_by != 'mentor' %}
+                                    <a href="{% url 'respond_to_connection_request' connection.id 'accept' %}" 
+                                       class="btn btn-success btn-sm me-2">Aceptar</a>
+                                    <a href="{% url 'respond_to_connection_request' connection.id 'reject' %}" 
+                                       class="btn btn-danger btn-sm">Rechazar</a>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">Esperando respuesta</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="text-success">Conexiones Activas</h4>
+            <a href="{% url 'investor_list_for_mentors' %}" class="btn btn-outline-primary">
+                <i class="fas fa-plus"></i> Nueva Conexión
+            </a>
+        </div>
+        
+        <div class="row">
+            {% for connection in connections %}
+                <div class="col-md-6 mb-3">
+                    <div class="card border-success">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                {{ connection.investor.get_full_name|default:connection.investor.username }}
+                            </h6>
+                            <p class="card-text small">{{ connection.purpose|truncatewords:15 }}</p>
+                            <small class="text-muted">Última actividad: {{ connection.last_activity|timesince }} ago</small>
+                            <div class="mt-2">
+                                <a href="{% url 'mentor_investor_chat' connection.id %}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-comments"></i> Chat
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-12">
+                    <div class="alert alert-info text-center">
+                        <p class="mb-2">Aún no tienes conexiones con inversionistas.</p>
+                        <a href="{% url 'investor_list_for_mentors' %}" class="btn btn-primary">
+                            <i class="fas fa-handshake"></i> Conectar con Inversionistas
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
     {% elif profile.user_type == 'investor' %}
         <h3 class="text-primary">Tus Inversiones</h3>
         <div class="row">
@@ -174,6 +258,90 @@
                 </div>
             {% empty %}
                 <p class="text-muted">No se han realizado inversiones.</p>
+            {% endfor %}
+        </div>
+
+        <!-- Sección de Conexiones Mentor-Inversionista -->
+        <h3 class="text-primary mt-4">Conexiones con Mentores</h3>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h5>{{ connections.count }}</h5>
+                        <p class="mb-0">Conexiones Activas</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card bg-info text-white">
+                    <div class="card-body text-center">
+                        <h5>{{ unread_connections_messages }}</h5>
+                        <p class="mb-0">Mensajes Sin Leer</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if pending_connections %}
+            <h4 class="text-warning">Solicitudes de Conexión Pendientes</h4>
+            <div class="row">
+                {% for connection in pending_connections %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card border-warning">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    {{ connection.mentor.get_full_name|default:connection.mentor.username }}
+                                </h6>
+                                <p class="card-text small">{{ connection.purpose|truncatewords:15 }}</p>
+                                {% if connection.initiated_by != 'investor' %}
+                                    <a href="{% url 'respond_to_connection_request' connection.id 'accept' %}" 
+                                       class="btn btn-success btn-sm me-2">Aceptar</a>
+                                    <a href="{% url 'respond_to_connection_request' connection.id 'reject' %}" 
+                                       class="btn btn-danger btn-sm">Rechazar</a>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">Esperando respuesta</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="text-success">Conexiones Activas</h4>
+            <a href="{% url 'mentor_list_for_investors' %}" class="btn btn-outline-primary">
+                <i class="fas fa-plus"></i> Nueva Conexión
+            </a>
+        </div>
+        
+        <div class="row">
+            {% for connection in connections %}
+                <div class="col-md-6 mb-3">
+                    <div class="card border-success">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                {{ connection.mentor.get_full_name|default:connection.mentor.username }}
+                            </h6>
+                            <p class="card-text small">{{ connection.purpose|truncatewords:15 }}</p>
+                            <small class="text-muted">Última actividad: {{ connection.last_activity|timesince }} ago</small>
+                            <div class="mt-2">
+                                <a href="{% url 'mentor_investor_chat' connection.id %}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-comments"></i> Chat
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-12">
+                    <div class="alert alert-info text-center">
+                        <p class="mb-2">Aún no tienes conexiones con mentores.</p>
+                        <a href="{% url 'mentor_list_for_investors' %}" class="btn btn-primary">
+                            <i class="fas fa-handshake"></i> Conectar con Mentores
+                        </a>
+                    </div>
+                </div>
             {% endfor %}
         </div>
 

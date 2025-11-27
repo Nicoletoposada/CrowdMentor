@@ -1,0 +1,106 @@
+/* Estilos para mentor_investor_connection.html */
+
+.user-info-section {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 10px;
+    padding: 1.5rem;
+}
+
+.avatar-circle {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.connection-form .form-label {
+    font-weight: 600;
+    color: #495057;
+}
+
+.form-control {
+    border-radius: 8px;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.btn {
+    border-radius: 8px;
+    padding: 0.5rem 1.5rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+}
+
+.btn-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+}
+
+/* Información adicional card */
+.bg-light .card-body {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 8px;
+}
+
+.list-unstyled li {
+    padding: 0.4rem 0;
+    transition: all 0.2s ease;
+}
+
+.list-unstyled li:hover {
+    transform: translateX(5px);
+}
+
+.fas.fa-check {
+    color: #28a745;
+    font-size: 0.9rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .avatar-circle {
+        width: 50px;
+        height: 50px;
+        font-size: 1.2rem;
+    }
+    
+    .user-info-section {
+        padding: 1rem;
+    }
+    
+    .d-grid.gap-2.d-md-flex {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* Error styling */
+.text-danger {
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+/* Help text styling */
+.form-text {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}

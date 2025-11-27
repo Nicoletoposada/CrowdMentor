@@ -2,7 +2,7 @@
 from django import forms # type: ignore
 from django.contrib.auth.forms import UserCreationForm # type: ignore
 from django.contrib.auth.models import User # type: ignore
-from .models import Profile, Project, Investment, Resource, ResourceCategory, ProjectCategory, ProjectEvaluation, EvaluationCriteria, CriterionScore, ProjectRating
+from .models import Profile, Project, Investment, Resource, ResourceCategory, ProjectCategory, ProjectEvaluation, EvaluationCriteria, CriterionScore, ProjectRating, MentorInvestorConnection, MentorInvestorMessage
 
 class MultipleFileInput(forms.ClearableFileInput):
     allow_multiple_selected = True
@@ -364,3 +364,116 @@ class ProjectCategoryForm(forms.ModelForm):
                 'value': 'fas fa-folder'
             })
         }
+
+class MentorInvestorConnectionForm(forms.ModelForm):
+    class Meta:
+        model = MentorInvestorConnection
+        fields = ['purpose', 'expertise_areas', 'investment_interests']
+        widgets = {
+            'purpose': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': 'Describe el propósito de esta conexión y cómo podríais colaborar...'
+            }),
+            'expertise_areas': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej: tecnología, marketing digital, finanzas corporativas'
+            }),
+            'investment_interests': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej: startups tecnológicas, proyectos sostenibles, innovación'
+            })
+        }
+        labels = {
+            'purpose': 'Propósito de la conexión',
+            'expertise_areas': 'Áreas de expertise',
+            'investment_interests': 'Intereses de inversión'
+        }
+        help_texts = {
+            'purpose': 'Explica por qué quieres conectarte y cómo pueden colaborar',
+            'expertise_areas': 'Menciona las áreas de expertise relevantes para la colaboración',
+            'investment_interests': 'Especifica los tipos de proyectos o sectores de interés'
+        }
+
+class MentorInvestorMessageForm(forms.ModelForm):
+    class Meta:
+        model = MentorInvestorMessage
+        fields = ['content', 'message_type', 'is_important', 'related_project']
+        widgets = {
+            'content': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': 'Escribe tu mensaje...'
+            }),
+            'message_type': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'is_important': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+            'related_project': forms.Select(attrs={
+                'class': 'form-control'
+            })
+        }
+        labels = {
+            'content': 'Mensaje',
+            'message_type': 'Tipo de mensaje',
+            'is_important': 'Marcar como importante',
+            'related_project': 'Proyecto relacionado (opcional)'
+        }
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        
+        # Filtrar proyectos según el tipo de usuario
+        if user:
+            if hasattr(user, 'profile'):
+                if user.profile.user_type == 'entrepreneur':
+                    # Si es emprendedor, mostrar sus proyectos
+                    self.fields['related_project'].queryset = Project.objects.filter(owner=user, is_active=True)
+                elif user.profile.user_type == 'investor':
+                    # Si es inversionista, mostrar proyectos en los que ha invertido
+                    invested_projects = Investment.objects.filter(investor=user, status='accepted').values_list('project', flat=True)
+                    self.fields['related_project'].queryset = Project.objects.filter(id__in=invested_projects)
+                else:
+                    # Para otros tipos de usuario, mostrar todos los proyectos activos
+                    self.fields['related_project'].queryset = Project.objects.filter(is_active=True)
+            else:
+                self.fields['related_project'].queryset = Project.objects.filter(is_active=True)
+        
+        # Hacer el campo opcional
+        self.fields['related_project'].required = False
+        self.fields['related_project'].empty_label = 'Ningún proyecto específico'
+
+class ConnectionSearchForm(forms.Form):
+    search = forms.CharField(
+        max_length=200,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Buscar por nombre, expertise, intereses...'
+        })
+    )
+    expertise_area = forms.CharField(
+        max_length=100,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Área de expertise'
+        })
+    )
+    sort_by = forms.ChoiceField(
+        choices=[
+            ('-last_activity', 'Actividad reciente'),
+            ('mentor__username', 'Nombre del mentor'),
+            ('investor__username', 'Nombre del inversionista'),
+            ('-created_at', 'Conexiones más recientes'),
+            ('created_at', 'Conexiones más antiguas'),
+        ],
+        required=False,
+        initial='-last_activity',
+        widget=forms.Select(attrs={
+            'class': 'form-control'
+        })
+    )

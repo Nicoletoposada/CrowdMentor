@@ -48,4 +48,14 @@ urlpatterns = [
     path('notifications/', views.notifications, name='notifications'),
     path('notifications/<int:notification_id>/read/', views.mark_notification_read, name='mark_notification_read'),
     path('analytics/', views.analytics_dashboard, name='analytics_dashboard'),
+    
+    # URLs para sistema mentor-inversionista
+    path('investors/', views.investor_list_for_mentors, name='investor_list_for_mentors'),
+    path('mentors-for-investors/', views.mentor_list_for_investors, name='mentor_list_for_investors'),
+    path('connect/<int:target_user_id>/', views.create_mentor_investor_connection, name='create_mentor_investor_connection'),
+    path('connections/', views.mentor_investor_connections, name='mentor_investor_connections'),
+    path('connections/<int:connection_id>/<str:action>/', views.respond_to_connection_request, name='respond_to_connection_request'),
+    path('connections/chat/<int:connection_id>/', views.mentor_investor_chat, name='mentor_investor_chat'),
+    path('connections/unread-count/', views.get_mentor_investor_unread_count, name='get_mentor_investor_unread_count'),
+    path('connections/search/', views.search_mentor_investor_connections, name='search_mentor_investor_connections'),
 ]

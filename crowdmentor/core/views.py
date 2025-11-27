@@ -7,8 +7,8 @@ from django.conf import settings # type: ignore
 from django.views import View # type: ignore
 from django.contrib.auth.models import User, Group # type: ignore
 from django.http import JsonResponse # type: ignore
-from .forms import CustomUserCreationForm, ProjectForm, InvestmentForm, LoginForm, ResourceForm, ResourceCategoryForm, ProjectSearchForm, ProjectEvaluationForm, CriterionScoreForm, ProjectRatingForm, ProjectCategoryForm
-from .models import Project, Investment, Mentorship, Profile, Message, UploadedFile, Resource, ResourceCategory, ProjectCategory, ProjectEvaluation, EvaluationCriteria, CriterionScore, ProjectRating, Notification
+from .forms import CustomUserCreationForm, ProjectForm, InvestmentForm, LoginForm, ResourceForm, ResourceCategoryForm, ProjectSearchForm, ProjectEvaluationForm, CriterionScoreForm, ProjectRatingForm, ProjectCategoryForm, MentorInvestorConnectionForm, MentorInvestorMessageForm, ConnectionSearchForm
+from .models import Project, Investment, Mentorship, Profile, Message, UploadedFile, Resource, ResourceCategory, ProjectCategory, ProjectEvaluation, EvaluationCriteria, CriterionScore, ProjectRating, Notification, MentorInvestorConnection, MentorInvestorMessage
 from django.db.models import Q, Avg, Count, Sum # type: ignore
 from django.views.decorators.http import require_POST # type: ignore
 from django.core.files.storage import default_storage # type: ignore
@@ -113,11 +113,30 @@ def dashboard(request):
         mentorships = Mentorship.objects.filter(mentor=request.user)
         pending_mentorships = mentorships.filter(status='pending')
         investments = Investment.objects.filter(investor=request.user)
+        
+        # Datos para conexiones mentor-inversionista
+        if profile.user_type == 'mentor':
+            connections = MentorInvestorConnection.objects.filter(mentor=request.user, status='accepted')
+            pending_connections = MentorInvestorConnection.objects.filter(mentor=request.user, status='pending')
+        else:
+            connections = MentorInvestorConnection.objects.filter(investor=request.user, status='accepted')
+            pending_connections = MentorInvestorConnection.objects.filter(investor=request.user, status='pending')
+        
+        # Contar mensajes no leídos en conexiones
+        unread_connections_messages = 0
+        for connection in connections:
+            unread_connections_messages += connection.messages.filter(
+                is_read=False
+            ).exclude(sender=request.user).count()
+        
         return render(request, 'dashboard.html', {
             'mentorships': mentorships,
             'pending_mentorships': pending_mentorships,
             'investments': investments,
             'profile': profile,
+            'connections': connections,
+            'pending_connections': pending_connections,
+            'unread_connections_messages': unread_connections_messages,
         })
     else:  # Evaluator
         pending_mentors = Profile.objects.filter(user_type='mentor', is_approved=False)
@@ -1007,3 +1026,334 @@ def like_project(request, project_id):
         })
     
     return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+# ========== VISTAS PARA INTERACCIÓN MENTOR-INVERSIONISTA ==========
+
+@login_required
+def investor_list_for_mentors(request):
+    """Vista para que mentores vean lista de inversionistas disponibles"""
+    if not hasattr(request.user, 'profile') or request.user.profile.user_type != 'mentor':
+        messages.error(request, 'Solo los mentores pueden acceder a esta página.')
+        return redirect('home')
+    
+    # Obtener inversionistas activos
+    investors = Profile.objects.filter(user_type='investor', is_approved=True).select_related('user')
+    
+    # Obtener conexiones existentes para no mostrar inversionistas ya conectados
+    existing_connections = MentorInvestorConnection.objects.filter(
+        mentor=request.user,
+        status__in=['pending', 'accepted']
+    ).values_list('investor_id', flat=True)
+    
+    investors = investors.exclude(user_id__in=existing_connections)
+    
+    context = {
+        'investors': investors,
+        'user_type': 'mentor'
+    }
+    return render(request, 'mentor_investor_list.html', context)
+
+@login_required
+def mentor_list_for_investors(request):
+    """Vista para que inversionistas vean lista de mentores disponibles"""
+    if not hasattr(request.user, 'profile') or request.user.profile.user_type != 'investor':
+        messages.error(request, 'Solo los inversionistas pueden acceder a esta página.')
+        return redirect('home')
+    
+    # Obtener mentores activos y aprobados
+    mentors = Profile.objects.filter(user_type='mentor', is_approved=True).select_related('user')
+    
+    # Obtener conexiones existentes para no mostrar mentores ya conectados
+    existing_connections = MentorInvestorConnection.objects.filter(
+        investor=request.user,
+        status__in=['pending', 'accepted']
+    ).values_list('mentor_id', flat=True)
+    
+    mentors = mentors.exclude(user_id__in=existing_connections)
+    
+    context = {
+        'mentors': mentors,
+        'user_type': 'investor'
+    }
+    return render(request, 'mentor_investor_list.html', context)
+
+@login_required
+def create_mentor_investor_connection(request, target_user_id):
+    """Crear una nueva conexión entre mentor e inversionista"""
+    if not hasattr(request.user, 'profile'):
+        messages.error(request, 'Tu cuenta no tiene un perfil asociado.')
+        return redirect('home')
+    
+    target_user = get_object_or_404(User, id=target_user_id)
+    current_user_type = request.user.profile.user_type
+    target_user_type = target_user.profile.user_type
+    
+    # Validar que la conexión sea válida (mentor-inversionista)
+    if not ((current_user_type == 'mentor' and target_user_type == 'investor') or 
+            (current_user_type == 'investor' and target_user_type == 'mentor')):
+        messages.error(request, 'Solo se pueden crear conexiones entre mentores e inversionistas.')
+        return redirect('home')
+    
+    # Verificar que no exista ya una conexión
+    if current_user_type == 'mentor':
+        existing_connection = MentorInvestorConnection.objects.filter(
+            mentor=request.user, investor=target_user
+        ).first()
+    else:
+        existing_connection = MentorInvestorConnection.objects.filter(
+            mentor=target_user, investor=request.user
+        ).first()
+    
+    if existing_connection:
+        messages.warning(request, 'Ya existe una conexión con este usuario.')
+        return redirect('mentor_investor_connections')
+    
+    if request.method == 'POST':
+        form = MentorInvestorConnectionForm(request.POST)
+        if form.is_valid():
+            connection = form.save(commit=False)
+            
+            # Establecer mentor e inversionista según el tipo de usuario
+            if current_user_type == 'mentor':
+                connection.mentor = request.user
+                connection.investor = target_user
+                connection.initiated_by = 'mentor'
+            else:
+                connection.mentor = target_user
+                connection.investor = request.user
+                connection.initiated_by = 'investor'
+            
+            connection.save()
+            
+            # Crear notificación para el usuario objetivo
+            Notification.objects.create(
+                user=target_user,
+                title='Nueva solicitud de conexión',
+                message=f'{request.user.username} quiere conectarse contigo para colaborar.',
+                notification_type='system'
+            )
+            
+            messages.success(request, 'Solicitud de conexión enviada exitosamente.')
+            return redirect('mentor_investor_connections')
+    else:
+        form = MentorInvestorConnectionForm()
+    
+    context = {
+        'form': form,
+        'target_user': target_user,
+        'current_user_type': current_user_type,
+        'target_user_type': target_user_type
+    }
+    return render(request, 'create_mentor_investor_connection.html', context)
+
+@login_required
+def mentor_investor_connections(request):
+    """Vista del dashboard de conexiones mentor-inversionista"""
+    if not hasattr(request.user, 'profile'):
+        messages.error(request, 'Tu cuenta no tiene un perfil asociado.')
+        return redirect('home')
+    
+    user_type = request.user.profile.user_type
+    
+    if user_type not in ['mentor', 'investor']:
+        messages.error(request, 'Solo mentores e inversionistas pueden acceder a esta página.')
+        return redirect('home')
+    
+    # Obtener conexiones según el tipo de usuario
+    if user_type == 'mentor':
+        connections = MentorInvestorConnection.objects.filter(mentor=request.user)
+    else:
+        connections = MentorInvestorConnection.objects.filter(investor=request.user)
+    
+    # Separar por estado
+    pending_connections = connections.filter(status='pending')
+    active_connections = connections.filter(status='accepted')
+    
+    # Estadísticas
+    total_connections = active_connections.count()
+    unread_messages = 0
+    
+    for connection in active_connections:
+        unread_messages += connection.messages.filter(
+            is_read=False
+        ).exclude(sender=request.user).count()
+    
+    context = {
+        'pending_connections': pending_connections,
+        'active_connections': active_connections,
+        'total_connections': total_connections,
+        'unread_messages': unread_messages,
+        'user_type': user_type
+    }
+    return render(request, 'mentor_investor_connections.html', context)
+
+@login_required
+def respond_to_connection_request(request, connection_id, action):
+    """Responder a una solicitud de conexión mentor-inversionista"""
+    connection = get_object_or_404(MentorInvestorConnection, id=connection_id)
+    
+    # Verificar que el usuario tenga permiso para responder
+    if request.user != connection.mentor and request.user != connection.investor:
+        messages.error(request, 'No tienes permiso para responder a esta solicitud.')
+        return redirect('mentor_investor_connections')
+    
+    # El usuario que NO inició la conexión es quien puede responder
+    if ((connection.initiated_by == 'mentor' and request.user == connection.mentor) or 
+        (connection.initiated_by == 'investor' and request.user == connection.investor)):
+        messages.error(request, 'No puedes responder a tu propia solicitud.')
+        return redirect('mentor_investor_connections')
+    
+    if action == 'accept':
+        connection.status = 'accepted'
+        connection.connected_at = timezone.now()
+        connection.save()
+        
+        # Crear notificación para quien inició la conexión
+        initiator = connection.mentor if connection.initiated_by == 'mentor' else connection.investor
+        Notification.objects.create(
+            user=initiator,
+            title='Conexión aceptada',
+            message=f'{request.user.username} ha aceptado tu solicitud de conexión.',
+            notification_type='system'
+        )
+        
+        messages.success(request, 'Has aceptado la solicitud de conexión.')
+        
+    elif action == 'reject':
+        connection.delete()
+        messages.info(request, 'Has rechazado la solicitud de conexión.')
+    else:
+        messages.error(request, 'Acción no válida.')
+    
+    return redirect('mentor_investor_connections')
+
+@login_required
+def mentor_investor_chat(request, connection_id):
+    """Chat entre mentor e inversionista"""
+    connection = get_object_or_404(MentorInvestorConnection, id=connection_id)
+    
+    # Verificar que el usuario tenga acceso al chat
+    if request.user != connection.mentor and request.user != connection.investor:
+        messages.error(request, 'No tienes permiso para acceder a este chat.')
+        return redirect('mentor_investor_connections')
+    
+    # Verificar que la conexión esté activa
+    if connection.status != 'accepted':
+        messages.error(request, 'Esta conexión no está activa.')
+        return redirect('mentor_investor_connections')
+    
+    if request.method == 'POST':
+        form = MentorInvestorMessageForm(request.POST, user=request.user)
+        if form.is_valid():
+            message = form.save(commit=False)
+            message.connection = connection
+            message.sender = request.user
+            message.save()
+            
+            # Actualizar última actividad de la conexión
+            connection.last_activity = timezone.now()
+            connection.save()
+            
+            return redirect('mentor_investor_chat', connection_id=connection_id)
+    else:
+        form = MentorInvestorMessageForm(user=request.user)
+    
+    # Obtener mensajes del chat
+    messages_list = connection.messages.all().order_by('timestamp')
+    
+    # Marcar mensajes como leídos
+    connection.messages.filter(is_read=False).exclude(sender=request.user).update(is_read=True)
+    
+    # Obtener el otro usuario
+    other_user = connection.get_other_user(request.user)
+    
+    context = {
+        'connection': connection,
+        'messages': messages_list,
+        'form': form,
+        'other_user': other_user,
+        'current_user_type': request.user.profile.user_type
+    }
+    return render(request, 'mentor_investor_chat.html', context)
+
+@login_required
+def get_mentor_investor_unread_count(request):
+    """API para obtener el contador de mensajes no leídos en conexiones mentor-inversionista"""
+    if not hasattr(request.user, 'profile'):
+        return JsonResponse({'unread_count': 0})
+    
+    user_type = request.user.profile.user_type
+    
+    if user_type not in ['mentor', 'investor']:
+        return JsonResponse({'unread_count': 0})
+    
+    # Obtener conexiones activas
+    if user_type == 'mentor':
+        connections = MentorInvestorConnection.objects.filter(mentor=request.user, status='accepted')
+    else:
+        connections = MentorInvestorConnection.objects.filter(investor=request.user, status='accepted')
+    
+    # Contar mensajes no leídos
+    unread_count = 0
+    for connection in connections:
+        unread_count += connection.messages.filter(
+            is_read=False
+        ).exclude(sender=request.user).count()
+    
+    return JsonResponse({'unread_count': unread_count})
+
+@login_required
+def search_mentor_investor_connections(request):
+    """Búsqueda avanzada de conexiones mentor-inversionista"""
+    if not hasattr(request.user, 'profile'):
+        return redirect('home')
+    
+    user_type = request.user.profile.user_type
+    if user_type not in ['mentor', 'investor']:
+        return redirect('home')
+    
+    form = ConnectionSearchForm(request.GET or None)
+    connections = MentorInvestorConnection.objects.none()
+    
+    if user_type == 'mentor':
+        base_connections = MentorInvestorConnection.objects.filter(mentor=request.user, status='accepted')
+    else:
+        base_connections = MentorInvestorConnection.objects.filter(investor=request.user, status='accepted')
+    
+    if form.is_valid():
+        connections = base_connections
+        
+        search = form.cleaned_data.get('search')
+        if search:
+            if user_type == 'mentor':
+                connections = connections.filter(
+                    Q(investor__username__icontains=search) |
+                    Q(investor__first_name__icontains=search) |
+                    Q(investor__last_name__icontains=search) |
+                    Q(purpose__icontains=search) |
+                    Q(investment_interests__icontains=search)
+                )
+            else:
+                connections = connections.filter(
+                    Q(mentor__username__icontains=search) |
+                    Q(mentor__first_name__icontains=search) |
+                    Q(mentor__last_name__icontains=search) |
+                    Q(purpose__icontains=search) |
+                    Q(expertise_areas__icontains=search)
+                )
+        
+        expertise_area = form.cleaned_data.get('expertise_area')
+        if expertise_area:
+            connections = connections.filter(expertise_areas__icontains=expertise_area)
+        
+        sort_by = form.cleaned_data.get('sort_by', '-last_activity')
+        connections = connections.order_by(sort_by)
+    else:
+        connections = base_connections.order_by('-last_activity')
+    
+    context = {
+        'connections': connections,
+        'form': form,
+        'user_type': user_type
+    }
+    return render(request, 'search_mentor_investor_connections.html', context)

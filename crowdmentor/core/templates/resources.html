@@ -2,15 +2,64 @@
 {% load static %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/admin_resources.css' %}">
 <link rel="stylesheet" href="{% static 'css/resources_custom.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="resources-hero-bg text-center mb-5">
-    <i class="fas fa-toolbox fa-4x text-primary mb-3"></i>
-    <h1 class="fw-bold">Recursos para Emprendedores</h1>
-    <p class="lead">Impulsa tu proyecto con herramientas, plantillas, guías y más.</p>
+<div class="resources-hero-modern">
+    <div class="hero-background">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+        <div class="grid-pattern"></div>
+    </div>
+    
+    <div class="hero-content-wrapper">
+        <div class="hero-badge animate-fade-in">
+            <i class="fas fa-rocket me-2"></i>
+            <span>Tu Centro de Recursos</span>
+        </div>
+        
+        <h1 class="hero-main-title animate-slide-up">
+            Recursos para
+            <span class="gradient-text">Emprendedores</span>
+        </h1>
+        
+        <p class="hero-description animate-slide-up-delay">
+            Impulsa tu proyecto con herramientas profesionales, plantillas diseñadas,<br>
+            guías especializadas y mucho más para hacer crecer tu negocio.
+        </p>
+        
+        <div class="hero-stats animate-fade-in-delay">
+            <div class="stat-item">
+                <div class="stat-icon">
+                    <i class="fas fa-file-alt"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-number">50+</div>
+                    <div class="stat-label">Plantillas</div>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-icon">
+                    <i class="fas fa-book-open"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-number">100+</div>
+                    <div class="stat-label">Guías</div>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-icon">
+                    <i class="fas fa-tools"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-number">30+</div>
+                    <div class="stat-label">Herramientas</div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="resources-container">

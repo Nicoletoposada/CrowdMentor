@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/mentor_investor_list.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            {% if user_type == 'mentor' %}
+                <h2 class="mb-4">
+                    <i class="fas fa-handshake text-primary"></i>
+                    Conectar con Inversionistas
+                </h2>
+                <p class="text-muted mb-4">
+                    Encuentra inversionistas para colaborar en proyectos estratégicos y crear oportunidades de crecimiento.
+                </p>
+            {% else %}
+                <h2 class="mb-4">
+                    <i class="fas fa-handshake text-primary"></i>
+                    Conectar con Mentores
+                </h2>
+                <p class="text-muted mb-4">
+                    Conecta con mentores experimentados para intercambiar conocimientos y descubrir oportunidades de inversión.
+                </p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        {% if user_type == 'mentor' %}
+            {% for investor in investors %}
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="avatar-circle bg-success text-white me-3">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div>
+                                    <h5 class="card-title mb-0">
+                                        {{ investor.user.get_full_name|default:investor.user.username }}
+                                    </h5>
+                                    <small class="text-muted">
+                                        <i class="fas fa-money-bill-wave"></i> Inversionista
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <h6 class="text-muted">Experiencia:</h6>
+                                <p class="card-text small">
+                                    {{ investor.experience|truncatewords:20 }}
+                                </p>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <h6 class="text-muted">Bio:</h6>
+                                <p class="card-text small">
+                                    {{ investor.bio|truncatewords:15 }}
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div class="card-footer bg-transparent">
+                            <a href="{% url 'create_mentor_investor_connection' investor.user.id %}" 
+                               class="btn btn-primary btn-sm w-100">
+                                <i class="fas fa-plus"></i> Solicitar Conexión
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-12">
+                    <div class="alert alert-info text-center">
+                        <i class="fas fa-info-circle"></i>
+                        No hay inversionistas disponibles para conectar en este momento.
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            {% for mentor in mentors %}
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="avatar-circle bg-info text-white me-3">
+                                    <i class="fas fa-user-tie"></i>
+                                </div>
+                                <div>
+                                    <h5 class="card-title mb-0">
+                                        {{ mentor.user.get_full_name|default:mentor.user.username }}
+                                    </h5>
+                                    <small class="text-muted">
+                                        <i class="fas fa-graduation-cap"></i> Mentor
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <h6 class="text-muted">Experiencia:</h6>
+                                <p class="card-text small">
+                                    {{ mentor.experience|truncatewords:20 }}
+                                </p>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <h6 class="text-muted">Bio:</h6>
+                                <p class="card-text small">
+                                    {{ mentor.bio|truncatewords:15 }}
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div class="card-footer bg-transparent">
+                            <a href="{% url 'create_mentor_investor_connection' mentor.user.id %}" 
+                               class="btn btn-primary btn-sm w-100">
+                                <i class="fas fa-plus"></i> Solicitar Conexión
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-12">
+                    <div class="alert alert-info text-center">
+                        <i class="fas fa-info-circle"></i>
+                        No hay mentores disponibles para conectar en este momento.
+                    </div>
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-lightbulb text-warning"></i>
+                        ¿Por qué conectar?
+                    </h5>
+                    {% if user_type == 'mentor' %}
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success me-2"></i> Accede a oportunidades de inversión</li>
+                            <li><i class="fas fa-check text-success me-2"></i> Comparte tu experiencia y conocimientos</li>
+                            <li><i class="fas fa-check text-success me-2"></i> Colabora en el desarrollo de proyectos estratégicos</li>
+                            <li><i class="fas fa-check text-success me-2"></i> Expande tu red profesional</li>
+                        </ul>
+                    {% else %}
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success me-2"></i> Obtén asesoría experta para tus inversiones</li>
+                            <li><i class="fas fa-check text-success me-2"></i> Descubre proyectos con potencial de crecimiento</li>
+                            <li><i class="fas fa-check text-success me-2"></i> Aprende de mentores experimentados</li>
+                            <li><i class="fas fa-check text-success me-2"></i> Maximiza el retorno de tus inversiones</li>
+                        </ul>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

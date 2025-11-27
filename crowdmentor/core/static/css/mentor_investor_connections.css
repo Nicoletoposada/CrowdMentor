@@ -1,0 +1,150 @@
+/* Estilos para mentor_investor_connections.html */
+
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+}
+
+.avatar-circle {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Estadísticas cards */
+.card.bg-primary,
+.card.bg-warning,
+.card.bg-info {
+    border: none;
+    border-radius: 15px;
+    transition: transform 0.3s ease;
+}
+
+.card.bg-primary:hover,
+.card.bg-warning:hover,
+.card.bg-info:hover {
+    transform: translateY(-5px);
+}
+
+/* Connection items */
+.connection-item {
+    transition: all 0.3s ease;
+    padding: 1rem;
+    border-radius: 8px;
+}
+
+.connection-item:hover {
+    background-color: #f8f9fa;
+    transform: translateX(5px);
+}
+
+.action-buttons .btn {
+    border-radius: 20px;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+    transition: all 0.3s ease;
+}
+
+.action-buttons .btn:hover {
+    transform: translateY(-2px);
+}
+
+/* Connection cards */
+.card.border-success {
+    border-width: 2px !important;
+    transition: all 0.3s ease;
+}
+
+.card.border-success:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Badges */
+.badge {
+    font-size: 0.75rem;
+    border-radius: 10px;
+}
+
+.badge.bg-danger {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+/* Empty state */
+.text-center.py-4 {
+    padding: 3rem 1rem !important;
+}
+
+.fa-3x {
+    opacity: 0.5;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .avatar-circle {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .action-buttons .btn {
+        width: 100%;
+    }
+    
+    .connection-item {
+        padding: 0.75rem;
+    }
+    
+    .d-flex.justify-content-between {
+        flex-direction: column;
+        gap: 1rem;
+    }
+}
+
+/* Status indicators */
+.badge.bg-warning {
+    color: #000 !important;
+}
+
+/* Loading states */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Card headers */
+.card-header.bg-warning,
+.card-header.bg-success {
+    border-radius: 0.375rem 0.375rem 0 0 !important;
+}
+
+/* Small text improvements */
+.small {
+    line-height: 1.4;
+}
+
+/* Button improvements */
+.btn-primary {
+    border-radius: 20px;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+}

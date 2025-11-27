@@ -1,0 +1,253 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/mentor_investor_chat.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-10 mx-auto">
+            <div class="card shadow">
+                <!-- Header del Chat -->
+                <div class="card-header bg-gradient-primary text-white">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <a href="{% url 'mentor_investor_connections' %}" 
+                               class="btn btn-light btn-sm me-3">
+                                <i class="fas fa-arrow-left"></i>
+                            </a>
+                            <div class="avatar-circle {% if current_user_type == 'mentor' %}bg-success{% else %}bg-info{% endif %} me-3">
+                                {% if current_user_type == 'mentor' %}
+                                    <i class="fas fa-money-bill-wave"></i>
+                                {% else %}
+                                    <i class="fas fa-user-tie"></i>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <h5 class="mb-0">{{ other_user.get_full_name|default:other_user.username }}</h5>
+                                <small class="opacity-75">
+                                    {% if current_user_type == 'mentor' %}
+                                        <i class="fas fa-money-bill-wave"></i> Inversionista
+                                    {% else %}
+                                        <i class="fas fa-user-tie"></i> Mentor
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <div class="text-end">
+                            <small class="opacity-75">
+                                Conectados desde {{ connection.connected_at|date:"d M Y" }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Información de la conexión -->
+                <div class="connection-info bg-light p-3 border-bottom">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-1">Propósito de la conexión:</h6>
+                            <p class="mb-0 small">{{ connection.purpose }}</p>
+                        </div>
+                        <div class="col-md-3">
+                            {% if connection.expertise_areas %}
+                                <h6 class="text-muted mb-1">Áreas de expertise:</h6>
+                                <p class="mb-0 small">{{ connection.expertise_areas }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            {% if connection.investment_interests %}
+                                <h6 class="text-muted mb-1">Intereses de inversión:</h6>
+                                <p class="mb-0 small">{{ connection.investment_interests }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Área de Mensajes -->
+                <div class="card-body p-0">
+                    <div class="chat-container">
+                        <div class="chat-messages" id="chat-messages">
+                            {% for message in messages %}
+                                <div class="message {% if message.sender == request.user %}sent{% else %}received{% endif %}">
+                                    <div class="message-header">
+                                        <div class="sender-info">
+                                            <span class="sender-name">
+                                                {{ message.sender.get_full_name|default:message.sender.username }}
+                                            </span>
+                                            {% if message.message_type != 'text' %}
+                                                <span class="message-type badge {% if message.message_type == 'opportunity' %}bg-success{% elif message.message_type == 'collaboration' %}bg-info{% elif message.message_type == 'knowledge_share' %}bg-warning{% else %}bg-secondary{% endif %}">
+                                                    {% if message.message_type == 'opportunity' %}
+                                                        <i class="fas fa-lightbulb"></i> Oportunidad
+                                                    {% elif message.message_type == 'collaboration' %}
+                                                        <i class="fas fa-handshake"></i> Colaboración
+                                                    {% elif message.message_type == 'knowledge_share' %}
+                                                        <i class="fas fa-graduation-cap"></i> Conocimiento
+                                                    {% else %}
+                                                        <i class="fas fa-cog"></i> Sistema
+                                                    {% endif %}
+                                                </span>
+                                            {% endif %}
+                                            {% if message.is_important %}
+                                                <span class="badge bg-danger">
+                                                    <i class="fas fa-exclamation"></i> Importante
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="message-time">
+                                            {{ message.timestamp|date:"d M, H:i" }}
+                                            {% if message.sender == request.user and message.is_read %}
+                                                <i class="fas fa-check-double text-info ms-1"></i>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="message-content">
+                                        {{ message.content|linebreaks }}
+                                        
+                                        {% if message.related_project %}
+                                            <div class="related-project mt-2 p-2 bg-light rounded">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-project-diagram"></i> Proyecto relacionado:
+                                                </small>
+                                                <div class="d-flex align-items-center mt-1">
+                                                    <strong>{{ message.related_project.title }}</strong>
+                                                    <a href="{% url 'project_detail' message.related_project.pk %}" 
+                                                       class="btn btn-sm btn-outline-primary ms-2" target="_blank">
+                                                        <i class="fas fa-external-link-alt"></i> Ver
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% empty %}
+                                <div class="text-center text-muted p-4">
+                                    <i class="fas fa-comments fa-3x mb-3"></i>
+                                    <h5>¡Comienza la conversación!</h5>
+                                    <p>Este es el inicio de vuestra colaboración. ¡Intercambiad ideas y descubrid oportunidades juntos!</p>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Formulario de Mensaje -->
+                <div class="card-footer bg-light">
+                    <form method="post" class="message-form">
+                        {% csrf_token %}
+                        
+                        <!-- Opciones del mensaje -->
+                        <div class="message-options mb-2">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <label for="{{ form.message_type.id_for_label }}" class="form-label small">Tipo de mensaje:</label>
+                                    {{ form.message_type }}
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="{{ form.related_project.id_for_label }}" class="form-label small">Proyecto relacionado:</label>
+                                    {{ form.related_project }}
+                                </div>
+                                <div class="col-md-4 d-flex align-items-end">
+                                    <div class="form-check">
+                                        {{ form.is_important }}
+                                        <label for="{{ form.is_important.id_for_label }}" class="form-check-label small">
+                                            Marcar como importante
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Área de texto del mensaje -->
+                        <div class="input-group">
+                            {{ form.content }}
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i> Enviar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Sugerencias de Colaboración -->
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fas fa-lightbulb text-warning"></i>
+                                Oportunidades de Colaboración
+                            </h6>
+                            <ul class="list-unstyled small mb-0">
+                                {% if current_user_type == 'mentor' %}
+                                    <li><i class="fas fa-check text-success me-2"></i> Comparte oportunidades de inversión exclusivas</li>
+                                    <li><i class="fas fa-check text-success me-2"></i> Ofrece análisis de proyectos estratégicos</li>
+                                    <li><i class="fas fa-check text-success me-2"></i> Proporciona insights del mercado</li>
+                                {% else %}
+                                    <li><i class="fas fa-check text-success me-2"></i> Solicita evaluación de proyectos potenciales</li>
+                                    <li><i class="fas fa-check text-success me-2"></i> Comparte tus criterios de inversión</li>
+                                    <li><i class="fas fa-check text-success me-2"></i> Pregunta sobre tendencias del mercado</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fas fa-handshake text-info"></i>
+                                Mejores Prácticas
+                            </h6>
+                            <ul class="list-unstyled small mb-0">
+                                <li><i class="fas fa-check text-success me-2"></i> Mantén comunicación regular y transparente</li>
+                                <li><i class="fas fa-check text-success me-2"></i> Comparte información relevante y actualizada</li>
+                                <li><i class="fas fa-check text-success me-2"></i> Sé específico en tus propuestas y solicitudes</li>
+                                <li><i class="fas fa-check text-success me-2"></i> Respeta los tiempos y compromisos acordados</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Scroll to bottom of chat
+    const chatMessages = document.getElementById('chat-messages');
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    // Auto-refresh chat every 30 seconds
+    setInterval(function() {
+        // Solo recargar si no hay texto en el formulario
+        const messageContent = document.querySelector('textarea[name="content"]');
+        if (messageContent && messageContent.value.trim() === '') {
+            location.reload();
+        }
+    }, 30000);
+
+    // Expandir textarea automáticamente
+    const textarea = document.querySelector('textarea[name="content"]');
+    if (textarea) {
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+    }
+
+    // Enviar mensaje con Ctrl+Enter
+    textarea.addEventListener('keydown', function(e) {
+        if (e.ctrlKey && e.key === 'Enter') {
+            e.preventDefault();
+            this.closest('form').submit();
+        }
+    });
+</script>
+{% endblock %}
