@@ -6,7 +6,7 @@ from django.contrib import messages # type: ignore
 from django.conf import settings # type: ignore
 from django.views import View # type: ignore
 from django.contrib.auth.models import User, Group # type: ignore
-from django.http import JsonResponse # type: ignore
+from django.http import JsonResponse, HttpResponse # type: ignore
 from .forms import CustomUserCreationForm, ProjectForm, InvestmentForm, LoginForm, ResourceForm, ResourceCategoryForm, ProjectSearchForm, ProjectEvaluationForm, CriterionScoreForm, ProjectRatingForm, ProjectCategoryForm, MentorInvestorConnectionForm, MentorInvestorMessageForm, ConnectionSearchForm
 from .models import Project, Investment, Mentorship, Profile, Message, UploadedFile, Resource, ResourceCategory, ProjectCategory, ProjectEvaluation, EvaluationCriteria, CriterionScore, ProjectRating, Notification, MentorInvestorConnection, MentorInvestorMessage
 from django.db.models import Q, Avg, Count, Sum # type: ignore
@@ -1009,6 +1009,78 @@ def analytics_dashboard(request):
     }
     
     return render(request, 'analytics_dashboard.html', context)
+
+@login_required
+def analytics_report(request):
+    """Generar un reporte CSV con las principales métricas analíticas."""
+    if not request.user.is_superuser:
+        messages.error(request, 'Acceso denegado.')
+        return redirect('home')
+
+    # Reutilizar la lógica del dashboard
+    total_projects = Project.objects.count()
+    active_projects = Project.objects.filter(is_active=True).count()
+    total_investments = Investment.objects.aggregate(
+        total=Sum('amount'),
+        count=Count('id')
+    )
+    total_users = User.objects.count()
+
+    projects_by_category = ProjectCategory.objects.annotate(
+        project_count=Count('project')
+    ).order_by('-project_count')
+
+    top_funded_projects = Project.objects.order_by('-amount_raised')[:10]
+    top_viewed_projects = Project.objects.order_by('-views_count')[:10]
+    best_evaluated_projects = Project.objects.annotate(
+        avg_evaluation=Avg('evaluations__overall_score'),
+        recommended_count=Count('evaluations', filter=Q(evaluations__is_recommended=True))
+    ).filter(avg_evaluation__isnull=False).order_by('-avg_evaluation')[:10]
+
+    timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+    filename = f'reporte_analiticas_{timestamp}.csv'
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    import csv
+
+    writer = csv.writer(response)
+    writer.writerow(['Reporte de Analiticas'])
+    writer.writerow(['Generado', timezone.now().strftime('%Y-%m-%d %H:%M:%S')])
+    writer.writerow([])
+
+    writer.writerow(['Resumen'])
+    writer.writerow(['Total de proyectos', total_projects])
+    writer.writerow(['Proyectos activos', active_projects])
+    writer.writerow(['Total de usuarios', total_users])
+    writer.writerow(['Total de inversiones', total_investments.get('count') or 0])
+    writer.writerow(['Monto total invertido', total_investments.get('total') or 0])
+    writer.writerow([])
+
+    writer.writerow(['Proyectos por categoria'])
+    writer.writerow(['Categoria', 'Cantidad de proyectos'])
+    for category in projects_by_category:
+        writer.writerow([category.name, category.project_count])
+    writer.writerow([])
+
+    writer.writerow(['Top 10 proyectos mas financiados'])
+    writer.writerow(['Proyecto', 'Monto recaudado'])
+    for project in top_funded_projects:
+        writer.writerow([project.title, project.amount_raised])
+    writer.writerow([])
+
+    writer.writerow(['Top 10 proyectos mas vistos'])
+    writer.writerow(['Proyecto', 'Vistas'])
+    for project in top_viewed_projects:
+        writer.writerow([project.title, project.views_count])
+    writer.writerow([])
+
+    writer.writerow(['Top 10 proyectos mejor evaluados'])
+    writer.writerow(['Proyecto', 'Promedio de evaluacion', 'Recomendaciones'])
+    for project in best_evaluated_projects:
+        writer.writerow([project.title, project.avg_evaluation, project.recommended_count])
+
+    return response
 
 @login_required
 def like_project(request, project_id):

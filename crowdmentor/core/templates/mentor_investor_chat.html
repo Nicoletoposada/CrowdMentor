@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load tz %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/mentor_investor_chat.css' %}">
@@ -98,7 +99,7 @@
                                             {% endif %}
                                         </div>
                                         <div class="message-time">
-                                            {{ message.timestamp|date:"d M, H:i" }}
+                                            {{ message.timestamp|localtime|date:"d M, H:i" }}
                                             {% if message.sender == request.user and message.is_read %}
                                                 <i class="fas fa-check-double text-info ms-1"></i>
                                             {% endif %}

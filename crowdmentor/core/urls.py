@@ -48,6 +48,7 @@ urlpatterns = [
     path('notifications/', views.notifications, name='notifications'),
     path('notifications/<int:notification_id>/read/', views.mark_notification_read, name='mark_notification_read'),
     path('analytics/', views.analytics_dashboard, name='analytics_dashboard'),
+    path('analytics/report/', views.analytics_report, name='analytics_report'),
     
     # URLs para sistema mentor-inversionista
     path('investors/', views.investor_list_for_mentors, name='investor_list_for_mentors'),
