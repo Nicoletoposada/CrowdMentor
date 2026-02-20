@@ -32,29 +32,29 @@
         <div class="hero-stats animate-fade-in-delay">
             <div class="stat-item">
                 <div class="stat-icon">
+                    <i class="fas fa-folder"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-number">4</div>
+                    <div class="stat-label">Categorías</div>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-icon">
                     <i class="fas fa-file-alt"></i>
                 </div>
                 <div class="stat-content">
-                    <div class="stat-number">50+</div>
-                    <div class="stat-label">Plantillas</div>
+                    <div class="stat-number">22</div>
+                    <div class="stat-label">Recursos</div>
                 </div>
             </div>
             <div class="stat-item">
                 <div class="stat-icon">
-                    <i class="fas fa-book-open"></i>
+                    <i class="fas fa-check-circle"></i>
                 </div>
                 <div class="stat-content">
-                    <div class="stat-number">100+</div>
-                    <div class="stat-label">Guías</div>
-                </div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-icon">
-                    <i class="fas fa-tools"></i>
-                </div>
-                <div class="stat-content">
-                    <div class="stat-number">30+</div>
-                    <div class="stat-label">Herramientas</div>
+                    <div class="stat-number">100%</div>
+                    <div class="stat-label">Verificados</div>
                 </div>
             </div>
         </div>
@@ -175,6 +175,36 @@
             </div>
         </div>
     {% endif %}
+    
+    <!-- Aviso Legal y Derechos de Autor -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="alert alert-info shadow-sm border-0" style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);">
+                <div class="d-flex align-items-start">
+                    <i class="fas fa-info-circle fa-2x me-3 mt-1" style="color: #1976d2;"></i>
+                    <div>
+                        <h5 class="alert-heading fw-bold mb-2" style="color: #1565c0;">
+                            <i class="fas fa-copyright me-2"></i>Nota Legal sobre Recursos
+                        </h5>
+                        <p class="mb-2" style="color: #424242;">
+                            <strong>Todos los recursos enlazados son de acceso público y se proporcionan con fines estrictamente educativos.</strong> 
+                            Los derechos de propiedad intelectual de cada recurso pertenecen a sus respectivos autores y organizaciones.
+                        </p>
+                        <hr style="border-color: rgba(25, 118, 210, 0.2);">
+                        <p class="mb-2 small" style="color: #616161;">
+                            <i class="fas fa-shield-alt me-2"></i>CrowdMentor no aloja, distribuye ni reproduce contenido protegido por derechos de autor. 
+                            Todos los enlaces externos dirigen a las fuentes originales oficiales.
+                        </p>
+                        <p class="mb-0 small" style="color: #616161;">
+                            <i class="fas fa-balance-scale me-2"></i>Los recursos incluyen: enlaces a contenido público de organizaciones educativas, 
+                            herramientas con versiones gratuitas oficiales, contenido bajo licencias Creative Commons, 
+                            y recursos gubernamentales de dominio público.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 {% endblock %}
