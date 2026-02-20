@@ -593,7 +593,25 @@ def respond_to_mentorship_request(request, mentorship_id, action):
 @login_required
 def mentor_list(request):
     mentors = Profile.objects.filter(user_type='mentor', is_approved=True)
-    return render(request, 'mentor_list.html', {'mentors': mentors})
+    
+    # Si el usuario es emprendedor, obtener sus mentorías activas
+    active_mentorships = []
+    if request.user.is_authenticated and hasattr(request.user, 'profile') and request.user.profile.user_type == 'entrepreneur':
+        # Obtener el proyecto más reciente activo del emprendedor
+        try:
+            project = Project.objects.filter(owner=request.user, is_active=True).latest('created_at')
+            # Obtener todas las mentorías activas para ese proyecto
+            active_mentorships = Mentorship.objects.filter(
+                project=project,
+                status='accepted'
+            ).values_list('mentor_id', flat=True)
+        except Project.DoesNotExist:
+            pass
+    
+    return render(request, 'mentor_list.html', {
+        'mentors': mentors,
+        'active_mentorships': active_mentorships
+    })
 
 @login_required
 def project_list_for_mentors(request):

@@ -18,9 +18,15 @@
                         {{ mentor.bio|linebreaks }}
                     </p>
                     {% if user.profile.user_type == 'entrepreneur' %}
-                    <a href="{% url 'request_mentorship_by_entrepreneur' mentor.user.id %}" class="btn btn-primary">
-                        Solicitar Mentoría
-                    </a>
+                        {% if mentor.user.id in active_mentorships %}
+                            <button class="btn btn-secondary" disabled>
+                                Mentoría Activa
+                            </button>
+                        {% else %}
+                            <a href="{% url 'request_mentorship_by_entrepreneur' mentor.user.id %}" class="btn btn-primary">
+                                Solicitar Mentoría
+                            </a>
+                        {% endif %}
                     {% endif %}
                 </div>
             </div>
