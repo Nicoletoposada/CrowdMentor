@@ -2,22 +2,22 @@
 
 /* Hero visual */
 .resources-hero {
-    background: linear-gradient(135deg, #4c6ef5 0%, #15aabf 100%);
+    background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
     padding: 0 0 24px 0;
     border-radius: 20px;
-    box-shadow: 0 4px 24px rgba(25, 118, 210, 0.07);
+    box-shadow: 0 4px 24px rgba(52, 152, 219, 0.07);
 }
 .resources-hero-bg {
     max-width: 600px;
     margin: 0 auto;
 }
 .resources-hero h1 {
-    color: #1976d2;
+    color: #2c3e50;
     font-size: 2.7rem;
     margin-bottom: 10px;
 }
 .resources-hero p {
-    color: #555;
+    color: #2c3e50;
     font-size: 1.2rem;
 }
 
@@ -31,7 +31,7 @@
 .resource-card {
     background: #fff;
     border-radius: 18px;
-    box-shadow: 0 2px 16px rgba(25, 118, 210, 0.08);
+    box-shadow: 0 2px 16px rgba(52, 152, 219, 0.08);
     transition: transform 0.18s, box-shadow 0.18s;
     border: none;
     min-height: 320px;
@@ -42,7 +42,7 @@
 }
 .resource-card:hover {
     transform: translateY(-6px) scale(1.03);
-    box-shadow: 0 8px 32px rgba(25, 118, 210, 0.13);
+    box-shadow: 0 8px 32px rgba(52, 152, 219, 0.13);
 }
 .resource-icon {
     background: #e3f2fd;
@@ -54,10 +54,10 @@
     justify-content: center;
     margin: 0 auto 10px auto;
     font-size: 2.2rem;
-    box-shadow: 0 2px 8px rgba(25, 118, 210, 0.07);
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.07);
 }
 .resource-card h5 {
-    color: #1976d2;
+    color: #2c3e50;
     font-size: 1.18rem;
 }
 .resource-card ul {
@@ -70,13 +70,13 @@
     font-size: 1.05rem;
 }
 .resource-card ul li a {
-    color: #1976d2;
+    color: #3498db;
     text-decoration: none;
     font-weight: 500;
     transition: color 0.2s;
 }
 .resource-card ul li a:hover {
-    color: #0d47a1;
+    color: #2c3e50;
     text-decoration: underline;
 }
 
