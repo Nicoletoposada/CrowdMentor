@@ -7,7 +7,7 @@ from django.conf import settings # type: ignore
 from django.views import View # type: ignore
 from django.contrib.auth.models import User, Group # type: ignore
 from django.http import JsonResponse, HttpResponse # type: ignore
-from .forms import CustomUserCreationForm, ProjectForm, InvestmentForm, LoginForm, ResourceForm, ResourceCategoryForm, ProjectSearchForm, ProjectEvaluationForm, CriterionScoreForm, ProjectRatingForm, ProjectCategoryForm, MentorInvestorConnectionForm, MentorInvestorMessageForm, ConnectionSearchForm
+from .forms import CustomUserCreationForm, ProjectForm, InvestmentForm, LoginForm, ResourceForm, ResourceCategoryForm, ProjectSearchForm, ProjectEvaluationForm, CriterionScoreForm, ProjectRatingForm, ProjectCategoryForm, MentorInvestorConnectionForm, MentorInvestorMessageForm, ConnectionSearchForm, MentorshipMessageForm
 from .models import Project, Investment, Mentorship, Profile, Message, UploadedFile, Resource, ResourceCategory, ProjectCategory, ProjectEvaluation, EvaluationCriteria, CriterionScore, ProjectRating, Notification, MentorInvestorConnection, MentorInvestorMessage
 from django.db.models import Q, Avg, Count, Sum # type: ignore
 from django.views.decorators.http import require_POST # type: ignore
@@ -36,17 +36,70 @@ def home(request):
     projects = Project.objects.filter(is_active=True)
     return render(request, 'home.html', {'projects': projects})
 
+def ensure_project_categories():
+    """Seed default project categories if none exist."""
+    if ProjectCategory.objects.exists():
+        return
+
+    categories = [
+        {
+            'name': 'Tecnologia',
+            'description': 'Proyectos relacionados con software, hardware, apps, etc.',
+            'icon': 'fas fa-laptop-code'
+        },
+        {
+            'name': 'Sostenibilidad',
+            'description': 'Proyectos enfocados en el medio ambiente y sostenibilidad',
+            'icon': 'fas fa-leaf'
+        },
+        {
+            'name': 'Salud',
+            'description': 'Proyectos relacionados con la salud y bienestar',
+            'icon': 'fas fa-heartbeat'
+        },
+        {
+            'name': 'Educacion',
+            'description': 'Proyectos educativos e innovacion en aprendizaje',
+            'icon': 'fas fa-graduation-cap'
+        },
+        {
+            'name': 'Fintech',
+            'description': 'Tecnologia financiera y servicios financieros',
+            'icon': 'fas fa-credit-card'
+        },
+        {
+            'name': 'E-commerce',
+            'description': 'Comercio electronico y marketplaces',
+            'icon': 'fas fa-shopping-cart'
+        },
+        {
+            'name': 'Impacto social',
+            'description': 'Proyectos con impacto social positivo',
+            'icon': 'fas fa-hands-helping'
+        }
+    ]
+
+    for cat_data in categories:
+        ProjectCategory.objects.get_or_create(
+            name=cat_data['name'],
+            defaults={
+                'description': cat_data['description'],
+                'icon': cat_data['icon']
+            }
+        )
+
 def register(request):
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST, request.FILES)
         if form.is_valid():
             user = form.save()
+            user_type = form.cleaned_data['user_type']
             profile = Profile.objects.create(
                 user=user,
-                user_type=form.cleaned_data['user_type'],
+                user_type=user_type,
                 bio=form.cleaned_data['bio'],
                 experience=form.cleaned_data['experience'],
-                is_approved=form.cleaned_data['user_type'] in ['entrepreneur', 'investor']
+                is_approved=user_type in ['entrepreneur', 'investor']
             )
 
             # Handle multiple file uploads
@@ -61,6 +114,28 @@ def register(request):
                     profile=profile,
                     file=file
                 )
+            
+            # Crear notificaciones para aprobaciones pendientes
+            if user_type == 'mentor':
+                # Notificar a todos los evaluadores
+                evaluators = User.objects.filter(profile__user_type='evaluator', profile__is_approved_by_admin=True)
+                for evaluator in evaluators:
+                    Notification.objects.create(
+                        user=evaluator,
+                        title='Nueva solicitud de mentor',
+                        message=f'{user.username} ha solicitado ser mentor y necesita aprobación.',
+                        notification_type='system'
+                    )
+            elif user_type == 'evaluator':
+                # Notificar a todos los administradores
+                admins = User.objects.filter(is_superuser=True)
+                for admin in admins:
+                    Notification.objects.create(
+                        user=admin,
+                        title='Nueva solicitud de evaluador',
+                        message=f'{user.username} ha solicitado ser evaluador y necesita aprobación.',
+                        notification_type='system'
+                    )
 
             login(request, user)
             messages.success(request, 'Registration successful!')
@@ -159,6 +234,8 @@ def project_create(request):
         messages.warning(request, 'Debes iniciar sesión para crear un proyecto.')
         return redirect('login')
 
+    ensure_project_categories()
+
     if request.method == 'POST':
         form = ProjectForm(request.POST, request.FILES)
         if form.is_valid():
@@ -190,6 +267,7 @@ def project_create(request):
     return render(request, 'project_create.html', context)
 
 def project_list(request):
+    ensure_project_categories()
     form = ProjectSearchForm(request.GET or None)
     projects = Project.objects.filter(is_active=True)
     
@@ -353,6 +431,15 @@ def approve_mentor(request, profile_id):
         profile = get_object_or_404(Profile, pk=profile_id)
         profile.is_approved = True
         profile.save()
+        
+        # Crear notificación para el mentor aprobado
+        Notification.objects.create(
+            user=profile.user,
+            title='¡Tu cuenta ha sido aprobada!',
+            message='Felicidades, tu solicitud de mentor ha sido aprobada. Ya puedes ofrecer mentorías.',
+            notification_type='system'
+        )
+        
         messages.success(request, 'Mentor approved!')
     return redirect('dashboard')
 
@@ -375,6 +462,14 @@ def approve_evaluator(request, user_id):
                 # Asignar permisos de evaluador
                 evaluator_group, created = Group.objects.get_or_create(name='Evaluadores')
                 user.groups.add(evaluator_group)
+                
+                # Crear notificación para el evaluador aprobado
+                Notification.objects.create(
+                    user=user,
+                    title='¡Tu cuenta de evaluador ha sido aprobada!',
+                    message='Felicidades, tu solicitud de evaluador ha sido aprobada por el administrador. Ya puedes evaluar proyectos.',
+                    notification_type='system'
+                )
                 
                 return JsonResponse({'success': True})
             else:
@@ -459,11 +554,30 @@ def manage_investment(request, investment_id):
         project = investment.project
         project.amount_raised += investment.amount
         project.save()
+        
+        # Crear notificación para el inversionista
+        Notification.objects.create(
+            user=investment.investor,
+            title='¡Inversión aceptada!',
+            message=f'Tu inversión de ${investment.amount:,.0f} COP en "{project.title}" ha sido aceptada.',
+            notification_type='investment',
+            related_project=project,
+            related_investment=investment
+        )
 
         messages.success(request, 'Has aceptado la inversión. El monto ha sido sumado al proyecto.')
     elif action == 'reject':
         investment.status = 'rejected'
         investment.save()
+        
+        # Crear notificación para el inversionista
+        Notification.objects.create(
+            user=investment.investor,
+            title='Inversión rechazada',
+            message=f'Tu inversión de ${investment.amount:,.0f} COP en "{investment.project.title}" ha sido rechazada.',
+            notification_type='investment',
+            related_project=investment.project
+        )
 
         messages.success(request, 'Has rechazado la inversión. El dinero será reembolsado al inversionista.')
     else:
@@ -512,6 +626,16 @@ def request_mentorship_by_mentor(request, project_id):
         initiated_by='mentor',
         status='pending'
     )
+    
+    # Crear notificación para el dueño del proyecto
+    Notification.objects.create(
+        user=project.owner,
+        title='Nueva solicitud de mentoría',
+        message=f'{request.user.username} quiere ser mentor de tu proyecto "{project.title}".',
+        notification_type='mentorship',
+        related_mentorship=mentorship,
+        related_project=project
+    )
 
     messages.success(request, f'Solicitud de mentoría enviada para el proyecto {project.title}.')
     return redirect('project_list')
@@ -559,6 +683,16 @@ def request_mentorship_by_entrepreneur(request, mentor_id):
         initiated_by='entrepreneur',
         status='pending'
     )
+    
+    # Crear notificación para el mentor
+    Notification.objects.create(
+        user=mentor.user,
+        title='Nueva solicitud de mentoría',
+        message=f'{request.user.username} solicita tu mentoría para el proyecto "{project.title}".',
+        notification_type='mentorship',
+        related_mentorship=mentorship,
+        related_project=project
+    )
 
     messages.success(request, f'Solicitud de mentoría enviada al mentor {mentor.user.username}.')
     return redirect('mentor_list')
@@ -579,9 +713,40 @@ def respond_to_mentorship_request(request, mentorship_id, action):
 
     if action == 'accept':
         mentorship.status = 'accepted'
-        messages.success(request, 'Has aceptado la solicitud de mentoría.')
         mentorship.save()
+        
+        # Crear notificación para quien solicitó la mentoría
+        if mentorship.initiated_by == 'mentor':
+            recipient = mentorship.mentor
+            message_text = f'{request.user.username} ha aceptado tu solicitud de mentoría para el proyecto "{mentorship.project.title}".'
+        else:
+            recipient = mentorship.project.owner
+            message_text = f'{request.user.username} ha aceptado tu solicitud de mentoría.'
+        
+        Notification.objects.create(
+            user=recipient,
+            title='Solicitud de mentoría aceptada',
+            message=message_text,
+            notification_type='mentorship',
+            related_mentorship=mentorship,
+            related_project=mentorship.project
+        )
+        
+        messages.success(request, 'Has aceptado la solicitud de mentoría.')
     elif action == 'reject':
+        # Crear notificación antes de eliminar
+        if mentorship.initiated_by == 'mentor':
+            recipient = mentorship.mentor
+        else:
+            recipient = mentorship.project.owner
+        
+        Notification.objects.create(
+            user=recipient,
+            title='Solicitud de mentoría rechazada',
+            message=f'{request.user.username} ha rechazado tu solicitud de mentoría.',
+            notification_type='mentorship'
+        )
+        
         mentorship.delete()
         messages.info(request, 'Has rechazado la solicitud de mentoría.')
     else:
@@ -633,25 +798,45 @@ def mentorship_chat(request, mentorship_id):
         return redirect('dashboard')
 
     if request.method == 'POST':
-        content = request.POST.get('content', '').strip()
-        if content:
-            Message.objects.create(
-                mentorship=mentorship,
-                sender=request.user,
-                content=content
+        form = MentorshipMessageForm(request.POST, user=request.user)
+        if form.is_valid():
+            message = form.save(commit=False)
+            message.mentorship = mentorship
+            message.sender = request.user
+            message.save()
+            
+            # Crear notificación para el otro usuario
+            recipient = mentorship.mentor if request.user == mentorship.project.owner else mentorship.project.owner
+            Notification.objects.create(
+                user=recipient,
+                title='Nuevo mensaje de mentoría',
+                message=f'{request.user.username} te ha enviado un mensaje.',
+                notification_type='message',
+                related_mentorship=mentorship
             )
+            
             return redirect('mentorship_chat', mentorship_id=mentorship_id)
+    else:
+        form = MentorshipMessageForm(user=request.user)
 
-    # Solo obtener los mensajes del día actual
-    today = timezone.now().date()
-    chat_messages = mentorship.messages.filter(
-        timestamp__date=today
-    ).order_by('timestamp')
+    # Obtener todos los mensajes del chat
+    chat_messages = mentorship.messages.all().order_by('timestamp')
+    
+    # Marcar mensajes como leídos
+    mentorship.messages.filter(is_read=False).exclude(sender=request.user).update(is_read=True)
+
+    # Obtener el otro usuario
+    other_user = mentorship.mentor if request.user == mentorship.project.owner else mentorship.project.owner
+    
+    # Determinar el tipo de usuario actual
+    current_user_type = request.user.profile.user_type if hasattr(request.user, 'profile') else None
 
     return render(request, 'mentorship_chat.html', {
         'mentorship': mentorship,
         'messages': chat_messages,
-        'other_user': mentorship.mentor if request.user == mentorship.project.owner else mentorship.project.owner
+        'form': form,
+        'other_user': other_user,
+        'current_user_type': current_user_type
     })
 
 @login_required
@@ -981,6 +1166,12 @@ def mark_notification_read(request, notification_id):
         return JsonResponse({'success': True})
     except Notification.DoesNotExist:
         return JsonResponse({'error': 'Notificación no encontrada'}, status=404)
+
+@login_required
+def get_notifications_count(request):
+    """API endpoint para obtener el número de notificaciones no leídas"""
+    unread_count = request.user.notifications.filter(is_read=False).count()
+    return JsonResponse({'unread_count': unread_count})
 
 @login_required
 def analytics_dashboard(request):
@@ -1343,6 +1534,15 @@ def mentor_investor_chat(request, connection_id):
             # Actualizar última actividad de la conexión
             connection.last_activity = timezone.now()
             connection.save()
+            
+            # Crear notificación para el otro usuario
+            recipient = connection.get_other_user(request.user)
+            Notification.objects.create(
+                user=recipient,
+                title='Nuevo mensaje',
+                message=f'{request.user.username} te ha enviado un mensaje.',
+                notification_type='message'
+            )
             
             return redirect('mentor_investor_chat', connection_id=connection_id)
     else:

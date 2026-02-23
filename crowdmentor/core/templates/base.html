@@ -145,7 +145,34 @@
             setTimeout(() => {
                 loading.classList.remove('active');
             }, 500);
+            
+            // Actualizar contador de notificaciones
+            {% if user.is_authenticated %}
+                updateNotificationCount();
+                // Actualizar cada 30 segundos
+                setInterval(updateNotificationCount, 30000);
+            {% endif %}
         });
+        
+        {% if user.is_authenticated %}
+        // Función para actualizar el contador de notificaciones
+        function updateNotificationCount() {
+            fetch('{% url "get_notifications_count" %}')
+                .then(response => response.json())
+                .then(data => {
+                    const badge = document.getElementById('notification-badge');
+                    if (badge) {
+                        if (data.unread_count > 0) {
+                            badge.textContent = data.unread_count;
+                            badge.classList.remove('hidden');
+                        } else {
+                            badge.classList.add('hidden');
+                        }
+                    }
+                })
+                .catch(error => console.error('Error al actualizar notificaciones:', error));
+        }
+        {% endif %}
 
         // Smooth scroll
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {

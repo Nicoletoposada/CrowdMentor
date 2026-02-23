@@ -131,14 +131,31 @@ class Message(models.Model):
     mentorship = models.ForeignKey(Mentorship, on_delete=models.CASCADE, related_name='messages')
     sender = models.ForeignKey(User, on_delete=models.CASCADE)
     content = models.TextField()
+    
+    # Tipos de mensaje
+    MESSAGE_TYPES = (
+        ('text', 'Mensaje de texto'),
+        ('advice', 'Consejo/Asesoría'),
+        ('feedback', 'Retroalimentación'),
+        ('milestone', 'Hito del proyecto'),
+        ('resource', 'Recurso compartido'),
+        ('system', 'Mensaje del sistema'),
+    )
+    message_type = models.CharField(max_length=20, choices=MESSAGE_TYPES, default='text')
+    
+    # Metadatos
     timestamp = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
+    is_important = models.BooleanField(default=False)  # Para marcar mensajes importantes
+    
+    # Enlace opcional al proyecto de la mentoría
+    related_resource = models.ForeignKey('Resource', on_delete=models.SET_NULL, null=True, blank=True)
 
     class Meta:
         ordering = ['timestamp']
 
     def __str__(self):
-        return self.sender.username
+        return f"{self.sender.username}: {self.content[:50]}"
 
 class ResourceCategory(models.Model):
     name = models.CharField(max_length=100, unique=True)

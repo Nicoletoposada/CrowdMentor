@@ -2,7 +2,7 @@
 from django import forms # type: ignore
 from django.contrib.auth.forms import UserCreationForm # type: ignore
 from django.contrib.auth.models import User # type: ignore
-from .models import Profile, Project, Investment, Resource, ResourceCategory, ProjectCategory, ProjectEvaluation, EvaluationCriteria, CriterionScore, ProjectRating, MentorInvestorConnection, MentorInvestorMessage
+from .models import Profile, Project, Investment, Resource, ResourceCategory, ProjectCategory, ProjectEvaluation, EvaluationCriteria, CriterionScore, ProjectRating, MentorInvestorConnection, MentorInvestorMessage, Message
 
 class MultipleFileInput(forms.ClearableFileInput):
     allow_multiple_selected = True
@@ -477,3 +477,41 @@ class ConnectionSearchForm(forms.Form):
             'class': 'form-control'
         })
     )
+
+class MentorshipMessageForm(forms.ModelForm):
+    class Meta:
+        model = Message
+        fields = ['content', 'message_type', 'is_important', 'related_resource']
+        widgets = {
+            'content': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': 'Escribe tu mensaje...'
+            }),
+            'message_type': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'is_important': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+            'related_resource': forms.Select(attrs={
+                'class': 'form-control'
+            })
+        }
+        labels = {
+            'content': 'Mensaje',
+            'message_type': 'Tipo de mensaje',
+            'is_important': 'Marcar como importante',
+            'related_resource': 'Recurso relacionado (opcional)'
+        }
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        
+        # Mostrar recursos disponibles (activos y destacados primero)
+        self.fields['related_resource'].queryset = Resource.objects.filter(is_active=True).order_by('-is_featured', 'title')
+        
+        # Hacer el campo opcional
+        self.fields['related_resource'].required = False
+        self.fields['related_resource'].empty_label = 'Ningún recurso específico'
