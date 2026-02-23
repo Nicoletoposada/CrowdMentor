@@ -174,12 +174,20 @@ def dashboard(request):
             project__owner=request.user,
             status='pending'
         )
+        unread_mentorship_messages = 0
+        for mentorship in accepted_mentorships:
+            unread_mentorship_messages += mentorship.messages.filter(
+                is_read=False
+            ).exclude(sender=request.user).count()
+        total_active_chats = accepted_mentorships.count()
         return render(request, 'dashboard.html', {
             'projects': projects,
             'investments': investments,
             'profile': profile,
             'mentorships': accepted_mentorships,
-            'pending_mentorships': pending_mentorships
+            'pending_mentorships': pending_mentorships,
+            'unread_mentorship_messages': unread_mentorship_messages,
+            'total_active_chats': total_active_chats,
         })
     elif profile.user_type in ['mentor', 'investor']:
         if profile.user_type == 'mentor' and not profile.is_approved:
@@ -203,6 +211,17 @@ def dashboard(request):
             unread_connections_messages += connection.messages.filter(
                 is_read=False
             ).exclude(sender=request.user).count()
+
+        active_mentorships = mentorships.filter(status='accepted')
+
+        # Incluir mensajes no leídos de mentorías para mentores
+        if profile.user_type == 'mentor':
+            for mentorship in active_mentorships:
+                unread_connections_messages += mentorship.messages.filter(
+                    is_read=False
+                ).exclude(sender=request.user).count()
+
+        total_active_chats = connections.count() + active_mentorships.count()
         
         return render(request, 'dashboard.html', {
             'mentorships': mentorships,
@@ -212,6 +231,7 @@ def dashboard(request):
             'connections': connections,
             'pending_connections': pending_connections,
             'unread_connections_messages': unread_connections_messages,
+            'total_active_chats': total_active_chats,
         })
     else:  # Evaluator
         pending_mentors = Profile.objects.filter(user_type='mentor', is_approved=False)
@@ -1429,40 +1449,62 @@ def create_mentor_investor_connection(request, target_user_id):
 
 @login_required
 def mentor_investor_connections(request):
-    """Vista del dashboard de conexiones mentor-inversionista"""
+    """Vista del dashboard de conexiones"""
     if not hasattr(request.user, 'profile'):
         messages.error(request, 'Tu cuenta no tiene un perfil asociado.')
         return redirect('home')
     
     user_type = request.user.profile.user_type
     
-    if user_type not in ['mentor', 'investor']:
-        messages.error(request, 'Solo mentores e inversionistas pueden acceder a esta página.')
+    if user_type not in ['mentor', 'investor', 'entrepreneur']:
+        messages.error(request, 'Solo mentores, inversionistas y emprendedores pueden acceder a esta página.')
         return redirect('home')
     
     # Obtener conexiones según el tipo de usuario
     if user_type == 'mentor':
         connections = MentorInvestorConnection.objects.filter(mentor=request.user)
-    else:
+    elif user_type == 'investor':
         connections = MentorInvestorConnection.objects.filter(investor=request.user)
+    else:
+        connections = MentorInvestorConnection.objects.none()
     
     # Separar por estado
     pending_connections = connections.filter(status='pending')
     active_connections = connections.filter(status='accepted')
+
+    # Mentorias (mentor-emprendedor)
+    if user_type == 'mentor':
+        mentorships = Mentorship.objects.filter(mentor=request.user)
+    elif user_type == 'entrepreneur':
+        mentorships = Mentorship.objects.filter(project__owner=request.user)
+    else:
+        mentorships = Mentorship.objects.none()
+
+    pending_mentorships = mentorships.filter(status='pending')
+    active_mentorships = mentorships.filter(status='accepted')
     
     # Estadísticas
-    total_connections = active_connections.count()
+    total_connections = active_connections.count() + active_mentorships.count()
+    pending_total = pending_connections.count() + pending_mentorships.count()
     unread_messages = 0
     
     for connection in active_connections:
         unread_messages += connection.messages.filter(
             is_read=False
         ).exclude(sender=request.user).count()
+
+    for mentorship in active_mentorships:
+        unread_messages += mentorship.messages.filter(
+            is_read=False
+        ).exclude(sender=request.user).count()
     
     context = {
         'pending_connections': pending_connections,
         'active_connections': active_connections,
+        'pending_mentorships': pending_mentorships,
+        'active_mentorships': active_mentorships,
         'total_connections': total_connections,
+        'pending_total': pending_total,
         'unread_messages': unread_messages,
         'user_type': user_type
     }

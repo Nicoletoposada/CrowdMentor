@@ -54,7 +54,7 @@
                             </a>
                             {% if user.is_authenticated and user|has_profile %}
                                 {% with user_type=user|get_user_type %}
-                                    {% if user_type == 'mentor' or user_type == 'investor' %}
+                                    {% if user_type == 'mentor' or user_type == 'investor' or user_type == 'entrepreneur' %}
                                         <a href="{% url 'mentor_investor_connections' %}" class="btn btn-outline-purple me-2 position-relative">
                                             <i class="fas fa-handshake me-2"></i>Conexiones
                                             <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-info hidden" id="connections-badge">

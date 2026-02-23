@@ -63,6 +63,26 @@
             {% endfor %}
         </div>
 
+        <h3 class="text-primary mt-4">Mensajes</h3>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h5>{{ total_active_chats }}</h5>
+                        <p class="mb-0">Chats activos</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card bg-warning text-white">
+                    <div class="card-body text-center">
+                        <h5>{{ unread_mentorship_messages }}</h5>
+                        <p class="mb-0">Mensajes Sin Leer</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <h3 class="text-primary mt-4">Mentorías Activas</h3>
         <div class="row">
             {% for mentorship in mentorships %}
@@ -137,6 +157,27 @@
             {% endfor %}
         </div>
 
+        <!-- Sección de Conexiones Mentor-Inversionista -->
+        <h3 class="text-primary mt-4">Mensajes</h3>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h5>{{ total_active_chats }}</h5>
+                        <p class="mb-0">Chats activos</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card bg-warning text-white">
+                    <div class="card-body text-center">
+                        <h5>{{ unread_connections_messages }}</h5>
+                        <p class="mb-0">Mensajes Sin Leer</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <h3 class="text-primary mt-4">Tus Mentorías Activas</h3>
         <div class="row">
             {% for mentorship in mentorships %}
@@ -157,27 +198,6 @@
                 <p class="text-muted">No hay mentorías activas.</p>
                 <a href="{% url 'project_list_for_mentors' %}" class="btn btn-primary">Ver Proyectos Disponibles</a>
             {% endfor %}
-        </div>
-
-        <!-- Sección de Conexiones Mentor-Inversionista -->
-        <h3 class="text-primary mt-4">Conexiones con Inversionistas</h3>
-        <div class="row mb-3">
-            <div class="col-md-6">
-                <div class="card bg-light">
-                    <div class="card-body text-center">
-                        <h5>{{ connections.count }}</h5>
-                        <p class="mb-0">Conexiones Activas</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="card bg-warning text-white">
-                    <div class="card-body text-center">
-                        <h5>{{ unread_connections_messages }}</h5>
-                        <p class="mb-0">Mensajes Sin Leer</p>
-                    </div>
-                </div>
-            </div>
         </div>
 
         {% if pending_connections %}
@@ -244,31 +264,14 @@
         </div>
 
     {% elif profile.user_type == 'investor' %}
-        <h3 class="text-primary">Tus Inversiones</h3>
-        <div class="row">
-            {% for investment in investments %}
-                <div class="col-md-6 mb-4">
-                    <div class="card shadow-sm">
-                        <div class="card-body">
-                            <h5 class="card-title text-primary">{{ investment.project.title }}</h5>
-                            <p class="card-text text-muted">Monto: ${{ investment.amount }}</p>
-                            <p class="card-text text-muted">Participación: {{ investment.equity_percentage }}%</p>
-                        </div>
-                    </div>
-                </div>
-            {% empty %}
-                <p class="text-muted">No se han realizado inversiones.</p>
-            {% endfor %}
-        </div>
-
         <!-- Sección de Conexiones Mentor-Inversionista -->
-        <h3 class="text-primary mt-4">Conexiones con Mentores</h3>
+        <h3 class="text-primary mt-4">Mensajes</h3>
         <div class="row mb-3">
             <div class="col-md-6">
                 <div class="card bg-light">
                     <div class="card-body text-center">
-                        <h5>{{ connections.count }}</h5>
-                        <p class="mb-0">Conexiones Activas</p>
+                        <h5>{{ total_active_chats }}</h5>
+                        <p class="mb-0">Chats activos</p>
                     </div>
                 </div>
             </div>
@@ -342,6 +345,23 @@
                         </a>
                     </div>
                 </div>
+            {% endfor %}
+        </div>
+
+        <h3 class="text-primary">Tus Inversiones</h3>
+        <div class="row">
+            {% for investment in investments %}
+                <div class="col-md-6 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title text-primary">{{ investment.project.title }}</h5>
+                            <p class="card-text text-muted">Monto: ${{ investment.amount }}</p>
+                            <p class="card-text text-muted">Participación: {{ investment.equity_percentage }}%</p>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <p class="text-muted">No se han realizado inversiones.</p>
             {% endfor %}
         </div>
 

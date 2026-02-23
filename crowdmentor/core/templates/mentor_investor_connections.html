@@ -16,16 +16,23 @@
             </h2>
             <p class="text-muted">
                 {% if user_type == 'mentor' %}
-                    Gestiona tus conexiones con inversionistas y colabora en oportunidades estratégicas.
-                {% else %}
+                    Gestiona tus conexiones con inversionistas y tus mentorías con emprendedores.
+                {% elif user_type == 'investor' %}
                     Gestiona tus conexiones con mentores y maximiza tus oportunidades de inversión.
+                {% else %}
+                    Gestiona tus mentorías con mentores y sigue el progreso de tus proyectos.
                 {% endif %}
             </p>
         </div>
         <div class="col-md-4 text-end">
-            <a href="{% if user_type == 'mentor' %}{% url 'investor_list_for_mentors' %}{% else %}{% url 'mentor_list_for_investors' %}{% endif %}" 
+            <a href="{% if user_type == 'mentor' %}{% url 'investor_list_for_mentors' %}{% elif user_type == 'investor' %}{% url 'mentor_list_for_investors' %}{% else %}{% url 'mentor_list' %}{% endif %}" 
                class="btn btn-primary">
-                <i class="fas fa-plus"></i> Nueva Conexión
+                <i class="fas fa-plus"></i>
+                {% if user_type == 'entrepreneur' %}
+                    Solicitar Mentoría
+                {% else %}
+                    Nueva Conexión
+                {% endif %}
             </a>
         </div>
     </div>
@@ -52,7 +59,7 @@
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-grow-1">
-                            <h4 class="mb-0">{{ pending_connections.count }}</h4>
+                            <h4 class="mb-0">{{ pending_total }}</h4>
                             <p class="mb-0">Solicitudes Pendientes</p>
                         </div>
                         <div class="ms-3">
@@ -80,76 +87,142 @@
     </div>
 
     <!-- Solicitudes Pendientes -->
-    {% if pending_connections %}
+    {% if pending_total %}
         <div class="row mb-4">
             <div class="col-12">
                 <div class="card">
                     <div class="card-header bg-warning text-white">
                         <h5 class="mb-0">
                             <i class="fas fa-clock"></i>
-                            Solicitudes Pendientes ({{ pending_connections.count }})
+                            Solicitudes Pendientes ({{ pending_total }})
                         </h5>
                     </div>
                     <div class="card-body">
-                        {% for connection in pending_connections %}
-                            <div class="connection-item border-bottom pb-3 mb-3">
-                                <div class="d-flex align-items-center justify-content-between">
-                                    <div class="d-flex align-items-center">
-                                        <div class="avatar-circle {% if user_type == 'mentor' %}bg-success{% else %}bg-info{% endif %} text-white me-3">
-                                            {% if user_type == 'mentor' %}
-                                                <i class="fas fa-money-bill-wave"></i>
-                                            {% else %}
-                                                <i class="fas fa-user-tie"></i>
-                                            {% endif %}
-                                        </div>
-                                        <div>
-                                            <h6 class="mb-1">
+                        {% if pending_connections %}
+                            <h6 class="text-muted">Mentor - Inversionista ({{ pending_connections.count }})</h6>
+                            {% for connection in pending_connections %}
+                                <div class="connection-item border-bottom pb-3 mb-3">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-circle {% if user_type == 'mentor' %}bg-success{% else %}bg-info{% endif %} text-white me-3">
                                                 {% if user_type == 'mentor' %}
-                                                    {{ connection.investor.get_full_name|default:connection.investor.username }}
+                                                    <i class="fas fa-money-bill-wave"></i>
                                                 {% else %}
-                                                    {{ connection.mentor.get_full_name|default:connection.mentor.username }}
+                                                    <i class="fas fa-user-tie"></i>
                                                 {% endif %}
-                                            </h6>
-                                            <small class="text-muted">
-                                                {% if connection.initiated_by == user_type %}
-                                                    Solicitud enviada hace {{ connection.created_at|timesince }}
-                                                {% else %}
-                                                    Solicitud recibida hace {{ connection.created_at|timesince }}
-                                                {% endif %}
-                                            </small>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-1">
+                                                    {% if user_type == 'mentor' %}
+                                                        {{ connection.investor.get_full_name|default:connection.investor.username }}
+                                                    {% else %}
+                                                        {{ connection.mentor.get_full_name|default:connection.mentor.username }}
+                                                    {% endif %}
+                                                </h6>
+                                                <small class="text-muted">
+                                                    {% if connection.initiated_by == user_type %}
+                                                        Solicitud enviada hace {{ connection.created_at|timesince }}
+                                                    {% else %}
+                                                        Solicitud recibida hace {{ connection.created_at|timesince }}
+                                                    {% endif %}
+                                                </small>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="action-buttons">
+                                            {% if connection.initiated_by != user_type %}
+                                                <a href="{% url 'respond_to_connection_request' connection.id 'accept' %}" 
+                                                   class="btn btn-success btn-sm me-2">
+                                                    <i class="fas fa-check"></i> Aceptar
+                                                </a>
+                                                <a href="{% url 'respond_to_connection_request' connection.id 'reject' %}" 
+                                                   class="btn btn-danger btn-sm">
+                                                    <i class="fas fa-times"></i> Rechazar
+                                                </a>
+                                            {% else %}
+                                                <span class="badge bg-warning text-dark">
+                                                    <i class="fas fa-clock"></i> Esperando respuesta
+                                                </span>
+                                            {% endif %}
                                         </div>
                                     </div>
                                     
-                                    <div class="action-buttons">
-                                        {% if connection.initiated_by != user_type %}
-                                            <!-- Solo mostrar botones si el usuario actual no inició la conexión -->
-                                            <a href="{% url 'respond_to_connection_request' connection.id 'accept' %}" 
-                                               class="btn btn-success btn-sm me-2">
-                                                <i class="fas fa-check"></i> Aceptar
-                                            </a>
-                                            <a href="{% url 'respond_to_connection_request' connection.id 'reject' %}" 
-                                               class="btn btn-danger btn-sm">
-                                                <i class="fas fa-times"></i> Rechazar
-                                            </a>
-                                        {% else %}
-                                            <span class="badge bg-warning text-dark">
-                                                <i class="fas fa-clock"></i> Esperando respuesta
-                                            </span>
+                                    <div class="mt-2">
+                                        <p class="mb-1"><strong>Propósito:</strong> {{ connection.purpose|truncatewords:20 }}</p>
+                                        {% if connection.expertise_areas %}
+                                            <p class="mb-1"><strong>Áreas de expertise:</strong> {{ connection.expertise_areas }}</p>
+                                        {% endif %}
+                                        {% if connection.investment_interests %}
+                                            <p class="mb-0"><strong>Intereses de inversión:</strong> {{ connection.investment_interests }}</p>
                                         {% endif %}
                                     </div>
                                 </div>
-                                
-                                <div class="mt-2">
-                                    <p class="mb-1"><strong>Propósito:</strong> {{ connection.purpose|truncatewords:20 }}</p>
-                                    {% if connection.expertise_areas %}
-                                        <p class="mb-1"><strong>Áreas de expertise:</strong> {{ connection.expertise_areas }}</p>
-                                    {% endif %}
-                                    {% if connection.investment_interests %}
-                                        <p class="mb-0"><strong>Intereses de inversión:</strong> {{ connection.investment_interests }}</p>
-                                    {% endif %}
+                            {% endfor %}
+                        {% endif %}
+
+                        {% if pending_mentorships %}
+                            <h6 class="text-muted mt-3">Mentor - Emprendedor ({{ pending_mentorships.count }})</h6>
+                            {% for mentorship in pending_mentorships %}
+                                <div class="connection-item border-bottom pb-3 mb-3">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-circle {% if user_type == 'mentor' %}bg-success{% else %}bg-primary{% endif %} text-white me-3">
+                                                {% if user_type == 'mentor' %}
+                                                    <i class="fas fa-user-graduate"></i>
+                                                {% else %}
+                                                    <i class="fas fa-user-tie"></i>
+                                                {% endif %}
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-1">
+                                                    {% if user_type == 'mentor' %}
+                                                        {{ mentorship.project.owner.get_full_name|default:mentorship.project.owner.username }}
+                                                    {% else %}
+                                                        {{ mentorship.mentor.get_full_name|default:mentorship.mentor.username }}
+                                                    {% endif %}
+                                                </h6>
+                                                <small class="text-muted">
+                                                    Proyecto: {{ mentorship.project.title }}
+                                                </small>
+                                                <div class="small text-muted">
+                                                    {% if mentorship.initiated_by == 'mentor' %}
+                                                        Solicitud enviada hace {{ mentorship.assigned_at|timesince }}
+                                                    {% else %}
+                                                        Solicitud recibida hace {{ mentorship.assigned_at|timesince }}
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="action-buttons">
+                                            {% if mentorship.initiated_by == 'mentor' and user_type == 'entrepreneur' %}
+                                                <a href="{% url 'respond_to_mentorship_request' mentorship.id 'accept' %}" 
+                                                   class="btn btn-success btn-sm me-2">
+                                                    <i class="fas fa-check"></i> Aceptar
+                                                </a>
+                                                <a href="{% url 'respond_to_mentorship_request' mentorship.id 'reject' %}" 
+                                                   class="btn btn-danger btn-sm">
+                                                    <i class="fas fa-times"></i> Rechazar
+                                                </a>
+                                            {% elif mentorship.initiated_by == 'entrepreneur' and user_type == 'mentor' %}
+                                                <a href="{% url 'respond_to_mentorship_request' mentorship.id 'accept' %}" 
+                                                   class="btn btn-success btn-sm me-2">
+                                                    <i class="fas fa-check"></i> Aceptar
+                                                </a>
+                                                <a href="{% url 'respond_to_mentorship_request' mentorship.id 'reject' %}" 
+                                                   class="btn btn-danger btn-sm">
+                                                    <i class="fas fa-times"></i> Rechazar
+                                                </a>
+                                            {% else %}
+                                                <span class="badge bg-warning text-dark">
+                                                    <i class="fas fa-clock"></i> Esperando respuesta
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        {% endfor %}
+                            {% endfor %}
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -163,11 +236,12 @@
                 <div class="card-header bg-success text-white">
                     <h5 class="mb-0">
                         <i class="fas fa-check-circle"></i>
-                        Conexiones Activas ({{ active_connections.count }})
+                        Conexiones Activas ({{ total_connections }})
                     </h5>
                 </div>
                 <div class="card-body">
                     {% if active_connections %}
+                        <h6 class="text-muted">Mentor - Inversionista ({{ active_connections.count }})</h6>
                         <div class="row">
                             {% for connection in active_connections %}
                                 <div class="col-lg-6 col-md-12 mb-3">
@@ -196,7 +270,6 @@
                                                     </div>
                                                 </div>
                                                 
-                                                {% comment %} Mostrar badge de mensajes no leídos si los hay {% endcomment %}
                                                 <div class="ms-auto">
                                                     <small class="text-muted">Mensajes</small>
                                                 </div>
@@ -220,20 +293,83 @@
                                 </div>
                             {% endfor %}
                         </div>
-                    {% else %}
+                    {% endif %}
+
+                    {% if active_mentorships %}
+                        <h6 class="text-muted mt-3">Mentor - Emprendedor ({{ active_mentorships.count }})</h6>
+                        <div class="row">
+                            {% for mentorship in active_mentorships %}
+                                <div class="col-lg-6 col-md-12 mb-3">
+                                    <div class="card border-success">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="avatar-circle {% if user_type == 'mentor' %}bg-success{% else %}bg-primary{% endif %} text-white me-3">
+                                                        {% if user_type == 'mentor' %}
+                                                            <i class="fas fa-user-graduate"></i>
+                                                        {% else %}
+                                                            <i class="fas fa-user-tie"></i>
+                                                        {% endif %}
+                                                    </div>
+                                                    <div>
+                                                        <h6 class="mb-0">
+                                                            {% if user_type == 'mentor' %}
+                                                                {{ mentorship.project.owner.get_full_name|default:mentorship.project.owner.username }}
+                                                            {% else %}
+                                                                {{ mentorship.mentor.get_full_name|default:mentorship.mentor.username }}
+                                                            {% endif %}
+                                                        </h6>
+                                                        <small class="text-muted">
+                                                            Mentoría activa desde {{ mentorship.assigned_at|timesince }}
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                                <div class="ms-auto">
+                                                    <small class="text-muted">Mensajes</small>
+                                                </div>
+                                            </div>
+                                            
+                                            <p class="card-text small mb-2">
+                                                <strong>Proyecto:</strong> {{ mentorship.project.title }}
+                                            </p>
+                                            
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <small class="text-muted">
+                                                    Estado: {{ mentorship.status|capfirst }}
+                                                </small>
+                                                <a href="{% url 'mentorship_chat' mentorship.id %}" 
+                                                   class="btn btn-primary btn-sm">
+                                                    <i class="fas fa-comments"></i> Chat
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    {% if not active_connections and not active_mentorships %}
                         <div class="text-center py-4">
                             <i class="fas fa-network-wired fa-3x text-muted mb-3"></i>
                             <h5 class="text-muted">No tienes conexiones activas</h5>
                             <p class="text-muted">
                                 {% if user_type == 'mentor' %}
-                                    Conecta con inversionistas para comenzar a colaborar en proyectos estratégicos.
-                                {% else %}
+                                    Conecta con inversionistas o acepta mentorías para comenzar a colaborar.
+                                {% elif user_type == 'investor' %}
                                     Conecta con mentores para obtener asesoría y descubrir oportunidades de inversión.
+                                {% else %}
+                                    Solicita mentoría para recibir acompañamiento en tu proyecto.
                                 {% endif %}
                             </p>
-                            <a href="{% if user_type == 'mentor' %}{% url 'investor_list_for_mentors' %}{% else %}{% url 'mentor_list_for_investors' %}{% endif %}" 
+                            <a href="{% if user_type == 'mentor' %}{% url 'investor_list_for_mentors' %}{% elif user_type == 'investor' %}{% url 'mentor_list_for_investors' %}{% else %}{% url 'mentor_list' %}{% endif %}" 
                                class="btn btn-primary">
-                                <i class="fas fa-plus"></i> Crear Primera Conexión
+                                <i class="fas fa-plus"></i>
+                                {% if user_type == 'entrepreneur' %}
+                                    Solicitar Mentoría
+                                {% else %}
+                                    Crear Primera Conexión
+                                {% endif %}
                             </a>
                         </div>
                     {% endif %}
