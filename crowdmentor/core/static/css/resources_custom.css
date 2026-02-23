@@ -317,6 +317,35 @@
     border-left: 5px solid #3498db;
 }
 
+/* Sobrescribir el color blanco global de headings para el área de contenido */
+.resources-container h3,
+.resources-container h4,
+.resources-container h5,
+.resources-container h6 {
+    color: #1565c0;
+}
+
+.category-header h3 {
+    color: #1565c0 !important;
+}
+
+.resource-card h6 {
+    color: #2c3e50 !important;
+}
+
+/* Hero: títulos sobre fondo oscuro deben permanecer blancos */
+.hero-main-title {
+    color: #fff !important;
+}
+
+.hero-badge {
+    color: #fff !important;
+}
+
+.hero-description {
+    color: rgba(255, 255, 255, 0.95) !important;
+}
+
 /* Responsive */
 @media (max-width: 992px) {
     .hero-main-title {
