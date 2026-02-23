@@ -94,7 +94,7 @@
                                         <i class="fas fa-dollar-sign me-1"></i>{{ form.funding_goal.label }}
                                     </label>
                                     {{ form.funding_goal }}
-                                    <div class="form-text">¿Cuánto necesitas para hacer realidad tu proyecto?</div>
+                                    <div class="form-text">Ingresa el monto en COP. Usa puntos como separador de miles (Ej: 5.000.000).</div>
                                     {% if form.funding_goal.errors %}
                                         <div class="text-danger small">{{ form.funding_goal.errors.0 }}</div>
                                     {% endif %}
@@ -267,15 +267,32 @@ document.addEventListener('DOMContentLoaded', function() {
     // Funding goal formatting
     const fundingInput = document.querySelector('input[name="funding_goal"]');
     if (fundingInput) {
+        // Formatear mientras escribe
         fundingInput.addEventListener('input', function() {
-            let value = this.value.replace(/[^\d.]/g, '');
-            if (value) {
-                // Add thousand separators for better readability
-                const parts = value.split('.');
-                parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-                this.setAttribute('data-formatted', parts.join('.'));
-            }
+            // Guardar posición del cursor
+            const selectionStart = this.selectionStart;
+            const prevLength = this.value.length;
+
+            // Limpiar todo excepto dígitos y punto decimal
+            let raw = this.value.replace(/[^\d]/g, '');
+
+            // Aplicar separadores de miles
+            let formatted = raw.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+            this.value = formatted;
+
+            // Ajustar cursor
+            const diff = this.value.length - prevLength;
+            this.setSelectionRange(selectionStart + diff, selectionStart + diff);
         });
+
+        // Limpiar separadores antes de enviar el formulario
+        const form = fundingInput.closest('form');
+        if (form) {
+            form.addEventListener('submit', function() {
+                fundingInput.value = fundingInput.value.replace(/\./g, '');
+            });
+        }
     }
 
     // Intersection Observer for animations
@@ -308,13 +325,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const title = document.querySelector('input[name="title"]').value || 'Título del proyecto';
         const description = document.querySelector('textarea[name="description"]').value || 'Descripción del proyecto...';
         const category = document.querySelector('select[name="category"]');
-        const funding = document.querySelector('input[name="funding_goal"]').value || '0';
+        const fundingRaw = parseInt((document.querySelector('input[name="funding_goal"]').value || '0').replace(/\./g, ''), 10) || 0;
         const deadline = document.querySelector('input[name="deadline"]').value;
         const tags = document.querySelector('input[name="tags"]').value;
 
         document.getElementById('preview-title').textContent = title;
         document.getElementById('preview-description').textContent = description.substring(0, 150) + (description.length > 150 ? '...' : '');
-        document.getElementById('preview-funding').textContent = `Meta: $${parseFloat(funding).toLocaleString()}`;
+        document.getElementById('preview-funding').textContent = `Meta: $${fundingRaw.toLocaleString('es-CO')} COP`;
         
         // Category preview
         const categoryContainer = document.getElementById('preview-category');

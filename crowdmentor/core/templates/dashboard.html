@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load custom_filters %}
 
 {% block content %}
     <h2 class="text-center text-primary my-4">Panel - 
@@ -22,8 +23,8 @@
                     <div class="card shadow-sm">
                         <div class="card-body">
                             <h5 class="card-title text-primary">{{ project.title }}</h5>
-                            <p class="card-text text-muted">Meta de Financiación: ${{ project.funding_goal|floatformat:0 }} COP</p>
-                            <p class="card-text text-muted">Monto Recaudado: ${{ project.amount_raised }}</p>
+                            <p class="card-text text-muted">Meta de Financiación: {{ project.funding_goal|cop_currency }}</p>
+                            <p class="card-text text-muted">Monto Recaudado: {{ project.amount_raised|cop_currency }}</p>
                             <a href="{% url 'project_detail' project.pk %}" class="btn btn-primary">Ver</a>
                         </div>
                     </div>
@@ -110,7 +111,7 @@
                         <div class="card shadow-sm">
                             <div class="card-body">
                                 <h5 class="card-title text-primary">{{ investment.investor.username }}</h5>
-                                <p class="card-text text-muted">Monto: ${{ investment.amount }}</p>
+                                <p class="card-text text-muted">Monto: {{ investment.amount|cop_currency }}</p>
                                 <p class="card-text text-muted">Porcentaje: {{ investment.equity_percentage }}%</p>
                                 <form method="post" action="{% url 'manage_investment' investment.id %}">
                                     {% csrf_token %}
@@ -355,7 +356,7 @@
                     <div class="card shadow-sm">
                         <div class="card-body">
                             <h5 class="card-title text-primary">{{ investment.project.title }}</h5>
-                            <p class="card-text text-muted">Monto: ${{ investment.amount }}</p>
+                            <p class="card-text text-muted">Monto: {{ investment.amount|cop_currency }}</p>
                             <p class="card-text text-muted">Participación: {{ investment.equity_percentage }}%</p>
                         </div>
                     </div>

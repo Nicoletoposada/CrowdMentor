@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load custom_filters %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/evaluate_project.css' %}">
@@ -32,10 +33,10 @@
                             <p class="text-muted">{{ project.description|truncatewords:50 }}</p>
                             <div class="row">
                                 <div class="col-6">
-                                    <strong>Meta:</strong> ${{ project.funding_goal|floatformat:0 }} COP
+                                    <strong>Meta:</strong> {{ project.funding_goal|cop_currency }}
                                 </div>
                                 <div class="col-6">
-                                    <strong>Recaudado:</strong> ${{ project.amount_raised|floatformat:0 }}
+                                    <strong>Recaudado:</strong> {{ project.amount_raised|cop_currency }}
                                 </div>
                             </div>
                         </div>

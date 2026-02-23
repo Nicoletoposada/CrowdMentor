@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load custom_filters %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/analytics_dashboard.css' %}">
@@ -143,7 +144,7 @@
                                         </a>
                                     </td>
                                     <td class="text-end text-success fw-bold">
-                                        ${{ project.amount_raised|floatformat:0 }}
+                                        {{ project.amount_raised|cop_currency }}
                                     </td>
                                     <td class="text-end">
                                         <span class="badge {% if project.get_funding_percentage >= 100 %}bg-success{% elif project.get_funding_percentage >= 50 %}bg-warning{% else %}bg-secondary{% endif %}">

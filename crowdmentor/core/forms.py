@@ -94,10 +94,11 @@ class ProjectForm(forms.ModelForm):
             'category': forms.Select(attrs={
                 'class': 'form-control'
             }),
-            'funding_goal': forms.NumberInput(attrs={
+            'funding_goal': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Meta de financiamiento en COP',
-                'min': '100000'
+                'placeholder': 'Ej: 5.000.000',
+                'inputmode': 'numeric',
+                'autocomplete': 'off',
             }),
             'deadline': forms.DateInput(attrs={
                 'class': 'form-control',
@@ -111,6 +112,19 @@ class ProjectForm(forms.ModelForm):
                 'class': 'form-control'
             })
         }
+
+    def clean_funding_goal(self):
+        value = self.cleaned_data.get('funding_goal')
+        if value is not None:
+            # Eliminar separadores de miles (puntos) antes de validar
+            cleaned = str(value).replace('.', '').replace(',', '')
+            try:
+                from decimal import Decimal
+                return Decimal(cleaned)
+            except Exception:
+                from django.core.exceptions import ValidationError
+                raise ValidationError('Ingresa un valor numérico válido.')
+        return value
 
 class InvestmentForm(forms.ModelForm):
     class Meta:
