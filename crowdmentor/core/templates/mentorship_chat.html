@@ -7,252 +7,310 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-4">
+<div class="container-fluid mt-4 mb-5">
     <div class="row">
-        <div class="col-md-10 mx-auto">
-            <div class="card shadow">
-                <!-- Header del Chat -->
-                <div class="card-header bg-gradient-primary text-white">
+        <div class="col-xl-9 col-lg-10 mx-auto">
+
+            <!-- ═══ Tarjeta principal del chat ═══ -->
+            <div class="card chat-card chat-theme-mentorship shadow-lg">
+
+                <!-- ── Header ── -->
+                <div class="card-header bg-gradient-primary text-white py-3 px-4">
                     <div class="d-flex align-items-center justify-content-between">
-                        <div class="d-flex align-items-center">
-                            <a href="{% url 'dashboard' %}" 
-                               class="btn btn-light btn-sm me-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <a href="{% url 'dashboard' %}" class="btn-back">
                                 <i class="fas fa-arrow-left"></i>
                             </a>
-                            <div class="avatar-circle {% if current_user_type == 'mentor' %}bg-success{% else %}bg-info{% endif %} me-3">
-                                {% if current_user_type == 'mentor' %}
-                                    <i class="fas fa-user-graduate"></i>
-                                {% else %}
-                                    <i class="fas fa-user-tie"></i>
-                                {% endif %}
+                            <!-- Avatar con iniciales -->
+                            <div class="avatar-wrapper">
+                                <div class="avatar-circle {% if current_user_type == 'mentor' %}bg-info{% else %}bg-success{% endif %}">
+                                    {{ other_user.get_full_name|default:other_user.username|slice:":1"|upper }}{{ other_user.last_name|default:""|slice:":1"|upper }}
+                                </div>
+                                <span class="status-dot"></span>
                             </div>
                             <div>
-                                <h5 class="mb-0">{{ other_user.get_full_name|default:other_user.username }}</h5>
-                                <small class="opacity-75">
+                                <h5 class="mb-0 fw-bold" style="font-size:1rem;">
+                                    {{ other_user.get_full_name|default:other_user.username }}
+                                </h5>
+                                <small class="opacity-75" style="font-size:0.78rem;">
                                     {% if current_user_type == 'mentor' %}
-                                        <i class="fas fa-user-graduate"></i> Emprendedor
+                                        <i class="fas fa-user-graduate me-1"></i>Emprendedor
                                     {% else %}
-                                        <i class="fas fa-user-tie"></i> Mentor
+                                        <i class="fas fa-user-tie me-1"></i>Mentor
                                     {% endif %}
+                                    &nbsp;·&nbsp;<span style="color:rgba(255,255,255,0.7);">en línea</span>
                                 </small>
                             </div>
                         </div>
-                        
+
                         <div class="text-end">
-                            <small class="opacity-75">
+                            <small class="opacity-75" style="font-size:0.78rem;">
+                                <i class="fas fa-calendar-alt me-1"></i>
                                 Mentoría iniciada el {{ mentorship.request_date|date:"d M Y" }}
                             </small>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Información de la mentoría -->
-                <div class="connection-info bg-light p-3 border-bottom">
-                    <div class="row">
-                        <div class="col-md-8">
-                            <h6 class="text-muted mb-1">Proyecto:</h6>
-                            <p class="mb-0">
-                                <strong>{{ mentorship.project.title }}</strong>
-                                <a href="{% url 'project_detail' mentorship.project.pk %}" 
-                                   class="btn btn-sm btn-outline-primary ms-2" target="_blank">
-                                    <i class="fas fa-external-link-alt"></i> Ver proyecto
-                                </a>
-                            </p>
-                        </div>
-                        <div class="col-md-4">
-                            <h6 class="text-muted mb-1">Estado de la mentoría:</h6>
-                            <p class="mb-0">
-                                <span class="badge {% if mentorship.status == 'accepted' %}bg-success{% elif mentorship.status == 'pending' %}bg-warning{% else %}bg-danger{% endif %}">
+                            <div class="mt-1">
+                                <span class="badge rounded-pill
+                                    {% if mentorship.status == 'accepted' %}bg-success
+                                    {% elif mentorship.status == 'pending' %}bg-warning text-dark
+                                    {% else %}bg-danger{% endif %}"
+                                    style="font-size:0.72rem;">
                                     {{ mentorship.get_status_display }}
                                 </span>
-                            </p>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Área de Mensajes -->
+                <!-- ── Info de la mentoría ── -->
+                <div class="connection-info px-4 py-2">
+                    <div class="row align-items-center g-2">
+                        <div class="col-md-7">
+                            <span class="me-1 text-muted" style="font-size:0.72rem;text-transform:uppercase;letter-spacing:.06em;font-weight:600;">
+                                <i class="fas fa-project-diagram me-1"></i>Proyecto:
+                            </span>
+                            <span class="fw-semibold" style="font-size:0.88rem;">{{ mentorship.project.title }}</span>
+                            <a href="{% url 'project_detail' mentorship.project.pk %}" target="_blank"
+                               class="btn btn-sm btn-outline-secondary ms-2 py-0 px-2" style="font-size:0.75rem;border-radius:6px;">
+                                <i class="fas fa-external-link-alt"></i> Ver
+                            </a>
+                        </div>
+                        <div class="col-md-5 text-md-end">
+                            <span class="text-muted" style="font-size:0.78rem;">
+                                <i class="fas fa-info-circle me-1"></i>Estado:
+                            </span>
+                            <span class="ms-1 badge rounded-pill
+                                {% if mentorship.status == 'accepted' %}bg-success
+                                {% elif mentorship.status == 'pending' %}bg-warning text-dark
+                                {% else %}bg-danger{% endif %}"
+                                style="font-size:0.72rem;">
+                                {{ mentorship.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Área de mensajes ── -->
                 <div class="card-body p-0">
                     <div class="chat-container">
                         <div class="chat-messages" id="chat-messages">
                             {% for message in messages %}
+
+                                {# Separador de fecha (solo si cambia el día) #}
+                                {% ifchanged message.timestamp|date:"Y-m-d" %}
+                                    <div class="date-separator">
+                                        {{ message.timestamp|localtime|date:"d \d\e F \d\e Y" }}
+                                    </div>
+                                {% endifchanged %}
+
                                 <div class="message {% if message.sender == request.user %}sent{% else %}received{% endif %}">
-                                    <div class="message-header">
-                                        <div class="sender-info">
+
+                                    <!-- Meta: nombre, tipo, importante -->
+                                    <div class="message-meta">
+                                        {% if message.sender != request.user %}
                                             <span class="sender-name">
                                                 {{ message.sender.get_full_name|default:message.sender.username }}
                                             </span>
-                                            {% if message.message_type != 'text' %}
-                                                <span class="message-type badge {% if message.message_type == 'advice' %}bg-success{% elif message.message_type == 'feedback' %}bg-info{% elif message.message_type == 'milestone' %}bg-warning{% elif message.message_type == 'resource' %}bg-primary{% else %}bg-secondary{% endif %}">
-                                                    {% if message.message_type == 'advice' %}
-                                                        <i class="fas fa-lightbulb"></i> Consejo
-                                                    {% elif message.message_type == 'feedback' %}
-                                                        <i class="fas fa-comments"></i> Retroalimentación
-                                                    {% elif message.message_type == 'milestone' %}
-                                                        <i class="fas fa-flag"></i> Hito
-                                                    {% elif message.message_type == 'resource' %}
-                                                        <i class="fas fa-book"></i> Recurso
-                                                    {% else %}
-                                                        <i class="fas fa-cog"></i> Sistema
-                                                    {% endif %}
-                                                </span>
-                                            {% endif %}
-                                            {% if message.is_important %}
-                                                <span class="badge bg-danger">
-                                                    <i class="fas fa-exclamation"></i> Importante
-                                                </span>
-                                            {% endif %}
-                                        </div>
-                                        <div class="message-time">
-                                            {{ message.timestamp|localtime|date:"d M, H:i" }}
-                                            {% if message.sender == request.user and message.is_read %}
-                                                <i class="fas fa-check-double text-info ms-1"></i>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="message-content">
-                                        {{ message.content|linebreaks }}
-                                        
-                                        {% if message.related_resource %}
-                                            <div class="related-project mt-2 p-2 bg-light rounded">
-                                                <small class="text-muted">
-                                                    <i class="fas fa-book"></i> Recurso relacionado:
-                                                </small>
-                                                <div class="d-flex align-items-center mt-1">
-                                                    <strong>{{ message.related_resource.title }}</strong>
-                                                    <a href="{{ message.related_resource.url }}" 
-                                                       class="btn btn-sm btn-outline-primary ms-2" target="_blank">
-                                                        <i class="fas fa-external-link-alt"></i> Ver
-                                                    </a>
-                                                </div>
-                                            </div>
+                                        {% endif %}
+
+                                        {% if message.message_type != 'text' %}
+                                            <span class="message-type-badge
+                                                {% if message.message_type == 'advice' %}bg-success text-white
+                                                {% elif message.message_type == 'feedback' %}bg-info text-white
+                                                {% elif message.message_type == 'milestone' %}bg-warning text-dark
+                                                {% elif message.message_type == 'resource' %}bg-primary text-white
+                                                {% else %}bg-secondary text-white{% endif %}">
+                                                {% if message.message_type == 'advice' %}<i class="fas fa-lightbulb"></i> Consejo
+                                                {% elif message.message_type == 'feedback' %}<i class="fas fa-comments"></i> Feedback
+                                                {% elif message.message_type == 'milestone' %}<i class="fas fa-flag"></i> Hito
+                                                {% elif message.message_type == 'resource' %}<i class="fas fa-book"></i> Recurso
+                                                {% else %}<i class="fas fa-cog"></i> Sistema{% endif %}
+                                            </span>
+                                        {% endif %}
+
+                                        {% if message.is_important %}
+                                            <span class="badge-important">
+                                                <i class="fas fa-exclamation-circle"></i> Importante
+                                            </span>
                                         {% endif %}
                                     </div>
+
+                                    <!-- Fila: avatar + burbuja -->
+                                    <div class="msg-row">
+                                        {% if message.sender != request.user %}
+                                            <div class="avatar-sm bg-info">
+                                                {{ message.sender.get_full_name|default:message.sender.username|slice:":1"|upper }}
+                                            </div>
+                                        {% endif %}
+
+                                        <div class="message-content">
+                                            {{ message.content|linebreaks }}
+
+                                            {% if message.related_resource %}
+                                                <div class="related-card">
+                                                    <span>
+                                                        <i class="fas fa-book me-1"></i>
+                                                        <strong>{{ message.related_resource.title }}</strong>
+                                                    </span>
+                                                    <a href="{{ message.related_resource.url }}"
+                                                       class="btn btn-sm" target="_blank">
+                                                        <i class="fas fa-external-link-alt me-1"></i>Ver
+                                                    </a>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    <!-- Hora -->
+                                    <div class="message-time mt-1 {% if message.sender == request.user %}me-1{% else %}ms-1{% endif %}">
+                                        {{ message.timestamp|localtime|date:"H:i" }}
+                                        {% if message.sender == request.user and message.is_read %}
+                                            <i class="fas fa-check-double ms-1"></i>
+                                        {% elif message.sender == request.user %}
+                                            <i class="fas fa-check ms-1" style="opacity:.5;"></i>
+                                        {% endif %}
+                                    </div>
+
                                 </div>
                             {% empty %}
-                                <div class="text-center text-muted p-4">
-                                    <i class="fas fa-comments fa-3x mb-3"></i>
-                                    <h5>¡Comienza la conversación!</h5>
-                                    <p>Este es el inicio de vuestra mentoría. ¡Compartan conocimientos y hagan crecer el proyecto juntos!</p>
+                                <div class="chat-empty">
+                                    <div class="empty-icon">
+                                        <i class="fas fa-comments"></i>
+                                    </div>
+                                    <h5>¡Inicia la conversación!</h5>
+                                    <p>Este es el comienzo de vuestra mentoría. Comparte conocimientos y haz crecer el proyecto juntos.</p>
                                 </div>
                             {% endfor %}
                         </div>
                     </div>
                 </div>
 
-                <!-- Formulario de Mensaje -->
-                <div class="card-footer bg-light">
-                    <form method="post" class="message-form">
+                <!-- ── Formulario de mensaje ── -->
+                <div class="chat-footer">
+                    <form method="post" class="message-form" id="chat-form">
                         {% csrf_token %}
-                        
+
                         <!-- Opciones del mensaje -->
-                        <div class="message-options mb-2">
-                            <div class="row">
+                        <div class="message-options">
+                            <div class="row g-2 align-items-end">
                                 <div class="col-md-4">
-                                    <label for="{{ form.message_type.id_for_label }}" class="form-label small">Tipo de mensaje:</label>
+                                    <label for="{{ form.message_type.id_for_label }}" class="form-label">
+                                        <i class="fas fa-tag me-1"></i>Tipo
+                                    </label>
                                     {{ form.message_type }}
                                 </div>
-                                <div class="col-md-4">
-                                    <label for="{{ form.related_resource.id_for_label }}" class="form-label small">Recurso relacionado:</label>
+                                <div class="col-md-5">
+                                    <label for="{{ form.related_resource.id_for_label }}" class="form-label">
+                                        <i class="fas fa-paperclip me-1"></i>Recurso relacionado
+                                    </label>
                                     {{ form.related_resource }}
                                 </div>
-                                <div class="col-md-4 d-flex align-items-end">
-                                    <div class="form-check">
-                                        {{ form.is_important }}
-                                        <label for="{{ form.is_important.id_for_label }}" class="form-check-label small">
-                                            Marcar como importante
-                                        </label>
-                                    </div>
+                                <div class="col-md-3 d-flex align-items-center gap-2 pt-1">
+                                    {{ form.is_important }}
+                                    <label for="{{ form.is_important.id_for_label }}" class="form-label mb-0" style="cursor:pointer;">
+                                        <i class="fas fa-exclamation-circle text-danger me-1"></i>Importante
+                                    </label>
                                 </div>
                             </div>
                         </div>
-                        
-                        <!-- Área de texto del mensaje -->
-                        <div class="input-group">
-                            {{ form.content }}
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-paper-plane"></i> Enviar
+
+                        <!-- Input del mensaje -->
+                        <div class="chat-input-row">
+                            <textarea name="content" id="{{ form.content.id_for_label }}"
+                                      rows="1" placeholder="Escribe un mensaje… (Ctrl+Enter para enviar)"
+                                      class="{% if form.content.errors %}is-invalid{% endif %}">{{ form.content.value|default:'' }}</textarea>
+                            <button type="submit" class="btn-send" title="Enviar mensaje">
+                                <i class="fas fa-paper-plane"></i>
                             </button>
                         </div>
+                        <div class="input-hint">
+                            <kbd>Ctrl</kbd> + <kbd>Enter</kbd> para enviar
+                        </div>
+
                     </form>
                 </div>
-            </div>
+            </div><!-- /chat-card -->
 
-            <!-- Sugerencias de Colaboración -->
-            <div class="row mt-4">
+            <!-- ═══ Cards de sugerencias ═══ -->
+            <div class="row mt-4 g-3">
                 <div class="col-md-6">
-                    <div class="card bg-light">
-                        <div class="card-body">
-                            <h6 class="card-title">
-                                <i class="fas fa-lightbulb text-warning"></i>
-                                Consejos para la Mentoría
-                            </h6>
-                            <ul class="list-unstyled small mb-0">
+                    <div class="suggest-card">
+                        <div class="card-header">
+                            <i class="fas fa-lightbulb text-warning"></i>
+                            Consejos para la Mentoría
+                        </div>
+                        <div class="card-body py-2 px-3">
+                            <ul class="list-unstyled mb-0">
                                 {% if current_user_type == 'mentor' %}
-                                    <li><i class="fas fa-check text-success me-2"></i> Proporciona retroalimentación constructiva y específica</li>
-                                    <li><i class="fas fa-check text-success me-2"></i> Comparte recursos y herramientas útiles</li>
-                                    <li><i class="fas fa-check text-success me-2"></i> Establece objetivos claros y alcanzables</li>
+                                    <li><i class="fas fa-check-circle text-success"></i> Proporciona retroalimentación constructiva y específica</li>
+                                    <li><i class="fas fa-check-circle text-success"></i> Comparte recursos y herramientas útiles</li>
+                                    <li><i class="fas fa-check-circle text-success"></i> Establece objetivos claros y alcanzables</li>
                                 {% else %}
-                                    <li><i class="fas fa-check text-success me-2"></i> Haz preguntas específicas sobre tus desafíos</li>
-                                    <li><i class="fas fa-check text-success me-2"></i> Comparte actualizaciones sobre tu progreso</li>
-                                    <li><i class="fas fa-check text-success me-2"></i> Implementa los consejos y reporta los resultados</li>
+                                    <li><i class="fas fa-check-circle text-success"></i> Haz preguntas específicas sobre tus desafíos</li>
+                                    <li><i class="fas fa-check-circle text-success"></i> Comparte actualizaciones periódicas sobre tu progreso</li>
+                                    <li><i class="fas fa-check-circle text-success"></i> Implementa los consejos y reporta los resultados</li>
                                 {% endif %}
                             </ul>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-6">
-                    <div class="card bg-light">
-                        <div class="card-body">
-                            <h6 class="card-title">
-                                <i class="fas fa-handshake text-info"></i>
-                                Mejores Prácticas
-                            </h6>
-                            <ul class="list-unstyled small mb-0">
-                                <li><i class="fas fa-check text-success me-2"></i> Mantén comunicación regular y transparente</li>
-                                <li><i class="fas fa-check text-success me-2"></i> Sé receptivo a diferentes perspectivas</li>
-                                <li><i class="fas fa-check text-success me-2"></i> Documenta los aprendizajes clave</li>
-                                <li><i class="fas fa-check text-success me-2"></i> Celebra los logros y aprende de los errores</li>
+                    <div class="suggest-card">
+                        <div class="card-header">
+                            <i class="fas fa-handshake text-info"></i>
+                            Mejores Prácticas
+                        </div>
+                        <div class="card-body py-2 px-3">
+                            <ul class="list-unstyled mb-0">
+                                <li><i class="fas fa-check-circle text-info"></i> Mantén comunicación regular y transparente</li>
+                                <li><i class="fas fa-check-circle text-info"></i> Sé receptivo a diferentes perspectivas</li>
+                                <li><i class="fas fa-check-circle text-info"></i> Documenta los aprendizajes clave</li>
+                                <li><i class="fas fa-check-circle text-info"></i> Celebra los logros y aprende de los errores</li>
                             </ul>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
+
+        </div><!-- /col -->
+    </div><!-- /row -->
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    // Scroll to bottom of chat
+(function () {
+    // Scroll al fondo
     const chatMessages = document.getElementById('chat-messages');
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
 
-    // Auto-refresh chat every 30 seconds
-    setInterval(function() {
-        // Solo recargar si no hay texto en el formulario
-        const messageContent = document.querySelector('textarea[name="content"]');
-        if (messageContent && messageContent.value.trim() === '') {
-            location.reload();
-        }
-    }, 30000);
-
-    // Expandir textarea automáticamente
-    const textarea = document.querySelector('textarea[name="content"]');
+    // Auto-expand textarea
+    const textarea = document.querySelector('#chat-form textarea');
     if (textarea) {
-        textarea.addEventListener('input', function() {
+        textarea.addEventListener('input', function () {
             this.style.height = 'auto';
-            this.style.height = (this.scrollHeight) + 'px';
+            this.style.height = Math.min(this.scrollHeight, 140) + 'px';
+        });
+
+        // Ctrl+Enter envía
+        textarea.addEventListener('keydown', function (e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('chat-form').submit();
+            }
         });
     }
 
-    // Enviar mensaje con Ctrl+Enter
-    textarea.addEventListener('keydown', function(e) {
-        if (e.ctrlKey && e.key === 'Enter') {
-            e.preventDefault();
-            this.closest('form').submit();
-        }
+    // Estilos modernos para selects de Django
+    document.querySelectorAll('.message-options select').forEach(function(sel) {
+        sel.classList.add('form-select');
     });
+
+    // Auto-refresh si textarea está vacío
+    setInterval(function () {
+        if (textarea && textarea.value.trim() === '') {
+            location.reload();
+        }
+    }, 30000);
+})();
 </script>
-{% endblock %} 
+{% endblock %}

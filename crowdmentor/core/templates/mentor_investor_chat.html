@@ -7,248 +7,299 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-4">
+<div class="container-fluid mt-4 mb-5">
     <div class="row">
-        <div class="col-md-10 mx-auto">
-            <div class="card shadow">
-                <!-- Header del Chat -->
-                <div class="card-header bg-gradient-primary text-white">
+        <div class="col-xl-9 col-lg-10 mx-auto">
+
+            <!-- ═══ Tarjeta principal del chat ═══ -->
+            <div class="card chat-card chat-theme-investor shadow-lg">
+
+                <!-- ── Header ── -->
+                <div class="card-header bg-gradient-primary text-white py-3 px-4">
                     <div class="d-flex align-items-center justify-content-between">
-                        <div class="d-flex align-items-center">
-                            <a href="{% url 'mentor_investor_connections' %}" 
-                               class="btn btn-light btn-sm me-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <a href="{% url 'mentor_investor_connections' %}" class="btn-back">
                                 <i class="fas fa-arrow-left"></i>
                             </a>
-                            <div class="avatar-circle {% if current_user_type == 'mentor' %}bg-success{% else %}bg-info{% endif %} me-3">
-                                {% if current_user_type == 'mentor' %}
-                                    <i class="fas fa-money-bill-wave"></i>
-                                {% else %}
-                                    <i class="fas fa-user-tie"></i>
-                                {% endif %}
+                            <!-- Avatar con iniciales -->
+                            <div class="avatar-wrapper">
+                                <div class="avatar-circle {% if current_user_type == 'mentor' %}bg-warning{% else %}bg-primary{% endif %}">
+                                    {{ other_user.get_full_name|default:other_user.username|slice:":1"|upper }}{{ other_user.last_name|default:""|slice:":1"|upper }}
+                                </div>
+                                <span class="status-dot"></span>
                             </div>
                             <div>
-                                <h5 class="mb-0">{{ other_user.get_full_name|default:other_user.username }}</h5>
-                                <small class="opacity-75">
+                                <h5 class="mb-0 fw-bold" style="font-size:1rem;">
+                                    {{ other_user.get_full_name|default:other_user.username }}
+                                </h5>
+                                <small class="opacity-75" style="font-size:0.78rem;">
                                     {% if current_user_type == 'mentor' %}
-                                        <i class="fas fa-money-bill-wave"></i> Inversionista
+                                        <i class="fas fa-money-bill-wave me-1"></i>Inversionista
                                     {% else %}
-                                        <i class="fas fa-user-tie"></i> Mentor
+                                        <i class="fas fa-user-tie me-1"></i>Mentor
                                     {% endif %}
+                                    &nbsp;·&nbsp;<span style="color:rgba(255,255,255,0.7);">en línea</span>
                                 </small>
                             </div>
                         </div>
-                        
+
                         <div class="text-end">
-                            <small class="opacity-75">
+                            <small class="opacity-75" style="font-size:0.78rem;">
+                                <i class="fas fa-link me-1"></i>
                                 Conectados desde {{ connection.connected_at|date:"d M Y" }}
                             </small>
                         </div>
                     </div>
                 </div>
 
-                <!-- Información de la conexión -->
-                <div class="connection-info bg-light p-3 border-bottom">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6 class="text-muted mb-1">Propósito de la conexión:</h6>
-                            <p class="mb-0 small">{{ connection.purpose }}</p>
+                <!-- ── Info de la conexión ── -->
+                <div class="connection-info px-4 py-2">
+                    <div class="row g-3">
+                        <div class="col-md-5">
+                            <span class="text-muted" style="font-size:0.72rem;text-transform:uppercase;letter-spacing:.06em;font-weight:600;">
+                                <i class="fas fa-bullseye me-1"></i>Propósito:
+                            </span>
+                            <p class="mb-0 mt-1" style="font-size:0.88rem;">{{ connection.purpose }}</p>
                         </div>
                         <div class="col-md-3">
                             {% if connection.expertise_areas %}
-                                <h6 class="text-muted mb-1">Áreas de expertise:</h6>
-                                <p class="mb-0 small">{{ connection.expertise_areas }}</p>
+                                <span class="text-muted" style="font-size:0.72rem;text-transform:uppercase;letter-spacing:.06em;font-weight:600;">
+                                    <i class="fas fa-star me-1"></i>Expertise:
+                                </span>
+                                <p class="mb-0 mt-1" style="font-size:0.85rem;">{{ connection.expertise_areas }}</p>
                             {% endif %}
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             {% if connection.investment_interests %}
-                                <h6 class="text-muted mb-1">Intereses de inversión:</h6>
-                                <p class="mb-0 small">{{ connection.investment_interests }}</p>
+                                <span class="text-muted" style="font-size:0.72rem;text-transform:uppercase;letter-spacing:.06em;font-weight:600;">
+                                    <i class="fas fa-chart-line me-1"></i>Intereses de inversión:
+                                </span>
+                                <p class="mb-0 mt-1" style="font-size:0.85rem;">{{ connection.investment_interests }}</p>
                             {% endif %}
                         </div>
                     </div>
                 </div>
 
-                <!-- Área de Mensajes -->
+                <!-- ── Área de mensajes ── -->
                 <div class="card-body p-0">
                     <div class="chat-container">
                         <div class="chat-messages" id="chat-messages">
                             {% for message in messages %}
+
+                                {# Separador de fecha (solo si cambia el día) #}
+                                {% ifchanged message.timestamp|date:"Y-m-d" %}
+                                    <div class="date-separator">
+                                        {{ message.timestamp|localtime|date:"d \d\e F \d\e Y" }}
+                                    </div>
+                                {% endifchanged %}
+
                                 <div class="message {% if message.sender == request.user %}sent{% else %}received{% endif %}">
-                                    <div class="message-header">
-                                        <div class="sender-info">
+
+                                    <!-- Meta: nombre, tipo, importante -->
+                                    <div class="message-meta">
+                                        {% if message.sender != request.user %}
                                             <span class="sender-name">
                                                 {{ message.sender.get_full_name|default:message.sender.username }}
                                             </span>
-                                            {% if message.message_type != 'text' %}
-                                                <span class="message-type badge {% if message.message_type == 'opportunity' %}bg-success{% elif message.message_type == 'collaboration' %}bg-info{% elif message.message_type == 'knowledge_share' %}bg-warning{% else %}bg-secondary{% endif %}">
-                                                    {% if message.message_type == 'opportunity' %}
-                                                        <i class="fas fa-lightbulb"></i> Oportunidad
-                                                    {% elif message.message_type == 'collaboration' %}
-                                                        <i class="fas fa-handshake"></i> Colaboración
-                                                    {% elif message.message_type == 'knowledge_share' %}
-                                                        <i class="fas fa-graduation-cap"></i> Conocimiento
-                                                    {% else %}
-                                                        <i class="fas fa-cog"></i> Sistema
-                                                    {% endif %}
-                                                </span>
-                                            {% endif %}
-                                            {% if message.is_important %}
-                                                <span class="badge bg-danger">
-                                                    <i class="fas fa-exclamation"></i> Importante
-                                                </span>
-                                            {% endif %}
-                                        </div>
-                                        <div class="message-time">
-                                            {{ message.timestamp|localtime|date:"d M, H:i" }}
-                                            {% if message.sender == request.user and message.is_read %}
-                                                <i class="fas fa-check-double text-info ms-1"></i>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="message-content">
-                                        {{ message.content|linebreaks }}
-                                        
-                                        {% if message.related_project %}
-                                            <div class="related-project mt-2 p-2 bg-light rounded">
-                                                <small class="text-muted">
-                                                    <i class="fas fa-project-diagram"></i> Proyecto relacionado:
-                                                </small>
-                                                <div class="d-flex align-items-center mt-1">
-                                                    <strong>{{ message.related_project.title }}</strong>
-                                                    <a href="{% url 'project_detail' message.related_project.pk %}" 
-                                                       class="btn btn-sm btn-outline-primary ms-2" target="_blank">
-                                                        <i class="fas fa-external-link-alt"></i> Ver
-                                                    </a>
-                                                </div>
-                                            </div>
+                                        {% endif %}
+
+                                        {% if message.message_type != 'text' %}
+                                            <span class="message-type-badge
+                                                {% if message.message_type == 'opportunity' %}bg-success text-white
+                                                {% elif message.message_type == 'collaboration' %}bg-info text-white
+                                                {% elif message.message_type == 'knowledge_share' %}bg-warning text-dark
+                                                {% else %}bg-secondary text-white{% endif %}">
+                                                {% if message.message_type == 'opportunity' %}<i class="fas fa-lightbulb"></i> Oportunidad
+                                                {% elif message.message_type == 'collaboration' %}<i class="fas fa-handshake"></i> Colaboración
+                                                {% elif message.message_type == 'knowledge_share' %}<i class="fas fa-graduation-cap"></i> Conocimiento
+                                                {% else %}<i class="fas fa-cog"></i> Sistema{% endif %}
+                                            </span>
+                                        {% endif %}
+
+                                        {% if message.is_important %}
+                                            <span class="badge-important">
+                                                <i class="fas fa-exclamation-circle"></i> Importante
+                                            </span>
                                         {% endif %}
                                     </div>
+
+                                    <!-- Fila: avatar + burbuja -->
+                                    <div class="msg-row">
+                                        {% if message.sender != request.user %}
+                                            <div class="avatar-sm bg-primary">
+                                                {{ message.sender.get_full_name|default:message.sender.username|slice:":1"|upper }}
+                                            </div>
+                                        {% endif %}
+
+                                        <div class="message-content">
+                                            {{ message.content|linebreaks }}
+
+                                            {% if message.related_project %}
+                                                <div class="related-card">
+                                                    <span>
+                                                        <i class="fas fa-project-diagram me-1"></i>
+                                                        <strong>{{ message.related_project.title }}</strong>
+                                                    </span>
+                                                    <a href="{% url 'project_detail' message.related_project.pk %}"
+                                                       class="btn btn-sm" target="_blank">
+                                                        <i class="fas fa-external-link-alt me-1"></i>Ver
+                                                    </a>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    <!-- Hora -->
+                                    <div class="message-time mt-1 {% if message.sender == request.user %}me-1{% else %}ms-1{% endif %}">
+                                        {{ message.timestamp|localtime|date:"H:i" }}
+                                        {% if message.sender == request.user and message.is_read %}
+                                            <i class="fas fa-check-double ms-1"></i>
+                                        {% elif message.sender == request.user %}
+                                            <i class="fas fa-check ms-1" style="opacity:.5;"></i>
+                                        {% endif %}
+                                    </div>
+
                                 </div>
                             {% empty %}
-                                <div class="text-center text-muted p-4">
-                                    <i class="fas fa-comments fa-3x mb-3"></i>
-                                    <h5>¡Comienza la conversación!</h5>
-                                    <p>Este es el inicio de vuestra colaboración. ¡Intercambiad ideas y descubrid oportunidades juntos!</p>
+                                <div class="chat-empty">
+                                    <div class="empty-icon">
+                                        <i class="fas fa-handshake"></i>
+                                    </div>
+                                    <h5>¡Inicia la colaboración!</h5>
+                                    <p>Este es el comienzo de vuestra conexión. Intercambia ideas y descubre oportunidades juntos.</p>
                                 </div>
                             {% endfor %}
                         </div>
                     </div>
                 </div>
 
-                <!-- Formulario de Mensaje -->
-                <div class="card-footer bg-light">
-                    <form method="post" class="message-form">
+                <!-- ── Formulario de mensaje ── -->
+                <div class="chat-footer">
+                    <form method="post" class="message-form" id="chat-form">
                         {% csrf_token %}
-                        
+
                         <!-- Opciones del mensaje -->
-                        <div class="message-options mb-2">
-                            <div class="row">
+                        <div class="message-options">
+                            <div class="row g-2 align-items-end">
                                 <div class="col-md-4">
-                                    <label for="{{ form.message_type.id_for_label }}" class="form-label small">Tipo de mensaje:</label>
+                                    <label for="{{ form.message_type.id_for_label }}" class="form-label">
+                                        <i class="fas fa-tag me-1"></i>Tipo
+                                    </label>
                                     {{ form.message_type }}
                                 </div>
-                                <div class="col-md-4">
-                                    <label for="{{ form.related_project.id_for_label }}" class="form-label small">Proyecto relacionado:</label>
+                                <div class="col-md-5">
+                                    <label for="{{ form.related_project.id_for_label }}" class="form-label">
+                                        <i class="fas fa-paperclip me-1"></i>Proyecto relacionado
+                                    </label>
                                     {{ form.related_project }}
                                 </div>
-                                <div class="col-md-4 d-flex align-items-end">
-                                    <div class="form-check">
-                                        {{ form.is_important }}
-                                        <label for="{{ form.is_important.id_for_label }}" class="form-check-label small">
-                                            Marcar como importante
-                                        </label>
-                                    </div>
+                                <div class="col-md-3 d-flex align-items-center gap-2 pt-1">
+                                    {{ form.is_important }}
+                                    <label for="{{ form.is_important.id_for_label }}" class="form-label mb-0" style="cursor:pointer;">
+                                        <i class="fas fa-exclamation-circle text-danger me-1"></i>Importante
+                                    </label>
                                 </div>
                             </div>
                         </div>
-                        
-                        <!-- Área de texto del mensaje -->
-                        <div class="input-group">
-                            {{ form.content }}
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-paper-plane"></i> Enviar
+
+                        <!-- Input del mensaje -->
+                        <div class="chat-input-row">
+                            <textarea name="content" id="{{ form.content.id_for_label }}"
+                                      rows="1" placeholder="Escribe un mensaje… (Ctrl+Enter para enviar)"
+                                      class="{% if form.content.errors %}is-invalid{% endif %}">{{ form.content.value|default:'' }}</textarea>
+                            <button type="submit" class="btn-send" title="Enviar mensaje">
+                                <i class="fas fa-paper-plane"></i>
                             </button>
                         </div>
+                        <div class="input-hint">
+                            <kbd>Ctrl</kbd> + <kbd>Enter</kbd> para enviar
+                        </div>
+
                     </form>
                 </div>
-            </div>
+            </div><!-- /chat-card -->
 
-            <!-- Sugerencias de Colaboración -->
-            <div class="row mt-4">
+            <!-- ═══ Cards de sugerencias ═══ -->
+            <div class="row mt-4 g-3">
                 <div class="col-md-6">
-                    <div class="card bg-light">
-                        <div class="card-body">
-                            <h6 class="card-title">
-                                <i class="fas fa-lightbulb text-warning"></i>
-                                Oportunidades de Colaboración
-                            </h6>
-                            <ul class="list-unstyled small mb-0">
+                    <div class="suggest-card">
+                        <div class="card-header">
+                            <i class="fas fa-lightbulb text-warning"></i>
+                            Oportunidades de Colaboración
+                        </div>
+                        <div class="card-body py-2 px-3">
+                            <ul class="list-unstyled mb-0">
                                 {% if current_user_type == 'mentor' %}
-                                    <li><i class="fas fa-check text-success me-2"></i> Comparte oportunidades de inversión exclusivas</li>
-                                    <li><i class="fas fa-check text-success me-2"></i> Ofrece análisis de proyectos estratégicos</li>
-                                    <li><i class="fas fa-check text-success me-2"></i> Proporciona insights del mercado</li>
+                                    <li><i class="fas fa-check-circle text-success"></i> Comparte oportunidades de inversión exclusivas</li>
+                                    <li><i class="fas fa-check-circle text-success"></i> Ofrece análisis de proyectos estratégicos</li>
+                                    <li><i class="fas fa-check-circle text-success"></i> Proporciona insights del mercado</li>
                                 {% else %}
-                                    <li><i class="fas fa-check text-success me-2"></i> Solicita evaluación de proyectos potenciales</li>
-                                    <li><i class="fas fa-check text-success me-2"></i> Comparte tus criterios de inversión</li>
-                                    <li><i class="fas fa-check text-success me-2"></i> Pregunta sobre tendencias del mercado</li>
+                                    <li><i class="fas fa-check-circle text-success"></i> Solicita evaluación de proyectos potenciales</li>
+                                    <li><i class="fas fa-check-circle text-success"></i> Comparte tus criterios de inversión</li>
+                                    <li><i class="fas fa-check-circle text-success"></i> Pregunta sobre tendencias del mercado</li>
                                 {% endif %}
                             </ul>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-6">
-                    <div class="card bg-light">
-                        <div class="card-body">
-                            <h6 class="card-title">
-                                <i class="fas fa-handshake text-info"></i>
-                                Mejores Prácticas
-                            </h6>
-                            <ul class="list-unstyled small mb-0">
-                                <li><i class="fas fa-check text-success me-2"></i> Mantén comunicación regular y transparente</li>
-                                <li><i class="fas fa-check text-success me-2"></i> Comparte información relevante y actualizada</li>
-                                <li><i class="fas fa-check text-success me-2"></i> Sé específico en tus propuestas y solicitudes</li>
-                                <li><i class="fas fa-check text-success me-2"></i> Respeta los tiempos y compromisos acordados</li>
+                    <div class="suggest-card">
+                        <div class="card-header">
+                            <i class="fas fa-handshake text-info"></i>
+                            Mejores Prácticas
+                        </div>
+                        <div class="card-body py-2 px-3">
+                            <ul class="list-unstyled mb-0">
+                                <li><i class="fas fa-check-circle text-info"></i> Mantén comunicación regular y transparente</li>
+                                <li><i class="fas fa-check-circle text-info"></i> Comparte información relevante y actualizada</li>
+                                <li><i class="fas fa-check-circle text-info"></i> Sé específico en tus propuestas y solicitudes</li>
+                                <li><i class="fas fa-check-circle text-info"></i> Respeta los tiempos y compromisos acordados</li>
                             </ul>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
+
+        </div><!-- /col -->
+    </div><!-- /row -->
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    // Scroll to bottom of chat
+(function () {
+    // Scroll al fondo
     const chatMessages = document.getElementById('chat-messages');
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
 
-    // Auto-refresh chat every 30 seconds
-    setInterval(function() {
-        // Solo recargar si no hay texto en el formulario
-        const messageContent = document.querySelector('textarea[name="content"]');
-        if (messageContent && messageContent.value.trim() === '') {
-            location.reload();
-        }
-    }, 30000);
-
-    // Expandir textarea automáticamente
-    const textarea = document.querySelector('textarea[name="content"]');
+    // Auto-expand textarea
+    const textarea = document.querySelector('#chat-form textarea');
     if (textarea) {
-        textarea.addEventListener('input', function() {
+        textarea.addEventListener('input', function () {
             this.style.height = 'auto';
-            this.style.height = (this.scrollHeight) + 'px';
+            this.style.height = Math.min(this.scrollHeight, 140) + 'px';
+        });
+
+        // Ctrl+Enter envía
+        textarea.addEventListener('keydown', function (e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('chat-form').submit();
+            }
         });
     }
 
-    // Enviar mensaje con Ctrl+Enter
-    textarea.addEventListener('keydown', function(e) {
-        if (e.ctrlKey && e.key === 'Enter') {
-            e.preventDefault();
-            this.closest('form').submit();
-        }
+    // Estilos modernos para selects de Django
+    document.querySelectorAll('.message-options select').forEach(function(sel) {
+        sel.classList.add('form-select');
     });
+
+    // Auto-refresh si textarea está vacío
+    setInterval(function () {
+        if (textarea && textarea.value.trim() === '') {
+            location.reload();
+        }
+    }, 30000);
+})();
 </script>
 {% endblock %}
