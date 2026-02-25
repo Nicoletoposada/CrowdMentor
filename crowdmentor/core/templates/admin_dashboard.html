@@ -78,13 +78,18 @@
                                         <td>{{ evaluator.bio|truncatechars:50 }}</td>
                                         <td>{{ evaluator.experience|truncatechars:50 }}</td>
                                         <td>
-                                            {% if evaluator.documents %}
-                                                <a href="{{ evaluator.documents.url }}" target="_blank" class="btn btn-sm btn-info">
-                                                    Ver Documentos
-                                                </a>
-                                            {% else %}
-                                                No hay documentos
-                                            {% endif %}
+                                            {% with files=evaluator.uploaded_files.all %}
+                                                {% if files %}
+                                                    {% for f in files %}
+                                                        <a href="{{ f.file.url }}" target="_blank" class="btn btn-sm btn-info mb-1 d-block">
+                                                            <i class="fas fa-file"></i>
+                                                            {% if f.description %}{{ f.description }}{% else %}Archivo {{ forloop.counter }}{% endif %}
+                                                        </a>
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <span class="text-muted">Sin documentos</span>
+                                                {% endif %}
+                                            {% endwith %}
                                         </td>
                                         <td>
                                             <div class="btn-group">
