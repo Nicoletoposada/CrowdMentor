@@ -525,15 +525,134 @@ def admin_dashboard(request):
         messages.error(request, 'Acceso denegado. Solo los administradores pueden acceder a esta página.')
         return redirect('home')
 
-    users = User.objects.all()
-    projects = Project.objects.all()
+    # ── Usuarios ──────────────────────────────────────────────────────────────
+    users = User.objects.select_related('profile').all().order_by('-date_joined')
+    users_by_type = {
+        'entrepreneur': Profile.objects.filter(user_type='entrepreneur').count(),
+        'mentor':       Profile.objects.filter(user_type='mentor').count(),
+        'investor':     Profile.objects.filter(user_type='investor').count(),
+        'evaluator':    Profile.objects.filter(user_type='evaluator').count(),
+    }
+
+    # ── Evaluadores pendientes ────────────────────────────────────────────────
     pending_evaluators = Profile.objects.filter(user_type='evaluator', is_approved_by_admin=False)
+
+    # ── Proyectos ─────────────────────────────────────────────────────────────
+    projects = Project.objects.select_related('owner', 'category').all().order_by('-created_at')
+
+    # ── Inversiones ───────────────────────────────────────────────────────────
+    investments = Investment.objects.select_related('project', 'investor').all().order_by('-invested_at')
+    investments_stats = Investment.objects.aggregate(
+        total=Sum('amount'),
+        count=Count('id'),
+        pendiente=Count('id', filter=Q(status='pending')),
+        aceptada=Count('id', filter=Q(status='accepted')),
+        rechazada=Count('id', filter=Q(status='rejected')),
+    )
+
+    # ── Mentorías ─────────────────────────────────────────────────────────────
+    mentorships = Mentorship.objects.select_related('project', 'mentor').all().order_by('-assigned_at')
+    mentorships_stats = {
+        'total':    Mentorship.objects.count(),
+        'pending':  Mentorship.objects.filter(status='pending').count(),
+        'accepted': Mentorship.objects.filter(status='accepted').count(),
+        'rejected': Mentorship.objects.filter(status='rejected').count(),
+    }
+
+    # ── Monitoreo general ─────────────────────────────────────────────────────
+    monitoring = {
+        'total_users':          User.objects.count(),
+        'active_users':         User.objects.filter(is_active=True).count(),
+        'inactive_users':       User.objects.filter(is_active=False).count(),
+        'total_projects':       Project.objects.count(),
+        'active_projects':      Project.objects.filter(is_active=True).count(),
+        'inactive_projects':    Project.objects.filter(is_active=False).count(),
+        'total_investments':    investments_stats['count'] or 0,
+        'total_amount':         investments_stats['total'] or 0,
+        'pending_investments':  investments_stats['pendiente'] or 0,
+        'total_mentorships':    mentorships_stats['total'],
+        'active_mentorships':   mentorships_stats['accepted'],
+    }
 
     return render(request, 'admin_dashboard.html', {
         'users': users,
+        'users_by_type': users_by_type,
         'projects': projects,
-        'pending_evaluators': pending_evaluators
+        'pending_evaluators': pending_evaluators,
+        'investments': investments,
+        'investments_stats': investments_stats,
+        'mentorships': mentorships,
+        'mentorships_stats': mentorships_stats,
+        'monitoring': monitoring,
     })
+
+
+@login_required
+def toggle_project_active(request, project_id):
+    """Activa o desactiva un proyecto desde el panel de admin."""
+    if not request.user.is_superuser:
+        return JsonResponse({'error': 'Acceso denegado'}, status=403)
+    try:
+        project = Project.objects.get(id=project_id)
+        project.is_active = not project.is_active
+        project.save()
+        return JsonResponse({'success': True, 'is_active': project.is_active})
+    except Project.DoesNotExist:
+        return JsonResponse({'error': 'Proyecto no encontrado'}, status=404)
+
+
+@login_required
+def toggle_user_active(request, user_id):
+    """Activa o desactiva la cuenta de un usuario desde el panel de admin."""
+    if not request.user.is_superuser:
+        return JsonResponse({'error': 'Acceso denegado'}, status=403)
+    if request.user.id == user_id:
+        return JsonResponse({'error': 'No puedes desactivar tu propia cuenta'}, status=400)
+    try:
+        user = User.objects.get(id=user_id)
+        user.is_active = not user.is_active
+        user.save()
+        return JsonResponse({'success': True, 'is_active': user.is_active})
+    except User.DoesNotExist:
+        return JsonResponse({'error': 'Usuario no encontrado'}, status=404)
+
+
+@login_required
+def admin_toggle_investment(request, investment_id):
+    """Cambia el estado de una inversión desde el panel de admin."""
+    if not request.user.is_superuser:
+        return JsonResponse({'error': 'Acceso denegado'}, status=403)
+    try:
+        investment = Investment.objects.get(id=investment_id)
+        action = request.POST.get('action')
+        if action == 'accept':
+            if investment.status != 'accepted':
+                investment.status = 'accepted'
+                investment.is_accepted = True
+                investment.save()
+                project = investment.project
+                project.amount_raised = Investment.objects.filter(
+                    project=project, status='accepted'
+                ).aggregate(total=Sum('amount'))['total'] or 0
+                project.save()
+        elif action == 'reject':
+            if investment.status == 'accepted':
+                project = investment.project
+                project.amount_raised = max(
+                    0,
+                    (project.amount_raised or 0) - investment.amount
+                )
+                project.save()
+            investment.status = 'rejected'
+            investment.is_accepted = False
+            investment.save()
+        elif action == 'pending':
+            investment.status = 'pending'
+            investment.is_accepted = False
+            investment.save()
+        return JsonResponse({'success': True, 'status': investment.status})
+    except Investment.DoesNotExist:
+        return JsonResponse({'error': 'Inversión no encontrada'}, status=404)
 
 @login_required
 def delete_user(request, user_id):

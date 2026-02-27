@@ -107,7 +107,7 @@ class Investment(models.Model):
 class Mentorship(models.Model):
     INITIATED_BY_CHOICES = [
         ('mentor', 'Mentor'),
-        ('entrepreneur', 'Entrepreneur'),
+        ('entrepreneur', 'Emprendedor'),
     ]
 
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='mentorships')

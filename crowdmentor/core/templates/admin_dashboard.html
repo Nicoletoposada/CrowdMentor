@@ -1,287 +1,589 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% load static %}
 
 {% block content %}
-<div class="container py-5">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h1 class="text-primary mb-3">Panel de Administrador</h1>
-        </div>
+<style>
+  .admin-stat-card { border-left: 4px solid; border-radius: 8px; }
+  .admin-stat-card.blue  { border-color: #0d6efd; }
+  .admin-stat-card.green { border-color: #198754; }
+  .admin-stat-card.orange{ border-color: #fd7e14; }
+  .admin-stat-card.red   { border-color: #dc3545; }
+  .admin-stat-card.teal  { border-color: #20c997; }
+  .admin-stat-card .stat-num { font-size: 2rem; font-weight: 700; }
+  .section-header { background: linear-gradient(135deg,#0d6efd,#0a58ca); color:#fff; border-radius:8px 8px 0 0; padding:14px 20px; }
+  .badge-status-pending  { background:#ffc107; color:#000; padding:.35em .6em; border-radius:.375rem; font-size:.8em; }
+  .badge-status-accepted { background:#198754; color:#fff; padding:.35em .6em; border-radius:.375rem; font-size:.8em; }
+  .badge-status-rejected { background:#dc3545; color:#fff; padding:.35em .6em; border-radius:.375rem; font-size:.8em; }
+  .table-hover tbody tr:hover { background: rgba(13,110,253,.05); }
+  .nav-pills .nav-link.active { background-color: #0d6efd; }
+  .nav-pills .nav-link { color: #0d6efd; }
+</style>
+
+<div class="container-fluid py-4">
+
+  <!-- ENCABEZADO -->
+  <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+    <div>
+      <h1 class="fw-bold text-primary mb-0"><i class="fas fa-shield-alt me-2"></i>Panel de Administrador</h1>
+      <small class="text-muted">Gestión completa de la plataforma CrowdMentor</small>
     </div>
+    <a href="{% url 'analytics_dashboard' %}" class="btn btn-outline-primary">
+      <i class="fas fa-chart-bar me-1"></i> Ver Analíticas
+    </a>
+  </div>
 
-    <div class="row">
-        <!-- Menú de Administración -->
-        <div class="col-12 mb-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-secondary text-white">
-                    <h3 class="mb-0">Menú de Administración</h3>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6 col-lg-3 mb-3">
-                            <a href="{% url 'admin_resources' %}" class="btn btn-primary w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3 admin-action-btn">
-                                <i class="fas fa-folder-open fa-3x mb-2 text-white"></i>
-                                <span class="fw-bold text-white">Gestionar Recursos</span>
-                                <small class="text-light">Categorías y recursos</small>
-                            </a>
-                        </div>
-                        <div class="col-md-6 col-lg-3 mb-3">
-                            <a href="#evaluadores-section" class="btn btn-outline-success w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3">
-                                <i class="fas fa-user-check fa-2x mb-2"></i>
-                                <span>Evaluadores</span>
-                                <small class="text-muted">Aprobar/rechazar</small>
-                            </a>
-                        </div>
-                        <div class="col-md-6 col-lg-3 mb-3">
-                            <a href="#usuarios-section" class="btn btn-outline-info w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3">
-                                <i class="fas fa-users fa-2x mb-2"></i>
-                                <span>Usuarios</span>
-                                <small class="text-muted">Gestionar usuarios</small>
-                            </a>
-                        </div>
-                        <div class="col-md-6 col-lg-3 mb-3">
-                            <a href="#proyectos-section" class="btn btn-outline-warning w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3">
-                                <i class="fas fa-project-diagram fa-2x mb-2"></i>
-                                <span>Proyectos</span>
-                                <small class="text-muted">Gestionar proyectos</small>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
+  <!-- TARJETAS DE MONITOREO -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-4 col-lg-2">
+      <div class="card admin-stat-card blue h-100 shadow-sm">
+        <div class="card-body py-3 text-center">
+          <div class="stat-num text-primary">{{ monitoring.total_users }}</div>
+          <div class="text-muted small">Usuarios</div>
+          <div class="d-flex justify-content-center gap-1 mt-1 flex-wrap">
+            <span class="badge bg-success">{{ monitoring.active_users }} act.</span>
+            <span class="badge bg-secondary">{{ monitoring.inactive_users }} inact.</span>
+          </div>
         </div>
-
-        <!-- Evaluadores Pendientes -->
-        <div class="col-12 mb-4" id="evaluadores-section">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h3 class="mb-0">Evaluadores Pendientes</h3>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Usuario</th>
-                                    <th>Email</th>
-                                    <th>Biografía</th>
-                                    <th>Experiencia</th>
-                                    <th>Documentos</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for evaluator in pending_evaluators %}
-                                    <tr>
-                                        <td>{{ evaluator.user.username }}</td>
-                                        <td>{{ evaluator.user.email }}</td>
-                                        <td>{{ evaluator.bio|truncatechars:50 }}</td>
-                                        <td>{{ evaluator.experience|truncatechars:50 }}</td>
-                                        <td>
-                                            {% with files=evaluator.uploaded_files.all %}
-                                                {% if files %}
-                                                    {% for f in files %}
-                                                        <a href="{{ f.file.url }}" target="_blank" class="btn btn-sm btn-info mb-1 d-block">
-                                                            <i class="fas fa-file"></i>
-                                                            {% if f.description %}{{ f.description }}{% else %}Archivo {{ forloop.counter }}{% endif %}
-                                                        </a>
-                                                    {% endfor %}
-                                                {% else %}
-                                                    <span class="text-muted">Sin documentos</span>
-                                                {% endif %}
-                                            {% endwith %}
-                                        </td>
-                                        <td>
-                                            <div class="btn-group">
-                                                <button class="btn btn-sm btn-success" data-user-id="{{ evaluator.user.id }}" onclick="approveEvaluator(this.dataset.userId)">
-                                                    Aprobar
-                                                </button>
-                                                <button class="btn btn-sm btn-danger" data-user-id="{{ evaluator.user.id }}" onclick="rejectEvaluator(this.dataset.userId)">
-                                                    Rechazar
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                {% empty %}
-                                    <tr>
-                                        <td colspan="6" class="text-center">No hay evaluadores pendientes</td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Usuarios -->
-        <div class="col-lg-6 mb-4" id="usuarios-section">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h3 class="mb-0">Usuarios</h3>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Usuario</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for user in users %}
-                                    <tr>
-                                        <td>{{ user.username }}</td>
-                                        <td>
-                                            <button class="btn btn-sm btn-danger" data-user-id="{{ user.id }}" onclick="deleteUser(this.dataset.userId)">
-                                                Eliminar
-                                            </button>
-                                        </td>
-                                    </tr>
-                                {% empty %}
-                                    <tr>
-                                        <td colspan="2" class="text-center">No hay usuarios registrados</td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Proyectos -->
-        <div class="col-lg-6 mb-4" id="proyectos-section">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h3 class="mb-0">Proyectos</h3>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Título</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for project in projects %}
-                                    <tr>
-                                        <td>{{ project.title }}</td>
-                                        <td>
-                                            <button class="btn btn-sm btn-danger" data-project-id="{{ project.id }}" onclick="deleteProject(this.dataset.projectId)">
-                                                Eliminar
-                                            </button>
-                                        </td>
-                                    </tr>
-                                {% empty %}
-                                    <tr>
-                                        <td colspan="2" class="text-center">No hay proyectos registrados</td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
+      </div>
     </div>
+    <div class="col-6 col-md-4 col-lg-2">
+      <div class="card admin-stat-card orange h-100 shadow-sm">
+        <div class="card-body py-3 text-center">
+          <div class="stat-num text-warning">{{ monitoring.total_projects }}</div>
+          <div class="text-muted small">Proyectos</div>
+          <div class="d-flex justify-content-center gap-1 mt-1 flex-wrap">
+            <span class="badge bg-success">{{ monitoring.active_projects }} act.</span>
+            <span class="badge bg-secondary">{{ monitoring.inactive_projects }} inact.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+      <div class="card admin-stat-card green h-100 shadow-sm">
+        <div class="card-body py-3 text-center">
+          <div class="stat-num text-success">{{ monitoring.total_investments }}</div>
+          <div class="text-muted small">Inversiones</div>
+          <div class="mt-1">
+            <span class="badge bg-warning text-dark">{{ monitoring.pending_investments }} pend.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+      <div class="card admin-stat-card teal h-100 shadow-sm">
+        <div class="card-body py-3 text-center">
+          <div class="stat-num text-success" style="font-size:1.3rem;">${{ monitoring.total_amount|floatformat:0 }}</div>
+          <div class="text-muted small">Monto invertido</div>
+          <div class="mt-1"><span class="badge bg-info text-dark">COP</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+      <div class="card admin-stat-card red h-100 shadow-sm">
+        <div class="card-body py-3 text-center">
+          <div class="stat-num text-danger">{{ monitoring.total_mentorships }}</div>
+          <div class="text-muted small">Mentorías</div>
+          <div class="mt-1">
+            <span class="badge bg-success">{{ monitoring.active_mentorships }} activas</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+      <div class="card admin-stat-card blue h-100 shadow-sm">
+        <div class="card-body py-3 text-center">
+          <div class="stat-num text-primary">{{ pending_evaluators.count }}</div>
+          <div class="text-muted small">Evaluadores</div>
+          <div class="mt-1"><span class="badge bg-warning text-dark">pendientes</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- USUARIOS POR TIPO -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="card text-center shadow-sm border-0">
+        <div class="card-body py-2">
+          <i class="fas fa-lightbulb fa-2x text-warning mb-2"></i>
+          <div class="fw-bold fs-4">{{ users_by_type.entrepreneur }}</div>
+          <small class="text-muted">Emprendedores</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card text-center shadow-sm border-0">
+        <div class="card-body py-2">
+          <i class="fas fa-chalkboard-teacher fa-2x text-info mb-2"></i>
+          <div class="fw-bold fs-4">{{ users_by_type.mentor }}</div>
+          <small class="text-muted">Mentores</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card text-center shadow-sm border-0">
+        <div class="card-body py-2">
+          <i class="fas fa-hand-holding-usd fa-2x text-success mb-2"></i>
+          <div class="fw-bold fs-4">{{ users_by_type.investor }}</div>
+          <small class="text-muted">Inversionistas</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card text-center shadow-sm border-0">
+        <div class="card-body py-2">
+          <i class="fas fa-user-check fa-2x text-primary mb-2"></i>
+          <div class="fw-bold fs-4">{{ users_by_type.evaluator }}</div>
+          <small class="text-muted">Evaluadores</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NAVEGACION RAPIDA -->
+  <div class="mb-4">
+    <ul class="nav nav-pills flex-wrap gap-2">
+      <li class="nav-item"><a class="nav-link active" href="#evaluadores-section">
+        <i class="fas fa-user-check me-1"></i>Evaluadores</a></li>
+      <li class="nav-item"><a class="nav-link" href="#usuarios-section">
+        <i class="fas fa-users me-1"></i>Usuarios</a></li>
+      <li class="nav-item"><a class="nav-link" href="#proyectos-section">
+        <i class="fas fa-project-diagram me-1"></i>Proyectos</a></li>
+      <li class="nav-item"><a class="nav-link" href="#inversiones-section">
+        <i class="fas fa-coins me-1"></i>Financiamiento</a></li>
+      <li class="nav-item"><a class="nav-link" href="#mentorias-section">
+        <i class="fas fa-handshake me-1"></i>Mentorías</a></li>
+      <li class="nav-item"><a class="nav-link" href="{% url 'admin_resources' %}">
+        <i class="fas fa-folder-open me-1"></i>Recursos</a></li>
+    </ul>
+  </div>
+
+  <!-- EVALUADORES PENDIENTES -->
+  <div class="card mb-4 shadow-sm border-0" id="evaluadores-section">
+    <div class="section-header">
+      <h5 class="mb-0"><i class="fas fa-user-check me-2"></i>Evaluadores Pendientes
+        {% if pending_evaluators.count %}
+          <span class="badge bg-warning text-dark ms-2">{{ pending_evaluators.count }}</span>
+        {% endif %}
+      </h5>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr><th>Usuario</th><th>Correo</th><th>Tipo</th><th>Biografía</th><th>Documentos</th><th>Acciones</th></tr>
+          </thead>
+          <tbody>
+            {% for ev in pending_evaluators %}
+            <tr>
+              <td class="fw-semibold">{{ ev.user.username }}</td>
+              <td>{{ ev.user.email }}</td>
+              <td><span class="badge bg-primary">Evaluador</span></td>
+              <td>{{ ev.bio|truncatechars:60 }}</td>
+              <td>
+                {% with files=ev.uploaded_files.all %}
+                  {% if files %}{% for f in files %}
+                    <a href="{{ f.file.url }}" target="_blank" class="btn btn-sm btn-outline-info mb-1">
+                      <i class="fas fa-file"></i> {% if f.description %}{{ f.description }}{% else %}Doc {{ forloop.counter }}{% endif %}
+                    </a>
+                  {% endfor %}{% else %}
+                    <span class="text-muted">Sin documentos</span>
+                  {% endif %}
+                {% endwith %}
+              </td>
+              <td>
+                <button class="btn btn-sm btn-success me-1" onclick="aprobarEvaluador({{ ev.user.id }})">
+                  <i class="fas fa-check"></i> Aprobar
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="rechazarEvaluador({{ ev.user.id }})">
+                  <i class="fas fa-times"></i> Rechazar
+                </button>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-center text-muted py-3">No hay evaluadores pendientes</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- GESTION DE USUARIOS -->
+  <div class="card mb-4 shadow-sm border-0" id="usuarios-section">
+    <div class="section-header">
+      <h5 class="mb-0"><i class="fas fa-users me-2"></i>Gestión de Usuarios
+        <span class="badge bg-light text-dark ms-2">{{ users.count }}</span>
+      </h5>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr><th>Usuario</th><th>Correo</th><th>Rol</th><th>Miembro desde</th><th>Estado</th><th>Acciones</th></tr>
+          </thead>
+          <tbody>
+            {% for u in users %}
+            <tr id="user-row-{{ u.id }}">
+              <td>
+                <div class="fw-semibold">{{ u.username }}</div>
+                {% if u.is_superuser %}<span class="badge bg-danger">Admin</span>{% endif %}
+              </td>
+              <td>{{ u.email|default:"-" }}</td>
+              <td>
+                {% if u.profile %}
+                  {% if u.profile.user_type == 'entrepreneur' %}
+                    <span class="badge bg-warning text-dark"><i class="fas fa-lightbulb me-1"></i>Emprendedor</span>
+                  {% elif u.profile.user_type == 'mentor' %}
+                    <span class="badge bg-info text-dark"><i class="fas fa-chalkboard-teacher me-1"></i>Mentor</span>
+                  {% elif u.profile.user_type == 'investor' %}
+                    <span class="badge bg-success"><i class="fas fa-hand-holding-usd me-1"></i>Inversionista</span>
+                  {% elif u.profile.user_type == 'evaluator' %}
+                    <span class="badge bg-primary"><i class="fas fa-user-check me-1"></i>Evaluador</span>
+                  {% endif %}
+                {% else %}
+                  <span class="text-muted">-</span>
+                {% endif %}
+              </td>
+              <td><small>{{ u.date_joined|date:"d/m/Y" }}</small></td>
+              <td>
+                {% if u.is_active %}
+                  <span class="badge bg-success" id="user-status-badge-{{ u.id }}">Activo</span>
+                {% else %}
+                  <span class="badge bg-secondary" id="user-status-badge-{{ u.id }}">Inactivo</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="d-flex gap-1 flex-wrap">
+                  {% if not u.is_superuser %}
+                    <button class="btn btn-sm {% if u.is_active %}btn-warning{% else %}btn-success{% endif %}"
+                            id="user-toggle-btn-{{ u.id }}"
+                            onclick="alternarUsuario({{ u.id }}, {{ u.is_active|yesno:'true,false' }})">
+                      <i class="fas {% if u.is_active %}fa-user-slash{% else %}fa-user-check{% endif %}"></i>
+                      {% if u.is_active %}Desactivar{% else %}Activar{% endif %}
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="eliminarUsuario({{ u.id }})">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  {% else %}
+                    <span class="text-muted small">Superadmin</span>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-center text-muted py-3">No hay usuarios registrados</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- GESTION DE PROYECTOS -->
+  <div class="card mb-4 shadow-sm border-0" id="proyectos-section">
+    <div class="section-header">
+      <h5 class="mb-0"><i class="fas fa-project-diagram me-2"></i>Gestión de Proyectos
+        <span class="badge bg-light text-dark ms-2">{{ projects.count }}</span>
+      </h5>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr><th>Proyecto</th><th>Propietario</th><th>Categoría</th><th>Meta</th><th>Recaudado</th><th>Estado</th><th>Creado</th><th>Acciones</th></tr>
+          </thead>
+          <tbody>
+            {% for project in projects %}
+            <tr id="project-row-{{ project.id }}">
+              <td class="fw-semibold">
+                <a href="{% url 'project_detail' project.pk %}" target="_blank" class="text-decoration-none">
+                  {{ project.title|truncatechars:40 }}
+                </a>
+              </td>
+              <td>{{ project.owner.username }}</td>
+              <td>
+                {% if project.category %}<span class="badge bg-secondary">{{ project.category.name }}</span>{% else %}-{% endif %}
+              </td>
+              <td>${{ project.funding_goal|floatformat:0 }}</td>
+              <td>
+                <div class="small fw-semibold text-success">${{ project.amount_raised|floatformat:0 }}</div>
+                <div class="progress" style="height:4px;min-width:60px;">
+                  <div class="progress-bar bg-success" style="width:{{ project.get_funding_percentage }}%"></div>
+                </div>
+                <div class="small text-muted">{{ project.get_funding_percentage|floatformat:0 }}%</div>
+              </td>
+              <td>
+                {% if project.is_active %}
+                  <span class="badge bg-success" id="proj-status-badge-{{ project.id }}">Activo</span>
+                {% else %}
+                  <span class="badge bg-secondary" id="proj-status-badge-{{ project.id }}">Inactivo</span>
+                {% endif %}
+              </td>
+              <td><small>{{ project.created_at|date:"d/m/Y" }}</small></td>
+              <td>
+                <div class="d-flex gap-1 flex-wrap">
+                  <button class="btn btn-sm {% if project.is_active %}btn-warning{% else %}btn-success{% endif %}"
+                          id="proj-toggle-btn-{{ project.id }}"
+                          onclick="alternarProyecto({{ project.id }}, {{ project.is_active|yesno:'true,false' }})">
+                    <i class="fas {% if project.is_active %}fa-eye-slash{% else %}fa-eye{% endif %}"></i>
+                    {% if project.is_active %}Desactivar{% else %}Activar{% endif %}
+                  </button>
+                  <button class="btn btn-sm btn-danger" onclick="eliminarProyecto({{ project.id }})">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="8" class="text-center text-muted py-3">No hay proyectos registrados</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- GESTION DE FINANCIAMIENTO -->
+  <div class="card mb-4 shadow-sm border-0" id="inversiones-section">
+    <div class="section-header">
+      <h5 class="mb-0"><i class="fas fa-coins me-2"></i>Gestión de Financiamiento
+        <span class="badge bg-light text-dark ms-2">{{ investments.count }}</span>
+      </h5>
+    </div>
+    <div class="card-body border-bottom pb-3">
+      <div class="row g-3 text-center">
+        <div class="col-6 col-md-3">
+          <div class="fw-bold fs-5 text-success">${{ investments_stats.total|default:0|floatformat:0 }}</div>
+          <div class="text-muted small">Total acumulado (COP)</div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="fw-bold fs-5 text-warning">{{ investments_stats.pendiente|default:0 }}</div>
+          <div class="text-muted small">Pendientes</div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="fw-bold fs-5 text-success">{{ investments_stats.aceptada|default:0 }}</div>
+          <div class="text-muted small">Aceptadas</div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="fw-bold fs-5 text-danger">{{ investments_stats.rechazada|default:0 }}</div>
+          <div class="text-muted small">Rechazadas</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr><th>#</th><th>Proyecto</th><th>Inversionista</th><th>Monto</th><th>Participación %</th><th>Estado</th><th>Fecha</th><th>Acciones</th></tr>
+          </thead>
+          <tbody>
+            {% for inv in investments %}
+            <tr id="inv-row-{{ inv.id }}">
+              <td class="text-muted small">{{ inv.id }}</td>
+              <td>
+                <a href="{% url 'project_detail' inv.project.pk %}" target="_blank" class="text-decoration-none">
+                  {{ inv.project.title|truncatechars:35 }}
+                </a>
+              </td>
+              <td>{{ inv.investor.username }}</td>
+              <td class="fw-semibold">${{ inv.amount|floatformat:0 }}</td>
+              <td>{{ inv.equity_percentage }}%</td>
+              <td>
+                <span class="badge-status-{{ inv.status }}" id="inv-status-badge-{{ inv.id }}">
+                  {% if inv.status == 'pending' %}Pendiente{% elif inv.status == 'accepted' %}Aceptada{% else %}Rechazada{% endif %}
+                </span>
+              </td>
+              <td><small>{{ inv.invested_at|date:"d/m/Y" }}</small></td>
+              <td>
+                <div class="d-flex gap-1 flex-wrap">
+                  {% if inv.status != 'accepted' %}
+                  <button class="btn btn-sm btn-success" title="Aceptar" onclick="cambiarEstadoInversion({{ inv.id }}, 'accept')">
+                    <i class="fas fa-check"></i>
+                  </button>
+                  {% endif %}
+                  {% if inv.status != 'rejected' %}
+                  <button class="btn btn-sm btn-danger" title="Rechazar" onclick="cambiarEstadoInversion({{ inv.id }}, 'reject')">
+                    <i class="fas fa-times"></i>
+                  </button>
+                  {% endif %}
+                  {% if inv.status != 'pending' %}
+                  <button class="btn btn-sm btn-secondary" title="Marcar pendiente" onclick="cambiarEstadoInversion({{ inv.id }}, 'pending')">
+                    <i class="fas fa-clock"></i>
+                  </button>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="8" class="text-center text-muted py-3">No hay inversiones registradas</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- GESTION DE MENTORIAS -->
+  <div class="card mb-4 shadow-sm border-0" id="mentorias-section">
+    <div class="section-header">
+      <h5 class="mb-0"><i class="fas fa-handshake me-2"></i>Gestión de Mentorías
+        <span class="badge bg-light text-dark ms-2">{{ mentorships.count }}</span>
+      </h5>
+    </div>
+    <div class="card-body border-bottom pb-3">
+      <div class="row g-3 text-center">
+        <div class="col-6 col-md-3">
+          <div class="fw-bold fs-5">{{ mentorships_stats.total }}</div>
+          <div class="text-muted small">Total</div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="fw-bold fs-5 text-warning">{{ mentorships_stats.pending }}</div>
+          <div class="text-muted small">Pendientes</div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="fw-bold fs-5 text-success">{{ mentorships_stats.accepted }}</div>
+          <div class="text-muted small">Activas</div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="fw-bold fs-5 text-danger">{{ mentorships_stats.rejected }}</div>
+          <div class="text-muted small">Rechazadas</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr><th>Proyecto</th><th>Mentor</th><th>Iniciada por</th><th>Estado</th><th>Fecha asignación</th></tr>
+          </thead>
+          <tbody>
+            {% for m in mentorships %}
+            <tr>
+              <td>
+                <a href="{% url 'project_detail' m.project.pk %}" target="_blank" class="text-decoration-none">
+                  {{ m.project.title|truncatechars:40 }}
+                </a>
+              </td>
+              <td>{{ m.mentor.username }}</td>
+              <td>
+                <span class="badge {% if m.initiated_by == 'mentor' %}bg-info text-dark{% else %}bg-primary{% endif %}">
+                  {{ m.get_initiated_by_display }}
+                </span>
+              </td>
+              <td>
+                <span class="badge-status-{{ m.status }}">
+                  {% if m.status == 'pending' %}Pendiente{% elif m.status == 'accepted' %}Activa{% else %}Rechazada{% endif %}
+                </span>
+              </td>
+              <td><small>{{ m.assigned_at|date:"d/m/Y" }}</small></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center text-muted py-3">No hay mentorías registradas</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
-function deleteUser(userId) {
-    if (confirm('¿Estás seguro de que deseas eliminar este usuario?')) {
-        fetch(`/delete_user/${userId}/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken')
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert('Error al eliminar el usuario');
-            }
-        });
+function obtenerCookie(nombre) {
+  let valor = null;
+  if (document.cookie && document.cookie !== '') {
+    for (const c of document.cookie.split(';')) {
+      const cookie = c.trim();
+      if (cookie.startsWith(nombre + '=')) { valor = decodeURIComponent(cookie.substring(nombre.length + 1)); break; }
     }
+  }
+  return valor;
 }
-
-function deleteProject(projectId) {
-    if (confirm('¿Estás seguro de que deseas eliminar este proyecto?')) {
-        fetch(`/delete_project/${projectId}/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken')
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert('Error al eliminar el proyecto');
-            }
-        });
-    }
+function enviar(url, cuerpo={}) {
+  return fetch(url, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': obtenerCookie('csrftoken'), 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams(cuerpo)
+  }).then(r => r.json());
 }
-
-function approveEvaluator(userId) {
-    if (confirm('¿Estás seguro de que deseas aprobar este evaluador? Se habilitará su acceso al panel de evaluador.')) {
-        fetch(`/approve_evaluator/${userId}/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken')
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('Evaluador aprobado exitosamente');
-                location.reload();
-            } else {
-                alert('Error al aprobar el evaluador');
-            }
-        });
-    }
+function eliminarUsuario(userId) {
+  if (!confirm('Confirma que deseas eliminar permanentemente este usuario y todos sus datos.')) return;
+  enviar(`/delete_user/${userId}/`).then(data => {
+    if (data.success) { document.getElementById(`user-row-${userId}`)?.remove(); }
+    else { alert(data.error || 'Error al eliminar el usuario'); }
+  });
 }
-
-function rejectEvaluator(userId) {
-    if (confirm('¿Estás seguro de que deseas rechazar este evaluador? Su perfil será eliminado.')) {
-        fetch(`/reject_evaluator/${userId}/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken')
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('Evaluador rechazado y perfil eliminado');
-                location.reload();
-            } else {
-                alert('Error al rechazar el evaluador');
-            }
-        });
-    }
+function alternarUsuario(userId, estaActivo) {
+  const accion = estaActivo ? 'desactivar' : 'activar';
+  if (!confirm(`Confirmas que deseas ${accion} la cuenta de este usuario?`)) return;
+  enviar(`/toggle_user_active/${userId}/`).then(data => {
+    if (data.success) {
+      const badge = document.getElementById(`user-status-badge-${userId}`);
+      const btn   = document.getElementById(`user-toggle-btn-${userId}`);
+      if (data.is_active) {
+        badge.className = 'badge bg-success'; badge.textContent = 'Activo';
+        btn.className = 'btn btn-sm btn-warning';
+        btn.innerHTML = '<i class="fas fa-user-slash"></i> Desactivar';
+        btn.setAttribute('onclick', `alternarUsuario(${userId}, true)`);
+      } else {
+        badge.className = 'badge bg-secondary'; badge.textContent = 'Inactivo';
+        btn.className = 'btn btn-sm btn-success';
+        btn.innerHTML = '<i class="fas fa-user-check"></i> Activar';
+        btn.setAttribute('onclick', `alternarUsuario(${userId}, false)`);
+      }
+    } else { alert(data.error || 'Error al cambiar el estado del usuario'); }
+  });
 }
-
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
+function eliminarProyecto(projectId) {
+  if (!confirm('Confirma que deseas eliminar permanentemente este proyecto.')) return;
+  enviar(`/delete_project/${projectId}/`).then(data => {
+    if (data.success) { document.getElementById(`project-row-${projectId}`)?.remove(); }
+    else { alert(data.error || 'Error al eliminar el proyecto'); }
+  });
+}
+function alternarProyecto(projectId, estaActivo) {
+  const accion = estaActivo ? 'desactivar' : 'activar';
+  if (!confirm(`Confirmas que deseas ${accion} este proyecto?`)) return;
+  enviar(`/toggle_project_active/${projectId}/`).then(data => {
+    if (data.success) {
+      const badge = document.getElementById(`proj-status-badge-${projectId}`);
+      const btn   = document.getElementById(`proj-toggle-btn-${projectId}`);
+      if (data.is_active) {
+        badge.className = 'badge bg-success'; badge.textContent = 'Activo';
+        btn.className = 'btn btn-sm btn-warning';
+        btn.innerHTML = '<i class="fas fa-eye-slash"></i> Desactivar';
+        btn.setAttribute('onclick', `alternarProyecto(${projectId}, true)`);
+      } else {
+        badge.className = 'badge bg-secondary'; badge.textContent = 'Inactivo';
+        btn.className = 'btn btn-sm btn-success';
+        btn.innerHTML = '<i class="fas fa-eye"></i> Activar';
+        btn.setAttribute('onclick', `alternarProyecto(${projectId}, false)`);
+      }
+    } else { alert(data.error || 'Error al cambiar el estado del proyecto'); }
+  });
+}
+function cambiarEstadoInversion(invId, accion) {
+  const etiquetas = { accept: 'aceptar', reject: 'rechazar', pending: 'marcar como pendiente' };
+  if (!confirm(`Confirmas que deseas ${etiquetas[accion] || accion} esta inversión?`)) return;
+  enviar(`/admin_toggle_investment/${invId}/`, { action: accion }).then(data => {
+    if (data.success) { location.reload(); }
+    else { alert(data.error || 'Error al cambiar el estado de la inversión'); }
+  });
+}
+function aprobarEvaluador(userId) {
+  if (!confirm('Confirmas que deseas aprobar este evaluador y habilitar su acceso?')) return;
+  enviar(`/approve_evaluator/${userId}/`).then(data => {
+    if (data.success) { alert('Evaluador aprobado exitosamente'); location.reload(); }
+    else { alert(data.error || 'Error al aprobar el evaluador'); }
+  });
+}
+function rechazarEvaluador(userId) {
+  if (!confirm('Confirmas que deseas rechazar este evaluador? Su perfil será eliminado.')) return;
+  enviar(`/reject_evaluator/${userId}/`).then(data => {
+    if (data.success) { alert('Evaluador rechazado exitosamente'); location.reload(); }
+    else { alert(data.error || 'Error al rechazar el evaluador'); }
+  });
 }
 </script>
 {% endblock %}
