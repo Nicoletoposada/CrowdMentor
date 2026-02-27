@@ -17,6 +17,14 @@ class Profile(models.Model):
     is_approved = models.BooleanField(default=False)  # For mentors/evaluators
     is_approved_by_admin = models.BooleanField(default=False)  # Para evaluadores aprobados por el administrador
 
+    # Campos adicionales de perfil
+    profile_picture = models.ImageField(upload_to='profiles/', blank=True, null=True)
+    birth_date = models.DateField(blank=True, null=True)
+    phone_number = models.CharField(max_length=20, blank=True)
+    location = models.CharField(max_length=100, blank=True)
+    linkedin_url = models.URLField(max_length=200, blank=True)
+    website_url = models.URLField(max_length=200, blank=True)
+
     def __str__(self):
         return f"{self.user.username} - {self.user_type}"
 

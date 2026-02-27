@@ -1,41 +1,510 @@
 {% extends 'base.html' %}
 {% load static %}
-{% load crispy_forms_tags %}
+
+{% block title %}Mi Perfil{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-header {
+        background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+        border-radius: 16px;
+        padding: 2rem;
+        color: white;
+        margin-bottom: 2rem;
+        box-shadow: 0 8px 32px rgba(52, 152, 219, 0.3);
+    }
+    .profile-avatar-wrapper {
+        position: relative;
+        display: inline-block;
+    }
+    .profile-avatar {
+        width: 130px;
+        height: 130px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid white;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    }
+    .profile-avatar-placeholder {
+        width: 130px;
+        height: 130px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 4px solid white;
+        font-size: 3rem;
+        color: white;
+    }
+    .avatar-edit-btn {
+        position: absolute;
+        bottom: 4px;
+        right: 4px;
+        background: white;
+        color: #3498db;
+        border: none;
+        border-radius: 50%;
+        width: 34px;
+        height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        font-size: 0.85rem;
+        transition: all 0.2s;
+    }
+    .avatar-edit-btn { color: #3498db; }
+    .avatar-edit-btn:hover { background: #e8f4fd; transform: scale(1.1); }
+    .badge-user-type {
+        background: rgba(255,255,255,0.25);
+        color: white;
+        border-radius: 20px;
+        padding: 0.3rem 0.9rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+        display: inline-block;
+        margin-top: 0.5rem;
+    }
+    .section-card {
+        background: white;
+        border-radius: 14px;
+        box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+        padding: 1.75rem;
+        margin-bottom: 1.5rem;
+    }
+    .section-card h5 {
+        color: #2c3e50;
+        font-weight: 700;
+        margin-bottom: 1.25rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #e8f4fd;
+    }
+    .section-card h5 i { color: #3498db; }
+    .form-label { font-weight: 600; color: #555; font-size: 0.9rem; }
+    .btn-save {
+        background: linear-gradient(135deg, #2c3e50, #3498db);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 0.6rem 1.8rem;
+        font-weight: 600;
+        transition: opacity 0.2s;
+    }
+    .btn-save:hover { opacity: 0.9; color: white; }
+    .nav-pills .nav-link {
+        color: #3498db;
+        border-radius: 8px;
+        font-weight: 600;
+    }
+    .nav-pills .nav-link.active {
+        background: linear-gradient(135deg, #2c3e50, #3498db);
+        color: white;
+    }
+    .tab-pane { animation: fadeInUp 0.3s ease; }
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .profile-info-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 0.6rem 0;
+        border-bottom: 1px solid #f5f5f5;
+    }
+    .profile-info-item:last-child { border-bottom: none; }
+    .profile-info-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: #e8f4fd;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        color: #3498db;
+        font-size: 0.85rem;
+    }
+    .profile-info-label { font-size: 0.75rem; color: #999; }
+    .profile-info-value { font-size: 0.9rem; color: #333; font-weight: 500; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-    <h2 class="text-center text-primary mb-4">Perfil de Usuario</h2>
-    <div class="row">
-        <div class="col-md-4 text-center">
-            {% if profile.profile_picture %}
-                <img src="{{ profile.profile_picture.url }}" class="img-fluid rounded-circle mb-3" alt="Foto de Perfil">
-            {% else %}
-                <img src="{% static 'images/default-profile.png' %}" class="img-fluid rounded-circle mb-3" alt="Foto de Perfil">
-            {% endif %}
-            <h4>{{ request.user.username }}</h4>
-        </div>
-        {% if not request.user.is_superuser %}
-        <div class="col-md-8">
-            <div class="p-4 shadow rounded bg-white">
-                <h5>Información del Usuario</h5>
-                <p><strong>Nombre de usuario:</strong> {{ user_info.username }}</p>
-                <p><strong>Correo electrónico:</strong> {{ user_info.email }}</p>
-                <p><strong>Nombre:</strong> {{ user_info.first_name }}</p>
-                <p><strong>Apellido:</strong> {{ user_info.last_name }}</p>
-                <p><strong>Tipo de usuario:</strong> {{ user_info.user_type }}</p>
-                <p><strong>Biografía:</strong> {{ user_info.bio }}</p>
-                <p><strong>Experiencia:</strong> {{ user_info.experience }}</p>
-                <p><strong>Fecha de nacimiento:</strong> {{ user_info.birth_date }}</p>
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+
+        <!-- Cabecera del perfil -->
+        <div class="profile-header">
+            <div class="d-flex align-items-center gap-4 flex-wrap">
+                <div class="profile-avatar-wrapper">
+                    {% if profile.profile_picture %}
+                        <img src="{{ profile.profile_picture.url }}" class="profile-avatar" alt="Foto de perfil" id="avatarImg">
+                    {% else %}
+                        <div class="profile-avatar-placeholder">
+                            <i class="fas fa-user"></i>
+                        </div>
+                    {% endif %}
+                    <button type="button" class="avatar-edit-btn" onclick="document.getElementById('quickPictureInput').click()" title="Cambiar foto">
+                        <i class="fas fa-camera"></i>
+                    </button>
+                </div>
+                <div>
+                    <h3 class="mb-1 fw-bold">
+                        {% if request.user.first_name %}
+                            {{ request.user.first_name }} {{ request.user.last_name }}
+                        {% else %}
+                            {{ request.user.username }}
+                        {% endif %}
+                    </h3>
+                    <p class="mb-1 opacity-75">@{{ request.user.username }}</p>
+                    <div class="badge-user-type">
+                        {% if profile.user_type == 'entrepreneur' %}<i class="fas fa-rocket me-1"></i>Emprendedor
+                        {% elif profile.user_type == 'mentor' %}<i class="fas fa-chalkboard-teacher me-1"></i>Mentor
+                        {% elif profile.user_type == 'investor' %}<i class="fas fa-chart-line me-1"></i>Inversionista
+                        {% elif profile.user_type == 'evaluator' %}<i class="fas fa-star me-1"></i>Evaluador
+                        {% endif %}
+                    </div>
+                    {% if profile.location %}
+                        <p class="mb-0 mt-2"><i class="fas fa-map-marker-alt me-1"></i>{{ profile.location }}</p>
+                    {% endif %}
+                </div>
             </div>
-            <form method="post" enctype="multipart/form-data" class="p-4 shadow rounded bg-white mt-4">
-                {% csrf_token %}
-                {{ profile_form|crispy }}
-                <h5 class="mt-4">Cambiar Contraseña</h5>
-                {{ password_form|crispy }}
-                <button type="submit" class="btn btn-primary btn-block mt-3">Actualizar Perfil</button>
-            </form>
         </div>
-        {% endif %}
+
+        <!-- Pestañas -->
+        <ul class="nav nav-pills mb-3 gap-2" id="profileTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active px-4" id="info-tab" data-bs-toggle="pill" data-bs-target="#info" type="button">
+                    <i class="fas fa-user me-2"></i>Mi Información
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link px-4" id="edit-tab" data-bs-toggle="pill" data-bs-target="#edit" type="button">
+                    <i class="fas fa-edit me-2"></i>Editar Perfil
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link px-4" id="password-tab" data-bs-toggle="pill" data-bs-target="#password-change" type="button">
+                    <i class="fas fa-lock me-2"></i>Contraseña
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+
+            <!-- PESTAÑA: Información actual -->
+            <div class="tab-pane fade show active" id="info" role="tabpanel">
+                <div class="section-card">
+                    <h5><i class="fas fa-id-card me-2"></i>Datos personales</h5>
+                    <div class="profile-info-item">
+                        <div class="profile-info-icon"><i class="fas fa-user"></i></div>
+                        <div>
+                            <div class="profile-info-label">Nombre completo</div>
+                            <div class="profile-info-value">
+                                {% if request.user.first_name %}{{ request.user.first_name }} {{ request.user.last_name }}{% else %}<span class="text-muted fst-italic">Sin nombre registrado</span>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="profile-info-item">
+                        <div class="profile-info-icon"><i class="fas fa-at"></i></div>
+                        <div>
+                            <div class="profile-info-label">Usuario</div>
+                            <div class="profile-info-value">@{{ request.user.username }}</div>
+                        </div>
+                    </div>
+                    <div class="profile-info-item">
+                        <div class="profile-info-icon"><i class="fas fa-envelope"></i></div>
+                        <div>
+                            <div class="profile-info-label">Correo electrónico</div>
+                            <div class="profile-info-value">{{ request.user.email }}</div>
+                        </div>
+                    </div>
+                    {% if profile.birth_date %}
+                    <div class="profile-info-item">
+                        <div class="profile-info-icon"><i class="fas fa-birthday-cake"></i></div>
+                        <div>
+                            <div class="profile-info-label">Fecha de nacimiento</div>
+                            <div class="profile-info-value">{{ profile.birth_date|date:"d/m/Y" }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if profile.phone_number %}
+                    <div class="profile-info-item">
+                        <div class="profile-info-icon"><i class="fas fa-phone"></i></div>
+                        <div>
+                            <div class="profile-info-label">Teléfono</div>
+                            <div class="profile-info-value">{{ profile.phone_number }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if profile.location %}
+                    <div class="profile-info-item">
+                        <div class="profile-info-icon"><i class="fas fa-map-marker-alt"></i></div>
+                        <div>
+                            <div class="profile-info-label">Ubicación</div>
+                            <div class="profile-info-value">{{ profile.location }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if profile.linkedin_url %}
+                    <div class="profile-info-item">
+                        <div class="profile-info-icon"><i class="fab fa-linkedin"></i></div>
+                        <div>
+                            <div class="profile-info-label">LinkedIn</div>
+                            <div class="profile-info-value"><a href="{{ profile.linkedin_url }}" target="_blank">{{ profile.linkedin_url }}</a></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if profile.website_url %}
+                    <div class="profile-info-item">
+                        <div class="profile-info-icon"><i class="fas fa-globe"></i></div>
+                        <div>
+                            <div class="profile-info-label">Sitio web</div>
+                            <div class="profile-info-value"><a href="{{ profile.website_url }}" target="_blank">{{ profile.website_url }}</a></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if profile.bio %}
+                <div class="section-card">
+                    <h5><i class="fas fa-align-left me-2"></i>Biografía</h5>
+                    <p class="text-secondary mb-0" style="white-space: pre-line;">{{ profile.bio }}</p>
+                </div>
+                {% endif %}
+
+                {% if profile.experience %}
+                <div class="section-card">
+                    <h5><i class="fas fa-briefcase me-2"></i>Experiencia profesional</h5>
+                    <p class="text-secondary mb-0" style="white-space: pre-line;">{{ profile.experience }}</p>
+                </div>
+                {% endif %}
+
+                <div class="text-center mt-2 mb-3">
+                    <button class="btn btn-save" onclick="document.getElementById('edit-tab').click()">
+                        <i class="fas fa-edit me-2"></i>Editar mi perfil
+                    </button>
+                </div>
+            </div>
+
+            <!-- PESTAÑA: Editar Perfil -->
+            <div class="tab-pane fade" id="edit" role="tabpanel">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_profile">
+
+                    <!-- Sección foto de perfil -->
+                    <div class="section-card">
+                        <h5><i class="fas fa-camera me-2"></i>Foto de perfil</h5>
+                        <div class="d-flex align-items-center gap-4 flex-wrap">
+                            <div class="profile-avatar-wrapper">
+                                {% if profile.profile_picture %}
+                                    <img src="{{ profile.profile_picture.url }}" class="profile-avatar" id="picturePreviewEdit">
+                                {% else %}
+                                    <div class="profile-avatar-placeholder" id="avatarPlaceholderEdit">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+                                    <img src="" class="profile-avatar" id="picturePreviewEdit" style="display:none;">
+                                {% endif %}
+                            </div>
+                            <div>
+                                <label class="form-label">Seleccionar nueva foto</label>
+                                {{ profile_form.profile_picture }}
+                                <small class="text-muted d-block mt-1">Formatos aceptados: JPG, PNG, GIF. Máx. 5 MB.</small>
+                                {% if profile_form.profile_picture.errors %}
+                                    <div class="text-danger small mt-1">{{ profile_form.profile_picture.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Datos del usuario -->
+                    <div class="section-card">
+                        <h5><i class="fas fa-id-badge me-2"></i>Datos de la cuenta</h5>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">{{ user_form.first_name.label }}</label>
+                                {{ user_form.first_name }}
+                                {% if user_form.first_name.errors %}<div class="text-danger small">{{ user_form.first_name.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">{{ user_form.last_name.label }}</label>
+                                {{ user_form.last_name }}
+                                {% if user_form.last_name.errors %}<div class="text-danger small">{{ user_form.last_name.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">{{ user_form.email.label }}</label>
+                                {{ user_form.email }}
+                                {% if user_form.email.errors %}<div class="text-danger small">{{ user_form.email.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Información personal -->
+                    <div class="section-card">
+                        <h5><i class="fas fa-user-circle me-2"></i>Información personal</h5>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">{{ profile_form.birth_date.label }}</label>
+                                {{ profile_form.birth_date }}
+                                {% if profile_form.birth_date.errors %}<div class="text-danger small">{{ profile_form.birth_date.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">{{ profile_form.phone_number.label }}</label>
+                                {{ profile_form.phone_number }}
+                                {% if profile_form.phone_number.errors %}<div class="text-danger small">{{ profile_form.phone_number.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">{{ profile_form.location.label }}</label>
+                                {{ profile_form.location }}
+                                {% if profile_form.location.errors %}<div class="text-danger small">{{ profile_form.location.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">{{ profile_form.bio.label }}</label>
+                                {{ profile_form.bio }}
+                                {% if profile_form.bio.errors %}<div class="text-danger small">{{ profile_form.bio.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">{{ profile_form.experience.label }}</label>
+                                {{ profile_form.experience }}
+                                {% if profile_form.experience.errors %}<div class="text-danger small">{{ profile_form.experience.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Redes y contacto -->
+                    <div class="section-card">
+                        <h5><i class="fas fa-link me-2"></i>Redes y contacto</h5>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label"><i class="fab fa-linkedin me-1 text-primary"></i>{{ profile_form.linkedin_url.label }}</label>
+                                {{ profile_form.linkedin_url }}
+                                {% if profile_form.linkedin_url.errors %}<div class="text-danger small">{{ profile_form.linkedin_url.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label"><i class="fas fa-globe me-1 text-success"></i>{{ profile_form.website_url.label }}</label>
+                                {{ profile_form.website_url }}
+                                {% if profile_form.website_url.errors %}<div class="text-danger small">{{ profile_form.website_url.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-3 justify-content-end mb-4">
+                        <a href="{% url 'profile' %}" class="btn btn-outline-secondary px-4">
+                            <i class="fas fa-times me-2"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-save px-4">
+                            <i class="fas fa-save me-2"></i>Guardar cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- PESTAÑA: Cambiar Contraseña -->
+            <div class="tab-pane fade" id="password-change" role="tabpanel">
+                <div class="section-card">
+                    <h5><i class="fas fa-lock me-2"></i>Cambiar contraseña</h5>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="change_password">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label">{{ password_form.current_password.label }}</label>
+                                {{ password_form.current_password }}
+                                {% if password_form.current_password.errors %}
+                                    <div class="text-danger small mt-1">{{ password_form.current_password.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">{{ password_form.new_password1.label }}</label>
+                                {{ password_form.new_password1 }}
+                                {% if password_form.new_password1.errors %}
+                                    <div class="text-danger small mt-1">{{ password_form.new_password1.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">{{ password_form.new_password2.label }}</label>
+                                {{ password_form.new_password2 }}
+                                {% if password_form.new_password2.errors %}
+                                    <div class="text-danger small mt-1">{{ password_form.new_password2.errors }}</div>
+                                {% endif %}
+                            </div>
+                            {% if password_form.non_field_errors %}
+                                <div class="col-12">
+                                    <div class="alert alert-danger">{% for e in password_form.non_field_errors %}{{ e }}{% endfor %}</div>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex justify-content-end mt-3">
+                            <button type="submit" class="btn btn-save px-4">
+                                <i class="fas fa-key me-2"></i>Cambiar contraseña
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div><!-- end tab-content -->
     </div>
 </div>
+
+<!-- Input oculto para cambio rápido de foto desde la cabecera -->
+<form method="post" enctype="multipart/form-data" id="quickPictureForm">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="update_profile">
+    <input type="file" id="quickPictureInput" name="profile_picture" accept="image/*" style="display:none;">
+</form>
+
+{% block extra_js %}
+<script>
+    // Vista previa de imagen en el editor de perfil
+    const pictureInput = document.querySelector('#id_profile_picture');
+    const previewEdit = document.getElementById('picturePreviewEdit');
+    const placeholderEdit = document.getElementById('avatarPlaceholderEdit');
+
+    if (pictureInput) {
+        pictureInput.addEventListener('change', function () {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewEdit.src = e.target.result;
+                    previewEdit.style.display = 'block';
+                    if (placeholderEdit) placeholderEdit.style.display = 'none';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    // Cambio rápido de foto desde el botón cámara de la cabecera
+    const quickInput = document.getElementById('quickPictureInput');
+    const quickForm = document.getElementById('quickPictureForm');
+    if (quickInput) {
+        quickInput.addEventListener('change', function() {
+            if (this.files[0]) {
+                quickForm.submit();
+            }
+        });
+    }
+
+    // Mantener pestaña activa tras error de formulario
+    {% if request.method == 'POST' %}
+        {% if request.POST.action == 'change_password' %}
+            document.addEventListener('DOMContentLoaded', function() {
+                const tab = document.getElementById('password-tab');
+                if (tab) bootstrap.Tab.getOrCreateInstance(tab).show();
+            });
+        {% elif request.POST.action == 'update_profile' %}
+            document.addEventListener('DOMContentLoaded', function() {
+                const tab = document.getElementById('edit-tab');
+                if (tab) bootstrap.Tab.getOrCreateInstance(tab).show();
+            });
+        {% endif %}
+    {% endif %}
+</script>
+{% endblock %}
 {% endblock %}

@@ -54,13 +54,14 @@ body {
     font-weight: 700;
     color: #fff !important;
 }
-.navbar-nav .nav-link {
+/* Solo aplica texto blanco en navbars azules (no en la cm-navbar blanca) */
+.navbar:not(.cm-navbar) .navbar-nav .nav-link {
     color: #fff !important;
     font-weight: 600;
     margin-left: 20px;
     transition: color 0.3s ease;
 }
-.navbar-nav .nav-link:hover {
+.navbar:not(.cm-navbar) .navbar-nav .nav-link:hover {
     color: #ffd43b !important;
 }
 

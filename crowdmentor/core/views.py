@@ -7,7 +7,7 @@ from django.conf import settings # type: ignore
 from django.views import View # type: ignore
 from django.contrib.auth.models import User, Group # type: ignore
 from django.http import JsonResponse, HttpResponse # type: ignore
-from .forms import CustomUserCreationForm, ProjectForm, InvestmentForm, LoginForm, ResourceForm, ResourceCategoryForm, ProjectSearchForm, ProjectEvaluationForm, CriterionScoreForm, ProjectRatingForm, ProjectCategoryForm, MentorInvestorConnectionForm, MentorInvestorMessageForm, ConnectionSearchForm, MentorshipMessageForm
+from .forms import CustomUserCreationForm, ProjectForm, InvestmentForm, LoginForm, ResourceForm, ResourceCategoryForm, ProjectSearchForm, ProjectEvaluationForm, CriterionScoreForm, ProjectRatingForm, ProjectCategoryForm, MentorInvestorConnectionForm, MentorInvestorMessageForm, ConnectionSearchForm, MentorshipMessageForm, UserEditForm, ProfileEditForm, PasswordChangeCustomForm
 from .models import Project, Investment, Mentorship, Profile, Message, UploadedFile, Resource, ResourceCategory, ProjectCategory, ProjectEvaluation, EvaluationCriteria, CriterionScore, ProjectRating, Notification, MentorInvestorConnection, MentorInvestorMessage
 from django.db.models import Q, Avg, Count, Sum # type: ignore
 from django.views.decorators.http import require_POST # type: ignore
@@ -1808,3 +1808,59 @@ def search_mentor_investor_connections(request):
         'user_type': user_type
     }
     return render(request, 'search_mentor_investor_connections.html', context)
+
+
+@login_required
+def profile_view(request):
+    """Vista para ver y editar el perfil del usuario autenticado."""
+    profile, _ = Profile.objects.get_or_create(
+        user=request.user,
+        defaults={
+            'user_type': 'entrepreneur',
+            'bio': '',
+            'experience': '',
+        }
+    )
+
+    if request.method == 'POST':
+        action = request.POST.get('action', '')
+
+        if action == 'update_profile':
+            user_form = UserEditForm(request.POST, instance=request.user)
+            profile_form = ProfileEditForm(request.POST, request.FILES, instance=profile)
+
+            if user_form.is_valid() and profile_form.is_valid():
+                user_form.save()
+                profile_form.save()
+                messages.success(request, 'Perfil actualizado exitosamente.')
+                return redirect('profile')
+            else:
+                password_form = PasswordChangeCustomForm(user=request.user)
+
+        elif action == 'change_password':
+            password_form = PasswordChangeCustomForm(user=request.user, data=request.POST)
+            user_form = UserEditForm(instance=request.user)
+            profile_form = ProfileEditForm(instance=profile)
+
+            if password_form.is_valid():
+                from django.contrib.auth import update_session_auth_hash
+                updated_user = password_form.save()
+                update_session_auth_hash(request, updated_user)
+                messages.success(request, 'Contraseña cambiada exitosamente.')
+                return redirect('profile')
+        else:
+            user_form = UserEditForm(instance=request.user)
+            profile_form = ProfileEditForm(instance=profile)
+            password_form = PasswordChangeCustomForm(user=request.user)
+    else:
+        user_form = UserEditForm(instance=request.user)
+        profile_form = ProfileEditForm(instance=profile)
+        password_form = PasswordChangeCustomForm(user=request.user)
+
+    context = {
+        'profile': profile,
+        'user_form': user_form,
+        'profile_form': profile_form,
+        'password_form': password_form,
+    }
+    return render(request, 'profile.html', context)

@@ -529,3 +529,131 @@ class MentorshipMessageForm(forms.ModelForm):
         # Hacer el campo opcional
         self.fields['related_resource'].required = False
         self.fields['related_resource'].empty_label = 'Ningún recurso específico'
+
+
+class UserEditForm(forms.ModelForm):
+    """Formulario para editar datos del modelo User (nombre, apellido, email)."""
+    first_name = forms.CharField(
+        label='Nombre',
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Tu nombre'})
+    )
+    last_name = forms.CharField(
+        label='Apellido',
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Tu apellido'})
+    )
+    email = forms.EmailField(
+        label='Correo electrónico',
+        required=True,
+        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'correo@ejemplo.com'})
+    )
+
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email']
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        # Verificar que el email no esté en uso por otro usuario
+        qs = User.objects.filter(email=email).exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError('Este correo ya está registrado por otro usuario.')
+        return email
+
+
+class ProfileEditForm(forms.ModelForm):
+    """Formulario para editar datos del perfil (bio, experiencia, foto, etc.)."""
+    bio = forms.CharField(
+        label='Biografía',
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 4,
+            'placeholder': 'Cuéntanos sobre ti...'
+        })
+    )
+    experience = forms.CharField(
+        label='Experiencia profesional',
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 4,
+            'placeholder': 'Describe tu experiencia profesional...'
+        })
+    )
+    birth_date = forms.DateField(
+        label='Fecha de nacimiento',
+        required=False,
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+    )
+    phone_number = forms.CharField(
+        label='Teléfono',
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+57 300 000 0000'})
+    )
+    location = forms.CharField(
+        label='Ciudad / Ubicación',
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Medellín, Colombia'})
+    )
+    linkedin_url = forms.URLField(
+        label='LinkedIn',
+        required=False,
+        widget=forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://linkedin.com/in/tuperfil'})
+    )
+    website_url = forms.URLField(
+        label='Sitio web personal',
+        required=False,
+        widget=forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://tusitio.com'})
+    )
+    profile_picture = forms.ImageField(
+        label='Foto de perfil',
+        required=False,
+        widget=forms.ClearableFileInput(attrs={'class': 'form-control'})
+    )
+
+    class Meta:
+        model = Profile
+        fields = ['bio', 'experience', 'birth_date', 'phone_number', 'location',
+                  'linkedin_url', 'website_url', 'profile_picture']
+
+
+class PasswordChangeCustomForm(forms.Form):
+    """Formulario para cambiar contraseña desde el perfil."""
+    current_password = forms.CharField(
+        label='Contraseña actual',
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Contraseña actual'})
+    )
+    new_password1 = forms.CharField(
+        label='Nueva contraseña',
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Nueva contraseña'})
+    )
+    new_password2 = forms.CharField(
+        label='Confirmar nueva contraseña',
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Repite la nueva contraseña'})
+    )
+
+    def __init__(self, user, *args, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)
+
+    def clean_current_password(self):
+        current = self.cleaned_data.get('current_password')
+        if not self.user.check_password(current):
+            raise forms.ValidationError('La contraseña actual no es correcta.')
+        return current
+
+    def clean(self):
+        cleaned_data = super().clean()
+        p1 = cleaned_data.get('new_password1')
+        p2 = cleaned_data.get('new_password2')
+        if p1 and p2 and p1 != p2:
+            raise forms.ValidationError('Las nuevas contraseñas no coinciden.')
+        return cleaned_data
+
+    def save(self):
+        new_password = self.cleaned_data['new_password1']
+        self.user.set_password(new_password)
+        self.user.save()
+        return self.user
