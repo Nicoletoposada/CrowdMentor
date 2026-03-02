@@ -143,11 +143,11 @@ class InvestmentForm(forms.ModelForm):
             'equity_percentage': 'Porcentaje de Participación',
         }
         widgets = {
-            'amount': forms.NumberInput(attrs={
+            'amount': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Monto en COP',
-                'min': '100000',
-                'step': '1000'
+                'placeholder': 'Ej: 1,000,000',
+                'inputmode': 'numeric',
+                'autocomplete': 'off',
             }),
             'equity_percentage': forms.NumberInput(attrs={
                 'class': 'form-control',
@@ -161,6 +161,18 @@ class InvestmentForm(forms.ModelForm):
             'amount': 'Ingresa el monto que deseas invertir en pesos colombianos (mínimo $100,000 COP)',
             'equity_percentage': 'Porcentaje de participación que solicitas en el proyecto'
         }
+
+    def clean_amount(self):
+        value = self.cleaned_data.get('amount')
+        if value is not None:
+            cleaned = str(value).replace(',', '').replace('.', '')
+            try:
+                from decimal import Decimal
+                return Decimal(cleaned)
+            except Exception:
+                from django.core.exceptions import ValidationError
+                raise ValidationError('Ingresa un valor numérico válido.')
+        return value
 
 class LoginForm(forms.Form):
     username = forms.CharField(

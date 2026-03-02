@@ -144,6 +144,16 @@
                             </div>
                         </div>
                         
+                        <!-- Tiempo de rentabilidad -->
+                        {% if project.profitability_time %}
+                        <div class="mb-2">
+                            <small class="text-success">
+                                <i class="fas fa-clock me-1"></i>
+                                Rentabilidad estimada: <strong>{{ project.profitability_time }} {{ project.profitability_unit }}</strong>
+                            </small>
+                        </div>
+                        {% endif %}
+
                         <!-- Progreso de financiamiento -->
                         <div class="progress mb-3 progress-thin">
                             <div class="progress-bar bg-success progress-bar-dynamic" role="progressbar" 

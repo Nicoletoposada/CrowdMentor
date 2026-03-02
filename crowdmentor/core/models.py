@@ -50,8 +50,8 @@ class Project(models.Model):
     description = models.TextField()
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='projects')
     category = models.ForeignKey('ProjectCategory', on_delete=models.SET_NULL, null=True, blank=True)
-    funding_goal = models.DecimalField(max_digits=10, decimal_places=2)
-    amount_raised = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    funding_goal = models.DecimalField(max_digits=20, decimal_places=2)
+    amount_raised = models.DecimalField(max_digits=20, decimal_places=2, default=0)
     created_at = models.DateTimeField(default=timezone.now)
     image = models.ImageField(upload_to='projects/', blank=True, null=True)
     is_active = models.BooleanField(default=True)
@@ -114,7 +114,7 @@ class Project(models.Model):
 class Investment(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='investments')
     investor = models.ForeignKey(User, on_delete=models.CASCADE)
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    amount = models.DecimalField(max_digits=20, decimal_places=2)
     equity_percentage = models.FloatField()  # Percentage of project ownership
     invested_at = models.DateTimeField(default=timezone.now)
     STATUS_CHOICES = [

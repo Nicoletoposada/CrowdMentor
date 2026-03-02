@@ -45,6 +45,15 @@
                                 <p class="text-muted mb-0">Mentores</p>
                             </div>
                         </div>
+                        {% if project.profitability_time %}
+                        <div class="col-md-12">
+                            <div class="stat-card text-center p-3 rounded" style="background-color: #e8f5e9;">
+                                <i class="fas fa-clock text-success fa-2x mb-2"></i>
+                                <h4 class="mb-0 text-success">{{ project.profitability_time }} {{ project.profitability_unit }}</h4>
+                                <p class="text-muted mb-0">Tiempo estimado para inicio de rentabilidad</p>
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
 
@@ -114,6 +123,36 @@
 </div>
 
 <script>
+    // Formateo con comas para el campo de monto de inversión
+    (function () {
+        const amountInput = document.getElementById('id_amount');
+        if (!amountInput) return;
+
+        function formatWithCommas(value) {
+            // Eliminar todo lo que no sea dígito
+            const digits = value.replace(/\D/g, '');
+            if (!digits) return '';
+            return parseInt(digits, 10).toLocaleString('en-US');
+        }
+
+        amountInput.addEventListener('input', function () {
+            const cursorPos = this.selectionStart;
+            const prevLen = this.value.length;
+            this.value = formatWithCommas(this.value);
+            // Ajustar posición del cursor
+            const diff = this.value.length - prevLen;
+            this.setSelectionRange(cursorPos + diff, cursorPos + diff);
+        });
+
+        // Limpiar comas antes de enviar el formulario
+        const form = amountInput.closest('form');
+        if (form) {
+            form.addEventListener('submit', function () {
+                amountInput.value = amountInput.value.replace(/,/g, '');
+            });
+        }
+    })();
+
     // Intersection Observer for animations
     const observerOptions = {
         root: null,

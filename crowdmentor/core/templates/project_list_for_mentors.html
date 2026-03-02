@@ -20,6 +20,14 @@
                             Recaudado: {{ project.amount_raised|cop_currency }}
                         </small>
                     </p>
+                    {% if project.profitability_time %}
+                    <p class="card-text">
+                        <small class="text-success">
+                            <i class="fas fa-clock me-1"></i>
+                            Rentabilidad estimada: <strong>{{ project.profitability_time }} {{ project.profitability_unit }}</strong>
+                        </small>
+                    </p>
+                    {% endif %}
                     <a href="{% url 'request_mentorship_by_mentor' project.id %}" class="btn btn-primary">
                         Ofrecer Mentoría
                     </a>
