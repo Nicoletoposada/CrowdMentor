@@ -104,6 +104,37 @@
 
                         <div class="form-section mb-4">
                             <h3 class="text-primary mb-3">
+                                <i class="fas fa-chart-pie me-2"></i>Rentabilidad Estimada
+                            </h3>
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <p class="text-muted small mb-3">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Indícale a los inversores en cuánto tiempo estimas que el proyecto comenzará a generar rentabilidad si tiene éxito.
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="{{ form.profitability_time.id_for_label }}" class="form-label">
+                                        <i class="fas fa-clock me-1"></i>Tiempo hasta rentabilidad
+                                    </label>
+                                    {{ form.profitability_time }}
+                                    <div class="form-text">Número de meses o años estimados (opcional)</div>
+                                    {% if form.profitability_time.errors %}
+                                        <div class="text-danger small">{{ form.profitability_time.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="{{ form.profitability_unit.id_for_label }}" class="form-label">
+                                        <i class="fas fa-calendar-alt me-1"></i>Unidad de tiempo
+                                    </label>
+                                    {{ form.profitability_unit }}
+                                    <div class="form-text">Selecciona la unidad que corresponde</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section mb-4">
+                            <h3 class="text-primary mb-3">
                                 <i class="fas fa-image me-2"></i>Imagen del Proyecto
                             </h3>
                             <div class="row g-3">

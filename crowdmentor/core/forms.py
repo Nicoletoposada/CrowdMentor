@@ -80,7 +80,7 @@ class CustomUserCreationForm(UserCreationForm):
 class ProjectForm(forms.ModelForm):
     class Meta:
         model = Project
-        fields = ['title', 'description', 'category', 'funding_goal', 'deadline', 'tags', 'image']
+        fields = ['title', 'description', 'category', 'funding_goal', 'deadline', 'tags', 'image', 'profitability_time', 'profitability_unit']
         widgets = {
             'title': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -110,7 +110,15 @@ class ProjectForm(forms.ModelForm):
             }),
             'image': forms.FileInput(attrs={
                 'class': 'form-control'
-            })
+            }),
+            'profitability_time': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej: 12',
+                'min': '1',
+            }),
+            'profitability_unit': forms.Select(attrs={
+                'class': 'form-control',
+            }),
         }
 
     def clean_funding_goal(self):

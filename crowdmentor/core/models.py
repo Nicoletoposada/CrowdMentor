@@ -65,6 +65,22 @@ class Project(models.Model):
     # Tags para búsqueda
     tags = models.CharField(max_length=500, blank=True, help_text="Separar con comas")
 
+    # Tiempo estimado para inicio de rentabilidad
+    PROFITABILITY_UNIT_CHOICES = (
+        ('meses', 'Meses'),
+        ('años', 'Años'),
+    )
+    profitability_time = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        help_text="Tiempo estimado para que el proyecto empiece a generar rentabilidad"
+    )
+    profitability_unit = models.CharField(
+        max_length=10,
+        choices=PROFITABILITY_UNIT_CHOICES,
+        default='meses',
+        blank=True
+    )
+
     def __str__(self):
         return self.title
 
