@@ -1447,6 +1447,322 @@ def like_project(request, project_id):
     
     return JsonResponse({'error': 'Método no permitido'}, status=405)
 
+
+# ========== MÉTRICAS POR ROL ==========
+
+@login_required
+def entrepreneur_metrics(request):
+    """Dashboard de métricas personales para emprendedores."""
+    profile = get_object_or_404(Profile, user=request.user)
+    if profile.user_type != 'entrepreneur':
+        messages.error(request, 'Acceso denegado.')
+        return redirect('dashboard')
+
+    projects = Project.objects.filter(owner=request.user)
+
+    # Agregar anotaciones por proyecto
+    projects_data = []
+    for p in projects:
+        investments_accepted = p.investments.filter(status='accepted')
+        investments_pending = p.investments.filter(status='pending')
+        total_invested = investments_accepted.aggregate(total=Sum('amount'))['total'] or 0
+        investors_count = investments_accepted.count()
+        mentors_count = p.mentorships.filter(status='accepted').count()
+        avg_score = p.evaluations.aggregate(avg=Avg('overall_score'))['avg']
+        projects_data.append({
+            'project': p,
+            'total_invested': total_invested,
+            'investors_count': investors_count,
+            'pending_investments': investments_pending.count(),
+            'mentors_count': mentors_count,
+            'avg_score': round(avg_score, 2) if avg_score else None,
+            'funding_pct': p.get_funding_percentage(),
+        })
+
+    total_raised = sum(d['total_invested'] for d in projects_data)
+    total_investors = Investment.objects.filter(project__owner=request.user, status='accepted').values('investor').distinct().count()
+    total_mentors = Mentorship.objects.filter(project__owner=request.user, status='accepted').values('mentor').distinct().count()
+    total_projects = projects.count()
+    active_projects = projects.filter(is_active=True).count()
+
+    context = {
+        'projects_data': projects_data,
+        'total_raised': total_raised,
+        'total_investors': total_investors,
+        'total_mentors': total_mentors,
+        'total_projects': total_projects,
+        'active_projects': active_projects,
+        'profile': profile,
+    }
+    return render(request, 'entrepreneur_metrics.html', context)
+
+
+@login_required
+def entrepreneur_report(request):
+    """Exporta reporte CSV de métricas del emprendedor."""
+    profile = get_object_or_404(Profile, user=request.user)
+    if profile.user_type != 'entrepreneur':
+        messages.error(request, 'Acceso denegado.')
+        return redirect('dashboard')
+
+    import csv
+    projects = Project.objects.filter(owner=request.user)
+
+    timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="reporte_emprendedor_{timestamp}.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(['Reporte de Métricas - Emprendedor'])
+    writer.writerow(['Generado el', timezone.now().strftime('%Y-%m-%d %H:%M:%S')])
+    writer.writerow(['Emprendedor', request.user.get_full_name() or request.user.username])
+    writer.writerow([])
+
+    writer.writerow(['Resumen General'])
+    writer.writerow(['Total proyectos', projects.count()])
+    writer.writerow(['Proyectos activos', projects.filter(is_active=True).count()])
+    total_raised = Investment.objects.filter(project__owner=request.user, status='accepted').aggregate(total=Sum('amount'))['total'] or 0
+    writer.writerow(['Total recaudado', total_raised])
+    writer.writerow([])
+
+    writer.writerow(['Detalle por Proyecto'])
+    writer.writerow(['Proyecto', 'Estado', 'Meta', 'Recaudado', '% Financiado', 'Inversiones aceptadas',
+                     'Inversiones pendientes', 'Mentores', 'Promedio evaluación', 'Vistas', 'Likes'])
+    for p in projects:
+        investments_accepted = p.investments.filter(status='accepted')
+        investments_pending = p.investments.filter(status='pending')
+        total_invested = investments_accepted.aggregate(total=Sum('amount'))['total'] or 0
+        avg_score = p.evaluations.aggregate(avg=Avg('overall_score'))['avg']
+        writer.writerow([
+            p.title,
+            p.get_status_display(),
+            p.funding_goal,
+            total_invested,
+            f"{p.get_funding_percentage():.1f}%",
+            investments_accepted.count(),
+            investments_pending.count(),
+            p.mentorships.filter(status='accepted').count(),
+            f"{avg_score:.2f}" if avg_score else 'Sin evaluar',
+            p.views_count,
+            p.likes_count,
+        ])
+
+    return response
+
+
+@login_required
+def investor_metrics(request):
+    """Dashboard de métricas de portafolio para inversionistas."""
+    profile = get_object_or_404(Profile, user=request.user)
+    if profile.user_type != 'investor':
+        messages.error(request, 'Acceso denegado.')
+        return redirect('dashboard')
+
+    investments = Investment.objects.filter(investor=request.user).select_related('project')
+
+    accepted = investments.filter(status='accepted')
+    pending = investments.filter(status='pending')
+    rejected = investments.filter(status='rejected')
+
+    total_invested = accepted.aggregate(total=Sum('amount'))['total'] or 0
+    total_equity = sum(inv.equity_percentage for inv in accepted)
+    projects_count = accepted.values('project').distinct().count()
+
+    # Por proyecto
+    portfolio = []
+    for inv in accepted:
+        portfolio.append({
+            'investment': inv,
+            'project': inv.project,
+            'funding_pct': inv.project.get_funding_percentage(),
+        })
+
+    # Distribución por estado de proyecto
+    status_breakdown = {}
+    for inv in accepted:
+        s = inv.project.get_status_display()
+        status_breakdown[s] = status_breakdown.get(s, 0) + 1
+
+    context = {
+        'portfolio': portfolio,
+        'pending_investments': pending,
+        'rejected_investments': rejected,
+        'total_invested': total_invested,
+        'total_equity': round(total_equity, 2),
+        'projects_count': projects_count,
+        'pending_count': pending.count(),
+        'rejected_count': rejected.count(),
+        'status_breakdown': status_breakdown,
+        'profile': profile,
+    }
+    return render(request, 'investor_metrics.html', context)
+
+
+@login_required
+def investor_report(request):
+    """Exporta reporte CSV del portafolio del inversionista."""
+    profile = get_object_or_404(Profile, user=request.user)
+    if profile.user_type != 'investor':
+        messages.error(request, 'Acceso denegado.')
+        return redirect('dashboard')
+
+    import csv
+    investments = Investment.objects.filter(investor=request.user).select_related('project')
+    accepted = investments.filter(status='accepted')
+    total_invested = accepted.aggregate(total=Sum('amount'))['total'] or 0
+    total_equity = sum(inv.equity_percentage for inv in accepted)
+
+    timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="reporte_inversionista_{timestamp}.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(['Reporte de Portafolio - Inversionista'])
+    writer.writerow(['Generado el', timezone.now().strftime('%Y-%m-%d %H:%M:%S')])
+    writer.writerow(['Inversionista', request.user.get_full_name() or request.user.username])
+    writer.writerow([])
+
+    writer.writerow(['Resumen'])
+    writer.writerow(['Total invertido (aceptadas)', total_invested])
+    writer.writerow(['Equity total acumulado (%)', f"{total_equity:.2f}"])
+    writer.writerow(['Proyectos en portafolio', accepted.values('project').distinct().count()])
+    writer.writerow(['Inversiones pendientes', investments.filter(status='pending').count()])
+    writer.writerow([])
+
+    writer.writerow(['Detalle de Inversiones Aceptadas'])
+    writer.writerow(['Proyecto', 'Estado proyecto', 'Monto invertido', 'Equity (%)',
+                     '% Financiado del proyecto', 'Meta de financiación', 'Total recaudado', 'Fecha de inversión'])
+    for inv in accepted:
+        writer.writerow([
+            inv.project.title,
+            inv.project.get_status_display(),
+            inv.amount,
+            f"{inv.equity_percentage:.2f}",
+            f"{inv.project.get_funding_percentage():.1f}%",
+            inv.project.funding_goal,
+            inv.project.amount_raised,
+            inv.invested_at.strftime('%Y-%m-%d'),
+        ])
+
+    pending = investments.filter(status='pending')
+    if pending.exists():
+        writer.writerow([])
+        writer.writerow(['Inversiones Pendientes'])
+        writer.writerow(['Proyecto', 'Monto', 'Equity (%)', 'Fecha de solicitud'])
+        for inv in pending:
+            writer.writerow([
+                inv.project.title,
+                inv.amount,
+                f"{inv.equity_percentage:.2f}",
+                inv.invested_at.strftime('%Y-%m-%d'),
+            ])
+
+    return response
+
+
+@login_required
+def mentor_metrics(request):
+    """Dashboard de métricas de actividad para mentores."""
+    profile = get_object_or_404(Profile, user=request.user)
+    if profile.user_type != 'mentor':
+        messages.error(request, 'Acceso denegado.')
+        return redirect('dashboard')
+
+    mentorships = Mentorship.objects.filter(mentor=request.user).select_related('project', 'project__owner')
+
+    active = mentorships.filter(status='accepted')
+    pending_ms = mentorships.filter(status='pending')
+    rejected_ms = mentorships.filter(status='rejected')
+
+    # Mensajes enviados/recibidos
+    total_messages_sent = Message.objects.filter(mentorship__mentor=request.user, sender=request.user).count()
+    total_messages_received = Message.objects.filter(mentorship__mentor=request.user).exclude(sender=request.user).count()
+
+    # Proyectos activos que mentor está apoyando
+    active_projects_data = []
+    for ms in active:
+        p = ms.project
+        avg_score = p.evaluations.aggregate(avg=Avg('overall_score'))['avg']
+        messages_count = ms.messages.count()
+        active_projects_data.append({
+            'mentorship': ms,
+            'project': p,
+            'funding_pct': p.get_funding_percentage(),
+            'avg_score': round(avg_score, 2) if avg_score else None,
+            'messages_count': messages_count,
+        })
+
+    # Conexiones con inversionistas
+    connections = MentorInvestorConnection.objects.filter(mentor=request.user, status='accepted').count()
+
+    context = {
+        'active_projects_data': active_projects_data,
+        'pending_mentorships': pending_ms,
+        'total_active': active.count(),
+        'total_pending': pending_ms.count(),
+        'total_rejected': rejected_ms.count(),
+        'total_messages_sent': total_messages_sent,
+        'total_messages_received': total_messages_received,
+        'investor_connections': connections,
+        'profile': profile,
+    }
+    return render(request, 'mentor_metrics.html', context)
+
+
+@login_required
+def mentor_report(request):
+    """Exporta reporte CSV de actividad del mentor."""
+    profile = get_object_or_404(Profile, user=request.user)
+    if profile.user_type != 'mentor':
+        messages.error(request, 'Acceso denegado.')
+        return redirect('dashboard')
+
+    import csv
+    mentorships = Mentorship.objects.filter(mentor=request.user).select_related('project', 'project__owner')
+    active = mentorships.filter(status='accepted')
+
+    timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="reporte_mentor_{timestamp}.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(['Reporte de Actividad - Mentor'])
+    writer.writerow(['Generado el', timezone.now().strftime('%Y-%m-%d %H:%M:%S')])
+    writer.writerow(['Mentor', request.user.get_full_name() or request.user.username])
+    writer.writerow([])
+
+    writer.writerow(['Resumen'])
+    writer.writerow(['Mentorías activas', active.count()])
+    writer.writerow(['Mentorías pendientes', mentorships.filter(status='pending').count()])
+    total_sent = Message.objects.filter(mentorship__mentor=request.user, sender=request.user).count()
+    total_recv = Message.objects.filter(mentorship__mentor=request.user).exclude(sender=request.user).count()
+    writer.writerow(['Mensajes enviados', total_sent])
+    writer.writerow(['Mensajes recibidos', total_recv])
+    investor_conn = MentorInvestorConnection.objects.filter(mentor=request.user, status='accepted').count()
+    writer.writerow(['Conexiones con inversionistas', investor_conn])
+    writer.writerow([])
+
+    writer.writerow(['Detalle de Mentorías Activas'])
+    writer.writerow(['Proyecto', 'Emprendedor', 'Estado proyecto', '% Financiado',
+                     'Meta', 'Recaudado', 'Promedio evaluación', 'Mensajes intercambiados', 'Desde'])
+    for ms in active:
+        p = ms.project
+        avg_score = p.evaluations.aggregate(avg=Avg('overall_score'))['avg']
+        writer.writerow([
+            p.title,
+            p.owner.get_full_name() or p.owner.username,
+            p.get_status_display(),
+            f"{p.get_funding_percentage():.1f}%",
+            p.funding_goal,
+            p.amount_raised,
+            f"{avg_score:.2f}" if avg_score else 'Sin evaluar',
+            ms.messages.count(),
+            ms.assigned_at.strftime('%Y-%m-%d'),
+        ])
+
+    return response
+
+
 # ========== VISTAS PARA INTERACCIÓN MENTOR-INVERSIONISTA ==========
 
 @login_required

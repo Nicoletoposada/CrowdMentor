@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/analytics_dashboard.css' %}">
+<style>
+    .progress-sm { height: 8px; }
+    .metric-badge { font-size: 1.4rem; font-weight: 700; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <!-- Encabezado -->
+    <div class="row mb-4 align-items-center">
+        <div class="col">
+            <h1 class="text-warning">
+                <i class="fas fa-chalkboard-teacher"></i> Mi Actividad como Mentor
+            </h1>
+            <p class="text-muted">Visualiza el desempeño de los proyectos que mentorizas y tu actividad en la plataforma.</p>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'mentor_report' %}" class="btn btn-success">
+                <i class="fas fa-file-csv"></i> Exportar Reporte CSV
+            </a>
+            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary ms-2">
+                <i class="fas fa-arrow-left"></i> Volver al Panel
+            </a>
+        </div>
+    </div>
+
+    <!-- Tarjetas de resumen -->
+    <div class="row mb-4">
+        <div class="col-md-2 mb-3">
+            <div class="card stat-card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="stat-icon bg-success mx-auto mb-2">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="metric-badge text-success">{{ total_active }}</div>
+                    <p class="text-muted mb-0 small">Mentorías activas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 mb-3">
+            <div class="card stat-card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="stat-icon bg-warning mx-auto mb-2">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="metric-badge text-warning">{{ total_pending }}</div>
+                    <p class="text-muted mb-0 small">Pendientes</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 mb-3">
+            <div class="card stat-card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="stat-icon bg-primary mx-auto mb-2">
+                        <i class="fas fa-paper-plane"></i>
+                    </div>
+                    <div class="metric-badge text-primary">{{ total_messages_sent }}</div>
+                    <p class="text-muted mb-0 small">Mensajes enviados</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 mb-3">
+            <div class="card stat-card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="stat-icon bg-info mx-auto mb-2">
+                        <i class="fas fa-inbox"></i>
+                    </div>
+                    <div class="metric-badge text-info">{{ total_messages_received }}</div>
+                    <p class="text-muted mb-0 small">Mensajes recibidos</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 mb-3">
+            <div class="card stat-card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="stat-icon bg-secondary mx-auto mb-2">
+                        <i class="fas fa-handshake"></i>
+                    </div>
+                    <div class="metric-badge text-secondary">{{ investor_connections }}</div>
+                    <p class="text-muted mb-0 small">Conexiones inversionistas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 mb-3">
+            <div class="card stat-card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="stat-icon bg-danger mx-auto mb-2">
+                        <i class="fas fa-times-circle"></i>
+                    </div>
+                    <div class="metric-badge text-danger">{{ total_rejected }}</div>
+                    <p class="text-muted mb-0 small">Rechazadas</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Proyectos mentorizados activos -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0"><i class="fas fa-tasks"></i> Proyectos que Estás Mentorizando</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Proyecto</th>
+                            <th>Emprendedor</th>
+                            <th>Estado</th>
+                            <th style="min-width:160px">Progreso financiación</th>
+                            <th class="text-center">Evaluación</th>
+                            <th class="text-center">Mensajes<br>intercambiados</th>
+                            <th>Mentoría desde</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in active_projects_data %}
+                        <tr>
+                            <td class="fw-bold">{{ d.project.title|truncatechars:28 }}</td>
+                            <td>{{ d.project.owner.get_full_name|default:d.project.owner.username }}</td>
+                            <td>
+                                <span class="badge
+                                    {% if d.project.status == 'active' %}bg-success
+                                    {% elif d.project.status == 'funded' %}bg-primary
+                                    {% elif d.project.status == 'completed' %}bg-info
+                                    {% elif d.project.status == 'cancelled' %}bg-danger
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ d.project.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="progress flex-grow-1" style="height:8px">
+                                        <div class="progress-bar
+                                            {% if d.funding_pct >= 100 %}bg-success
+                                            {% elif d.funding_pct >= 50 %}bg-warning
+                                            {% else %}bg-danger{% endif %}"
+                                            style="width: {{ d.funding_pct|floatformat:0 }}%">
+                                        </div>
+                                    </div>
+                                    <small class="fw-bold" style="min-width:38px">{{ d.funding_pct|floatformat:1 }}%</small>
+                                </div>
+                                <small class="text-muted">
+                                    {{ d.project.amount_raised|cop_currency }} / {{ d.project.funding_goal|cop_currency }}
+                                </small>
+                            </td>
+                            <td class="text-center">
+                                {% if d.avg_score %}
+                                    <span class="badge bg-primary">{{ d.avg_score }} / 10</span>
+                                {% else %}
+                                    <span class="text-muted small">Sin evaluar</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-secondary">{{ d.messages_count }}</span>
+                            </td>
+                            <td><small class="text-muted">{{ d.mentorship.assigned_at|date:"d/m/Y" }}</small></td>
+                            <td>
+                                <a href="{% url 'mentorship_chat' d.mentorship.pk %}" class="btn btn-sm btn-outline-warning">
+                                    <i class="fas fa-comments"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-5">
+                                <i class="fas fa-chalkboard-teacher fa-2x mb-2"></i>
+                                <p>No tienes mentorías activas actualmente.</p>
+                                <a href="{% url 'project_list_for_mentors' %}" class="btn btn-warning">Ver proyectos disponibles</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Solicitudes pendientes -->
+    {% if pending_mentorships %}
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0"><i class="fas fa-hourglass-half"></i> Solicitudes de Mentoría Pendientes</h5>
+        </div>
+        <div class="card-body p-0">
+            <ul class="list-group list-group-flush">
+                {% for ms in pending_mentorships %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>{{ ms.project.title }}</strong>
+                        <br>
+                        <small class="text-muted">{{ ms.project.owner.get_full_name|default:ms.project.owner.username }}</small>
+                    </div>
+                    <div>
+                        <form method="post" action="{% url 'respond_to_mentorship_request' ms.id 'accept' %}" class="d-inline">
+                            {% csrf_token %}
+                            <button class="btn btn-sm btn-success"><i class="fas fa-check"></i> Aceptar</button>
+                        </form>
+                        <form method="post" action="{% url 'respond_to_mentorship_request' ms.id 'reject' %}" class="d-inline">
+                            {% csrf_token %}
+                            <button class="btn btn-sm btn-danger"><i class="fas fa-times"></i> Rechazar</button>
+                        </form>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

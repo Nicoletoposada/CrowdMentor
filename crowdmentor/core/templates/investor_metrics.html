@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/analytics_dashboard.css' %}">
+<style>
+    .progress-sm { height: 8px; }
+    .metric-badge { font-size: 1.4rem; font-weight: 700; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <!-- Encabezado -->
+    <div class="row mb-4 align-items-center">
+        <div class="col">
+            <h1 class="text-success">
+                <i class="fas fa-briefcase"></i> Mi Portafolio de Inversiones
+            </h1>
+            <p class="text-muted">Seguimiento de tus inversiones y el progreso de los proyectos financiados.</p>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'investor_report' %}" class="btn btn-success">
+                <i class="fas fa-file-csv"></i> Exportar Reporte CSV
+            </a>
+            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary ms-2">
+                <i class="fas fa-arrow-left"></i> Volver al Panel
+            </a>
+        </div>
+    </div>
+
+    <!-- Tarjetas de resumen -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="stat-icon bg-success mx-auto mb-3">
+                        <i class="fas fa-coins"></i>
+                    </div>
+                    <div class="metric-badge text-success">{{ total_invested|cop_currency }}</div>
+                    <p class="text-muted mb-0">Total invertido</p>
+                    <small class="text-success">Inversiones aceptadas</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="stat-icon bg-primary mx-auto mb-3">
+                        <i class="fas fa-lightbulb"></i>
+                    </div>
+                    <div class="metric-badge text-primary">{{ projects_count }}</div>
+                    <p class="text-muted mb-0">Proyectos en portafolio</p>
+                    <small class="text-primary">Con inversión aceptada</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="stat-icon bg-info mx-auto mb-3">
+                        <i class="fas fa-percentage"></i>
+                    </div>
+                    <div class="metric-badge text-info">{{ total_equity }}%</div>
+                    <p class="text-muted mb-0">Equity total acumulado</p>
+                    <small class="text-info">Suma de participaciones</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="stat-icon bg-warning mx-auto mb-3">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="metric-badge text-warning">{{ pending_count }}</div>
+                    <p class="text-muted mb-0">Inversiones pendientes</p>
+                    <small class="text-warning">Esperando aceptación</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Portafolio activo -->
+        <div class="col-lg-8 mb-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Portafolio Activo</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Proyecto</th>
+                                    <th>Estado</th>
+                                    <th class="text-end">Monto</th>
+                                    <th class="text-center">Equity</th>
+                                    <th style="min-width:130px">Progreso proyecto</th>
+                                    <th>Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in portfolio %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'project_detail' item.project.pk %}" class="fw-bold text-decoration-none">
+                                            {{ item.project.title|truncatechars:28 }}
+                                        </a>
+                                        <br>
+                                        <small class="text-muted">{{ item.project.owner.get_full_name|default:item.project.owner.username }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge
+                                            {% if item.project.status == 'active' %}bg-success
+                                            {% elif item.project.status == 'funded' %}bg-primary
+                                            {% elif item.project.status == 'completed' %}bg-info
+                                            {% elif item.project.status == 'cancelled' %}bg-danger
+                                            {% else %}bg-secondary{% endif %}">
+                                            {{ item.project.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end fw-bold text-success">{{ item.investment.amount|cop_currency }}</td>
+                                    <td class="text-center">
+                                        <span class="badge bg-info">{{ item.investment.equity_percentage|floatformat:2 }}%</span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="progress flex-grow-1" style="height:8px">
+                                                <div class="progress-bar
+                                                    {% if item.funding_pct >= 100 %}bg-success
+                                                    {% elif item.funding_pct >= 50 %}bg-warning
+                                                    {% else %}bg-danger{% endif %}"
+                                                    style="width: {{ item.funding_pct|floatformat:0 }}%">
+                                                </div>
+                                            </div>
+                                            <small class="fw-bold" style="min-width:38px">{{ item.funding_pct|floatformat:1 }}%</small>
+                                        </div>
+                                    </td>
+                                    <td><small class="text-muted">{{ item.investment.invested_at|date:"d/m/Y" }}</small></td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-5">
+                                        <i class="fas fa-briefcase fa-2x mb-2"></i>
+                                        <p>No tienes inversiones aceptadas aún.</p>
+                                        <a href="{% url 'project_list' %}" class="btn btn-success">Explorar proyectos</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel lateral -->
+        <div class="col-lg-4 mb-4">
+            <!-- Distribución por estado de proyecto -->
+            {% if status_breakdown %}
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0"><i class="fas fa-chart-donut"></i> Estado de los Proyectos</h6>
+                </div>
+                <div class="card-body">
+                    {% for status, count in status_breakdown.items %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>{{ status }}</span>
+                        <span class="badge bg-primary">{{ count }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Inversiones pendientes -->
+            {% if pending_investments %}
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0"><i class="fas fa-hourglass-half"></i> Pendientes de Aceptación</h6>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for inv in pending_investments %}
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <strong>{{ inv.project.title|truncatechars:22 }}</strong><br>
+                                    <small class="text-muted">{{ inv.amount|cop_currency }} · {{ inv.equity_percentage|floatformat:2 }}%</small>
+                                </div>
+                                <small class="text-muted">{{ inv.invested_at|date:"d/m/Y" }}</small>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

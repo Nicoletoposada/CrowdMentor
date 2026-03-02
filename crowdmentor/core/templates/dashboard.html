@@ -15,7 +15,12 @@
     {% endif %}
     </h2>
     {% if profile.user_type == 'entrepreneur' %}
-        <h3 class="text-primary">Tus Proyectos</h3>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="text-primary mb-0">Tus Proyectos</h3>
+            <a href="{% url 'entrepreneur_metrics' %}" class="btn btn-outline-primary">
+                <i class="fas fa-chart-line"></i> Mis Métricas
+            </a>
+        </div>
         <a href="{% url 'project_create' %}" class="btn btn-success mb-3">Crear Nuevo Proyecto</a>
         <div class="row">
             {% for project in projects %} 
@@ -128,6 +133,11 @@
         </div>
 
     {% elif profile.user_type == 'mentor' %}
+        <div class="text-end mb-3">
+            <a href="{% url 'mentor_metrics' %}" class="btn btn-outline-warning">
+                <i class="fas fa-chart-line"></i> Mi Actividad y Métricas
+            </a>
+        </div>
         <h3 class="text-primary">Solicitudes de Mentoría Pendientes</h3>
         <div class="row">
             {% for mentorship in pending_mentorships %}
@@ -349,7 +359,12 @@
             {% endfor %}
         </div>
 
-        <h3 class="text-primary">Tus Inversiones</h3>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h3 class="text-primary mb-0">Tus Inversiones</h3>
+            <a href="{% url 'investor_metrics' %}" class="btn btn-outline-success">
+                <i class="fas fa-briefcase"></i> Mi Portafolio y Métricas
+            </a>
+        </div>
         <div class="row">
             {% for investment in investments %}
                 <div class="col-md-6 mb-4">

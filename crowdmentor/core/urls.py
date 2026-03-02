@@ -54,6 +54,12 @@ urlpatterns = [
     path('notifications/count/', views.get_notifications_count, name='get_notifications_count'),
     path('analytics/', views.analytics_dashboard, name='analytics_dashboard'),
     path('analytics/report/', views.analytics_report, name='analytics_report'),
+    path('mis-metricas/emprendedor/', views.entrepreneur_metrics, name='entrepreneur_metrics'),
+    path('mis-metricas/emprendedor/reporte/', views.entrepreneur_report, name='entrepreneur_report'),
+    path('mis-metricas/inversionista/', views.investor_metrics, name='investor_metrics'),
+    path('mis-metricas/inversionista/reporte/', views.investor_report, name='investor_report'),
+    path('mis-metricas/mentor/', views.mentor_metrics, name='mentor_metrics'),
+    path('mis-metricas/mentor/reporte/', views.mentor_report, name='mentor_report'),
     
     # URLs para sistema mentor-inversionista
     path('investors/', views.investor_list_for_mentors, name='investor_list_for_mentors'),
