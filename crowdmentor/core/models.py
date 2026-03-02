@@ -427,3 +427,69 @@ class MentorInvestorMessage(models.Model):
 
     def __str__(self):
         return f"{self.sender.username} -> {self.connection.get_other_user(self.sender).username}: {self.content[:50]}..."
+
+
+# ─────────────────────────────────────────────────────────────
+# Asistente IA para estructuración de proyectos (PMI)
+# ─────────────────────────────────────────────────────────────
+class AIProjectSession(models.Model):
+    """Almacena la sesión de conversación con el asistente de IA PMI."""
+    STATUS_CHOICES = [
+        ('active', 'Activa'),
+        ('completed', 'Completada'),
+        ('abandoned', 'Abandonada'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ai_project_sessions')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+
+    # Historial completo de mensajes en JSON: [{role, content, timestamp}]
+    messages = models.JSONField(default=list)
+
+    # Datos estructurados extraídos por la IA al finalizar
+    generated_title = models.CharField(max_length=200, blank=True)
+    generated_description = models.TextField(blank=True)
+    generated_tags = models.CharField(max_length=500, blank=True)
+    generated_funding_goal = models.CharField(max_length=50, blank=True)
+    generated_profitability_time = models.CharField(max_length=20, blank=True)
+    generated_profitability_unit = models.CharField(max_length=10, blank=True, default='meses')
+
+    # Proyecto creado a partir de esta sesión (puede ser None)
+    resulting_project = models.ForeignKey(
+        'Project', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='ai_session'
+    )
+
+    # Fase actual del proceso PMI guiado
+    PMI_PHASES = [
+        ('welcome', 'Bienvenida'),
+        ('ideation', 'Ideación'),
+        ('problem', 'Problema y Solución'),
+        ('market', 'Mercado Objetivo'),
+        ('business_model', 'Modelo de Negocio'),
+        ('resources', 'Recursos y Presupuesto'),
+        ('risks', 'Riesgos'),
+        ('timeline', 'Cronograma'),
+        ('summary', 'Resumen Generado'),
+    ]
+    current_phase = models.CharField(max_length=20, default='welcome')
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Sesión IA de {self.user.username} – {self.created_at.strftime('%d/%m/%Y %H:%M')}"
+
+    def add_message(self, role: str, content: str):
+        """Agrega un mensaje al historial."""
+        from django.utils import timezone as tz
+        msgs = list(self.messages)
+        msgs.append({'role': role, 'content': content, 'timestamp': tz.now().isoformat()})
+        self.messages = msgs
+        self.save(update_fields=['messages', 'updated_at'])
+
+    def get_last_n_messages(self, n: int = 20):
+        """Devuelve los últimos N mensajes para contexto."""
+        return self.messages[-n:] if len(self.messages) > n else self.messages

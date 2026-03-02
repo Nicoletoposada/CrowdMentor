@@ -1,6 +1,6 @@
 from django.contrib import admin # type: ignore
 from django.utils.html import format_html # type: ignore
-from .models import Profile, Project, Investment, Mentorship, Message, ResourceCategory, Resource, UploadedFile
+from .models import Profile, Project, Investment, Mentorship, Message, ResourceCategory, Resource, UploadedFile, AIProjectSession
 
 # Register your models here.
 
@@ -101,3 +101,14 @@ class ResourceAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         })
     )
+
+@admin.register(AIProjectSession)
+class AIProjectSessionAdmin(admin.ModelAdmin):
+    list_display = ['user', 'status', 'current_phase', 'num_messages', 'generated_title', 'created_at']
+    list_filter  = ['status', 'current_phase']
+    search_fields = ['user__username', 'generated_title']
+    readonly_fields = ['created_at', 'updated_at', 'messages', 'resulting_project']
+
+    def num_messages(self, obj):
+        return len(obj.messages)
+    num_messages.short_description = 'Mensajes'

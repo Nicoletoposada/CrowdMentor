@@ -6,6 +6,22 @@
 {% endblock %}
 
 {% block content %}
+
+{% if from_ai %}
+<div class="alert alert-success border-0 shadow-sm mb-0 rounded-0" role="alert">
+    <div class="container d-flex align-items-center gap-3">
+        <i class="fas fa-robot fa-2x text-success"></i>
+        <div>
+            <strong>¡Tu proyecto fue estructurado por el Asistente IA PMI!</strong><br>
+            <small class="text-muted">Los campos han sido pre-llenados con base en tu conversación. Revisa y ajusta lo que necesites antes de publicar.</small>
+        </div>
+        <a href="{% url 'ai_project_assistant_session' ai_session_id %}" class="btn btn-sm btn-outline-success ms-auto">
+            <i class="fas fa-comments me-1"></i>Ver conversación
+        </a>
+    </div>
+</div>
+{% endif %}
+
 <div class="container py-5">
     <div class="row">
         <div class="col-lg-8 mx-auto">
@@ -175,6 +191,10 @@
                                 </div>
                             </div>
                         </div>
+
+                        {% if ai_session_id %}
+                        <input type="hidden" name="ai_session" value="{{ ai_session_id }}">
+                        {% endif %}
 
                         <div class="form-actions mt-5">
                             <div class="row g-2">

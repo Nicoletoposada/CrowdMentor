@@ -70,4 +70,11 @@ urlpatterns = [
     path('connections/chat/<int:connection_id>/', views.mentor_investor_chat, name='mentor_investor_chat'),
     path('connections/unread-count/', views.get_mentor_investor_unread_count, name='get_mentor_investor_unread_count'),
     path('connections/search/', views.search_mentor_investor_connections, name='search_mentor_investor_connections'),
+
+    # ── Asistente IA PMI para estructuración de proyectos ──
+    path('ai-assistant/', views.ai_project_assistant, name='ai_project_assistant'),
+    path('ai-assistant/<int:session_id>/', views.ai_project_assistant_session, name='ai_project_assistant_session'),
+    path('ai-assistant/<int:session_id>/chat/', views.ai_project_assistant_session, name='ai_project_chat'),
+    path('ai-assistant/<int:session_id>/use/', views.ai_project_use_data, name='ai_project_use_data'),
+    path('ai-assistant/<int:session_id>/delete/', views.ai_project_session_delete, name='ai_project_session_delete'),
 ]

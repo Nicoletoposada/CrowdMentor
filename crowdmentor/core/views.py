@@ -8,7 +8,7 @@ from django.views import View # type: ignore
 from django.contrib.auth.models import User, Group # type: ignore
 from django.http import JsonResponse, HttpResponse # type: ignore
 from .forms import CustomUserCreationForm, ProjectForm, InvestmentForm, LoginForm, ResourceForm, ResourceCategoryForm, ProjectSearchForm, ProjectEvaluationForm, CriterionScoreForm, ProjectRatingForm, ProjectCategoryForm, MentorInvestorConnectionForm, MentorInvestorMessageForm, ConnectionSearchForm, MentorshipMessageForm, UserEditForm, ProfileEditForm, PasswordChangeCustomForm
-from .models import Project, Investment, Mentorship, Profile, Message, UploadedFile, Resource, ResourceCategory, ProjectCategory, ProjectEvaluation, EvaluationCriteria, CriterionScore, ProjectRating, Notification, MentorInvestorConnection, MentorInvestorMessage
+from .models import Project, Investment, Mentorship, Profile, Message, UploadedFile, Resource, ResourceCategory, ProjectCategory, ProjectEvaluation, EvaluationCriteria, CriterionScore, ProjectRating, Notification, MentorInvestorConnection, MentorInvestorMessage, AIProjectSession
 from django.db.models import Q, Avg, Count, Sum # type: ignore
 from django.views.decorators.http import require_POST # type: ignore
 from django.core.files.storage import default_storage # type: ignore
@@ -262,6 +262,17 @@ def project_create(request):
             project = form.save(commit=False)
             project.owner = request.user
             project.save()
+
+            # Vincular sesión IA si viene de ella
+            ai_session_id = request.POST.get('ai_session')
+            if ai_session_id:
+                try:
+                    ai_session = AIProjectSession.objects.get(pk=ai_session_id, user=request.user)
+                    ai_session.resulting_project = project
+                    ai_session.status = 'completed'
+                    ai_session.save(update_fields=['resulting_project', 'status'])
+                except AIProjectSession.DoesNotExist:
+                    pass
             
             # Crear notificación para administradores
             from django.contrib.auth.models import User
@@ -278,11 +289,25 @@ def project_create(request):
             messages.success(request, '¡Proyecto creado exitosamente!')
             return redirect('project_detail', pk=project.pk)
     else:
-        form = ProjectForm()
+        # Pre-llenar con datos del asistente IA (vienen por GET)
+        ai_session_id = request.GET.get('ai_session', '')
+        initial = {}
+        if ai_session_id:
+            initial = {
+                'title': request.GET.get('title', ''),
+                'description': request.GET.get('description', ''),
+                'tags': request.GET.get('tags', ''),
+                'funding_goal': request.GET.get('funding_goal', '') or None,
+                'profitability_time': request.GET.get('profitability_time', '') or None,
+                'profitability_unit': request.GET.get('profitability_unit', 'meses'),
+            }
+        form = ProjectForm(initial=initial)
     
     context = {
         'form': form,
         'categories': ProjectCategory.objects.all(),
+        'ai_session_id': request.GET.get('ai_session', '') or request.POST.get('ai_session', ''),
+        'from_ai': bool(request.GET.get('ai_session', '')),
     }
     return render(request, 'project_create.html', context)
 
@@ -2180,3 +2205,220 @@ def profile_view(request):
         'password_form': password_form,
     }
     return render(request, 'profile.html', context)
+
+
+# ════════════════════════════════════════════════════════════
+# Asistente IA PMI para estructuración de proyectos
+# ════════════════════════════════════════════════════════════
+
+PMI_SYSTEM_PROMPT = """
+Eres un experto consultor de proyectos que sigue la metodología PMI (Project Management Institute)
+adaptada para emprendimientos. Tu misión es guiar al emprendedor paso a paso para estructurar
+su idea de negocio de forma sólida, de manera conversacional y amigable.
+
+Eres parte de CrowdMentor, una plataforma que conecta emprendedores con mentores e inversionistas.
+Una vez que el emprendedor tenga su proyecto estructurado, podrá publicarlo y recibir mentoría.
+
+GUÍA DE CONVERSACIÓN PMI (sé natural, no robótico):
+1. IDEACIÓN: Explora la idea, el nombre tentativo del proyecto.
+2. PROBLEMA Y SOLUCIÓN: ¿Qué problema resuelve? ¿Cómo lo resuelve?
+3. MERCADO OBJETIVO: ¿A quiénes va dirigido? ¿Cuál es el tamaño del mercado?
+4. MODELO DE NEGOCIO: ¿Cómo generará ingresos? ¿Qué te diferencia de la competencia?
+5. RECURSOS Y PRESUPUESTO: ¿Cuánto capital inicial se necesita? ¿A qué se destinaría?
+6. RIESGOS: ¿Cuáles son los principales riesgos y cómo mitigarlos?
+7. CRONOGRAMA: ¿En cuánto tiempo espera ser rentable?
+8. RESUMEN FINAL: Cuando tengas información suficiente (después de al menos 6 respuestas del usuario),
+   genera un JSON EXACTAMENTE en este formato (sólo cuando el usuario confirme que quiere continuar
+   o cuando el tema esté completamente desarrollado):
+
+   <PROJECT_DATA>
+   {
+     "title": "Título del proyecto",
+     "description": "Descripción detallada del proyecto incluyendo problema, solución, mercado y modelo de negocio",
+     "tags": "tag1, tag2, tag3",
+     "funding_goal": "50000",
+     "profitability_time": "18",
+     "profitability_unit": "meses"
+   }
+   </PROJECT_DATA>
+
+IMPORTANTE:
+- Haz UNA sola pregunta a la vez.
+- Sé alentador y constructivo.
+- Si el usuario no tiene clara una fase, ayúdalo con ejemplos o sugerencias.
+- Después de cada respuesta del usuario, resume brevemente lo que entendiste y avanza a la siguiente fase.
+- El JSON solo debe aparecer cuando hayas recopilado información suficiente de todas las fases.
+- Usa Español latinoamericano.
+- Mantén respuestas concisas (máximo 150 palabras por respuesta).
+"""
+
+
+def _get_gemini_response(session: AIProjectSession, user_message: str) -> str:
+    """Llama a la API de Gemini y devuelve la respuesta del modelo."""
+    api_key = getattr(settings, 'GEMINI_API_KEY', '')
+    if not api_key:
+        return (
+            '⚠️ El asistente de IA no está configurado. '
+            'El administrador debe configurar la clave GEMINI_API_KEY en settings.py. '
+            'Mientras tanto, puedes <a href="/project/create/">crear tu proyecto manualmente</a>.'
+        )
+
+    try:
+        from google import genai  # type: ignore
+        from google.genai import types  # type: ignore
+
+        client = genai.Client(api_key=api_key)
+
+        # Construir historial para Gemini (role: user | model)
+        history = []
+        for msg in session.get_last_n_messages(18):
+            role = 'user' if msg['role'] == 'user' else 'model'
+            history.append(types.Content(role=role, parts=[types.Part(text=msg['content'])]))
+
+        # El mensaje actual del usuario
+        history.append(types.Content(role='user', parts=[types.Part(text=user_message)]))
+
+        response = client.models.generate_content(
+            model='gemini-2.0-flash',
+            contents=history,
+            config=types.GenerateContentConfig(
+                system_instruction=PMI_SYSTEM_PROMPT,
+                max_output_tokens=600,
+                temperature=0.7,
+            ),
+        )
+        return response.text or ''
+    except Exception as exc:
+        return f'⚠️ Ocurrió un error al contactar el asistente: {exc}. Por favor inténtalo de nuevo.'
+
+
+def _extract_project_data(ai_text: str) -> dict | None:
+    """Extrae el JSON de PROJECT_DATA si está presente en la respuesta."""
+    import re, json
+    match = re.search(r'<PROJECT_DATA>(.*?)</PROJECT_DATA>', ai_text, re.DOTALL)
+    if not match:
+        return None
+    try:
+        return json.loads(match.group(1).strip())
+    except (json.JSONDecodeError, ValueError):
+        return None
+
+
+@login_required
+def ai_project_assistant(request):
+    """Vista principal del asistente IA PMI."""
+    try:
+        profile = request.user.profile
+        if profile.user_type != 'entrepreneur':
+            messages.warning(request, 'El asistente de IA está disponible solo para emprendedores.')
+            return redirect('dashboard')
+    except Profile.DoesNotExist:
+        messages.error(request, 'Completa tu perfil primero.')
+        return redirect('dashboard')
+
+    if request.method == 'POST' and request.POST.get('action') == 'new_session':
+        # Crear nueva sesión
+        session = AIProjectSession.objects.create(user=request.user)
+        welcome_msg = (
+            '¡Hola! Soy tu asistente de proyectos PMI 🚀 \n\n'
+            'Estoy aquí para ayudarte a estructurar tu idea de emprendimiento de forma profesional, '
+            'siguiendo la metodología PMI (Project Management Institute). \n\n'
+            'Al finalizar, tendrás un proyecto bien definido que podrás publicar en CrowdMentor '
+            'para conectar con mentores e inversionistas. \n\n'
+            '✨ **¿Tienes ya alguna idea de proyecto o negocio en mente?** Cuéntame, aunque sea de '
+            'forma muy general — no importa si aún está poco desarrollada.'
+        )
+        session.add_message('assistant', welcome_msg)
+        return redirect('ai_project_assistant_session', session_id=session.pk)
+
+    # Listar sesiones del usuario
+    sessions = AIProjectSession.objects.filter(user=request.user)
+    return render(request, 'ai_project_assistant.html', {'sessions': sessions})
+
+
+@login_required
+def ai_project_assistant_session(request, session_id):
+    """Vista de una sesión del asistente IA."""
+    session = get_object_or_404(AIProjectSession, pk=session_id, user=request.user)
+
+    if request.method == 'POST':
+        import json as json_module
+        data = json_module.loads(request.body.decode('utf-8'))
+        user_message = data.get('message', '').strip()
+
+        if not user_message:
+            return JsonResponse({'error': 'Mensaje vacío'}, status=400)
+
+        if session.status != 'active':
+            return JsonResponse({'error': 'La sesión ya fue cerrada.'}, status=400)
+
+        # Guardar mensaje del usuario
+        session.add_message('user', user_message)
+
+        # Obtener respuesta del modelo
+        ai_response = _get_gemini_response(session, user_message)
+
+        # Verificar si hay datos de proyecto generados
+        project_data = _extract_project_data(ai_response)
+
+        # Limpiar el texto de la respuesta (quitar bloque JSON)
+        import re
+        clean_response = re.sub(r'<PROJECT_DATA>.*?</PROJECT_DATA>', '', ai_response, flags=re.DOTALL).strip()
+        if not clean_response:
+            clean_response = '✅ ¡Excelente! He estructurado tu proyecto. Pulsa **“Crear Proyecto”** para continuar.'
+
+        session.add_message('assistant', clean_response)
+
+        response_payload = {'message': clean_response, 'project_data': None}
+
+        if project_data:
+            session.generated_title = project_data.get('title', '')
+            session.generated_description = project_data.get('description', '')
+            session.generated_tags = project_data.get('tags', '')
+            session.generated_funding_goal = project_data.get('funding_goal', '')
+            session.generated_profitability_time = project_data.get('profitability_time', '')
+            session.generated_profitability_unit = project_data.get('profitability_unit', 'meses')
+            session.current_phase = 'summary'
+            session.save(update_fields=[
+                'generated_title', 'generated_description', 'generated_tags',
+                'generated_funding_goal', 'generated_profitability_time',
+                'generated_profitability_unit', 'current_phase'
+            ])
+            response_payload['project_data'] = project_data
+
+        return JsonResponse(response_payload)
+
+    return render(request, 'ai_project_assistant_session.html', {'session': session})
+
+
+@login_required
+def ai_project_use_data(request, session_id):
+    """Redirige al formulario de creación de proyecto pre-llenado con los datos de la IA."""
+    session = get_object_or_404(AIProjectSession, pk=session_id, user=request.user)
+    if not session.generated_title:
+        messages.warning(request, 'La sesión no tiene datos generados todavía.')
+        return redirect('ai_project_assistant_session', session_id=session_id)
+
+    # Pasar datos como parámetros GET al formulario de creación
+    from urllib.parse import urlencode
+    params = urlencode({
+        'ai_session': session_id,
+        'title': session.generated_title,
+        'description': session.generated_description,
+        'tags': session.generated_tags,
+        'funding_goal': session.generated_funding_goal,
+        'profitability_time': session.generated_profitability_time,
+        'profitability_unit': session.generated_profitability_unit,
+    })
+    return redirect(f'/project/create/?{params}')
+
+
+@login_required  
+def ai_project_session_delete(request, session_id):
+    """Elimina una sesión de IA."""
+    session = get_object_or_404(AIProjectSession, pk=session_id, user=request.user)
+    if request.method == 'POST':
+        session.delete()
+        messages.success(request, 'Sesión eliminada.')
+        return redirect('ai_project_assistant')
+    return redirect('ai_project_assistant')

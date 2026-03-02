@@ -22,6 +22,27 @@
             </a>
         </div>
         <a href="{% url 'project_create' %}" class="btn btn-success mb-3">Crear Nuevo Proyecto</a>
+
+        <!-- ── Asistente IA PMI ── -->
+        <div class="alert border-0 mb-4 p-0" style="background:transparent;">
+            <div class="card border-0 shadow-sm"
+                 style="background:linear-gradient(135deg,#1a1a2e 0%,#0f3460 100%); color:#fff; border-radius:.85rem;">
+                <div class="card-body d-flex flex-wrap align-items-center gap-3 py-3 px-4">
+                    <i class="fas fa-robot fa-2x opacity-75 text-info"></i>
+                    <div class="flex-grow-1">
+                        <strong class="d-block fs-6">¿No sabes por dónde empezar?</strong>
+                        <small class="opacity-75">
+                            Usa nuestro <strong>Asistente IA PMI</strong> para estructurar tu idea
+                            paso a paso antes de crear tu proyecto.
+                        </small>
+                    </div>
+                    <a href="{% url 'ai_project_assistant' %}"
+                       class="btn btn-info btn-sm fw-semibold text-white text-nowrap">
+                        <i class="fas fa-magic me-1"></i>Iniciar Asistente IA
+                    </a>
+                </div>
+            </div>
+        </div>
         <div class="row">
             {% for project in projects %} 
                 <div class="col-md-6 mb-4">

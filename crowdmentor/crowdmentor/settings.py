@@ -138,3 +138,10 @@ CRISPY_TEMPLATE_PACK = 'bootstrap5'
 LOGIN_REDIRECT_URL = '/dashboard/'
 LOGOUT_REDIRECT_URL = '/'
 LOGIN_URL = '/login/'
+
+# ─── Asistente IA (Google Gemini) ───
+# Obtén tu clave gratuita en: https://aistudio.google.com/app/apikey
+# Luego reemplaza el valor o defínelo como variable de entorno:
+#   set GEMINI_API_KEY=tu_clave  (Windows)
+import os
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')  # Reemplaza '' con tu clave si no usas env vars

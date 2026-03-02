@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Asistente IA PMI – CrowdMentor{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ─── Asistente IA – Lista de sesiones ─── */
+.ai-hero {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    border-radius: 1rem;
+    padding: 3rem 2rem;
+    color: #fff;
+}
+.ai-hero h1 { font-size: 2rem; font-weight: 700; }
+.ai-hero p  { opacity: .85; }
+.pmi-badge {
+    display: inline-flex; align-items: center; gap: .4rem;
+    background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2);
+    color: #fff; border-radius: 2rem; padding: .3rem .9rem; font-size: .8rem;
+}
+.phase-pill {
+    display: inline-block; padding: .25rem .75rem;
+    border-radius: 2rem; font-size: .75rem; font-weight: 600; white-space: nowrap;
+}
+.phase-active   { background:#dcfce7; color:#166534; }
+.phase-done     { background:#e0e7ff; color:#3730a3; }
+.phase-abandon  { background:#fee2e2; color:#991b1b; }
+.session-card { transition: transform .2s, box-shadow .2s; }
+.session-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.12)!important; }
+.btn-ai-start {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none; color: #fff; font-weight: 600;
+    padding: .8rem 2.5rem; border-radius: 2rem; font-size: 1rem;
+    transition: opacity .2s, transform .2s;
+}
+.btn-ai-start:hover { opacity: .9; transform: scale(1.03); color: #fff; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+
+    <!-- === HERO === -->
+    <div class="ai-hero mb-5 shadow-lg">
+        <div class="row align-items-center g-4">
+            <div class="col-lg-7">
+                <span class="pmi-badge mb-3">
+                    <i class="fas fa-shield-alt"></i> Metodología PMI &nbsp;|&nbsp;
+                    <i class="fas fa-robot"></i> Gemini AI
+                </span>
+                <h1 class="mb-3">
+                    <i class="fas fa-robot me-2 text-info"></i>Asistente de Proyectos IA
+                </h1>
+                <p class="fs-5 mb-4">
+                    ¿Tienes una idea pero no sabes cómo estructurarla? Nuestro asistente usa
+                    la metodología <strong>PMI</strong> para guiarte en una conversación
+                    y ayudarte a definir tu proyecto paso a paso.
+                    Al finalizar, tu proyecto quedará listo para conectar con
+                    <strong>mentores e inversionistas</strong>.
+                </p>
+
+                <!-- PMI Phases visual -->
+                <div class="d-flex flex-wrap gap-2 mb-4">
+                    <span class="pmi-badge"><i class="fas fa-lightbulb"></i> Ideación</span>
+                    <span class="pmi-badge"><i class="fas fa-tools"></i> Problema/Solución</span>
+                    <span class="pmi-badge"><i class="fas fa-users"></i> Mercado</span>
+                    <span class="pmi-badge"><i class="fas fa-dollar-sign"></i> Modelo de Negocio</span>
+                    <span class="pmi-badge"><i class="fas fa-chart-line"></i> Recursos/Riesgos</span>
+                    <span class="pmi-badge"><i class="fas fa-check-circle"></i> Proyecto Listo</span>
+                </div>
+
+                <!-- Start button -->
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="new_session">
+                    <button type="submit" class="btn-ai-start">
+                        <i class="fas fa-magic me-2"></i>Iniciar nueva sesión con IA
+                    </button>
+                </form>
+            </div>
+            <div class="col-lg-5 text-center d-none d-lg-block">
+                <i class="fas fa-robot" style="font-size:9rem; opacity:.15;"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- === SESIONES ANTERIORES === -->
+    {% if sessions %}
+    <h4 class="mb-4 fw-bold"><i class="fas fa-history me-2 text-primary"></i>Tus sesiones anteriores</h4>
+    <div class="row g-3">
+        {% for s in sessions %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm session-card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="phase-pill
+                            {% if s.status == 'active' %}phase-active
+                            {% elif s.status == 'completed' %}phase-done
+                            {% else %}phase-abandon{% endif %}">
+                            {% if s.status == 'active' %}<i class="fas fa-circle-notch fa-spin me-1"></i>Activa
+                            {% elif s.status == 'completed' %}<i class="fas fa-check-circle me-1"></i>Completada
+                            {% else %}<i class="fas fa-times-circle me-1"></i>Abandonada{% endif %}
+                        </span>
+                        <small class="text-muted">{{ s.created_at|date:"d/m/Y H:i" }}</small>
+                    </div>
+
+                    {% if s.generated_title %}
+                    <h6 class="fw-bold mb-1 text-truncate" title="{{ s.generated_title }}">
+                        <i class="fas fa-project-diagram me-1 text-primary"></i>{{ s.generated_title }}
+                    </h6>
+                    {% else %}
+                    <p class="text-muted small mb-1">
+                        <i class="fas fa-comments me-1"></i>
+                        {{ s.messages|length }} mensaje{{ s.messages|length|pluralize:"s" }} intercambiado{{ s.messages|length|pluralize:"s" }}
+                    </p>
+                    {% endif %}
+
+                    {% if s.resulting_project %}
+                    <p class="small text-success mb-2">
+                        <i class="fas fa-rocket me-1"></i>
+                        Proyecto publicado: <a href="{% url 'project_detail' s.resulting_project.pk %}">{{ s.resulting_project.title }}</a>
+                    </p>
+                    {% endif %}
+                </div>
+                <div class="card-footer bg-transparent border-0 d-flex gap-2 pb-3">
+                    <a href="{% url 'ai_project_assistant_session' s.pk %}" class="btn btn-sm btn-outline-primary flex-grow-1">
+                        <i class="fas fa-eye me-1"></i>
+                        {% if s.status == 'active' %}Continuar{% else %}Ver{% endif %}
+                    </a>
+                    {% if s.generated_title and not s.resulting_project %}
+                    <a href="{% url 'ai_project_use_data' s.pk %}" class="btn btn-sm btn-success flex-grow-1">
+                        <i class="fas fa-rocket me-1"></i>Crear proyecto
+                    </a>
+                    {% endif %}
+                    <form method="post" action="{% url 'ai_project_session_delete' s.pk %}" class="d-inline"
+                          onsubmit="return confirm('¿Eliminar esta sesión?')">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+        <i class="fas fa-robot fa-3x mb-3 opacity-25"></i>
+        <p>Aún no has iniciado ninguna sesión con el asistente.</p>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
