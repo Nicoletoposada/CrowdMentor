@@ -1,0 +1,453 @@
+{% load custom_filters %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contrato de Inversión – {{ investment.project.title }}</title>
+    <style>
+        /* ── Estilos base ── */
+        *, *::before, *::after { box-sizing: border-box; }
+
+        body {
+            font-family: 'Georgia', serif;
+            font-size: 13px;
+            color: #1a1a2e;
+            background: #f4f6fa;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .contract-wrapper {
+            max-width: 820px;
+            margin: 0 auto;
+            background: #fff;
+            border: 2px solid #0d6efd;
+            border-radius: 12px;
+            padding: 50px 60px;
+            box-shadow: 0 4px 24px rgba(13,110,253,.15);
+        }
+
+        /* ── Encabezado ── */
+        .contract-header {
+            text-align: center;
+            margin-bottom: 36px;
+            padding-bottom: 24px;
+            border-bottom: 3px double #0d6efd;
+        }
+
+        .contract-header .logo-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #0d6efd;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .contract-header .doc-type {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 6px;
+            color: #333;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .contract-header .doc-number {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        /* ── Secciones ── */
+        .section {
+            margin-bottom: 28px;
+        }
+
+        .section-title {
+            font-size: 13px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #0d6efd;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 6px;
+            margin-bottom: 14px;
+        }
+
+        /* ── Tabla de partes ── */
+        .parties-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .parties-table td {
+            padding: 10px 14px;
+            vertical-align: top;
+            border: 1px solid #dee2e6;
+        }
+
+        .parties-table .label {
+            font-weight: bold;
+            color: #495057;
+            background: #f8f9fa;
+            width: 38%;
+        }
+
+        /* ── Tabla de términos ── */
+        .terms-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .terms-table th {
+            background: #0d6efd;
+            color: #fff;
+            padding: 10px 14px;
+            text-align: left;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+
+        .terms-table td {
+            padding: 10px 14px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .terms-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .terms-table .value {
+            font-weight: bold;
+            color: #0d6efd;
+        }
+
+        /* ── Cláusulas ── */
+        .clause {
+            margin-bottom: 16px;
+        }
+
+        .clause-number {
+            font-weight: bold;
+            color: #0d6efd;
+        }
+
+        p {
+            line-height: 1.7;
+            margin: 0 0 10px;
+        }
+
+        /* ── Firmas ── */
+        .signatures {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 60px;
+            gap: 40px;
+        }
+
+        .signature-block {
+            flex: 1;
+            text-align: center;
+        }
+
+        .signature-line {
+            border-top: 1px solid #333;
+            margin-bottom: 8px;
+            padding-top: 6px;
+        }
+
+        .signature-label {
+            font-weight: bold;
+            font-size: 12px;
+            color: #495057;
+        }
+
+        .signature-name {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .signature-space {
+            height: 60px;
+        }
+
+        /* ── Pie de página ── */
+        .contract-footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            text-align: center;
+            font-size: 11px;
+            color: #999;
+        }
+
+        /* ── Badge de estado ── */
+        .badge-generated {
+            display: inline-block;
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffc107;
+            border-radius: 20px;
+            padding: 4px 14px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-top: 6px;
+        }
+
+        /* ── Botones (solo en pantalla) ── */
+        .action-bar {
+            max-width: 820px;
+            margin: 20px auto;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 22px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            text-decoration: none;
+            transition: opacity .2s;
+        }
+
+        .btn:hover { opacity: .85; }
+
+        .btn-primary { background: #0d6efd; color: #fff; }
+        .btn-success { background: #198754; color: #fff; }
+        .btn-secondary { background: #6c757d; color: #fff; }
+
+        /* ── Ocultar acciones al imprimir ── */
+        @media print {
+            body { background: #fff; padding: 0; }
+            .contract-wrapper { border: none; box-shadow: none; border-radius: 0; padding: 20mm 20mm; }
+            .action-bar { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Barra de acciones (pantalla) -->
+    <div class="action-bar">
+        <button class="btn btn-primary" onclick="window.print()">
+            🖨️ Imprimir / Guardar PDF
+        </button>
+        {% if request.user == investment.investor %}
+        <a href="{% url 'upload_signed_contract' contract.id %}" class="btn btn-success">
+            📤 Subir Contrato Firmado
+        </a>
+        {% endif %}
+        <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+            ← Volver al Dashboard
+        </a>
+    </div>
+
+    <!-- Contrato -->
+    <div class="contract-wrapper">
+
+        <!-- Encabezado -->
+        <div class="contract-header">
+            <div class="logo-title">CrowdMentor</div>
+            <div class="doc-type">Contrato de Inversión</div>
+            <div class="doc-number">
+                N.° CM-{{ contract.id|stringformat:"06d" }} &nbsp;|&nbsp;
+                Generado el {{ contract.generated_at|date:"d \d\e F \d\e Y" }}
+            </div>
+            <div class="badge-generated">⏳ Pendiente de firma y carga</div>
+        </div>
+
+        <!-- Objeto del contrato -->
+        <div class="section">
+            <div class="section-title">1. Objeto del Contrato</div>
+            <div class="clause">
+                <p>
+                    El presente contrato regula los términos y condiciones bajo los cuales el
+                    <strong>Inversionista</strong> realiza una aportación económica al proyecto denominado
+                    <strong>"{{ investment.project.title }}"</strong>, gestionado por el
+                    <strong>Emprendedor</strong>, a través de la plataforma CrowdMentor.
+                </p>
+            </div>
+        </div>
+
+        <!-- Partes -->
+        <div class="section">
+            <div class="section-title">2. Partes del Contrato</div>
+            <table class="parties-table">
+                <tr>
+                    <td class="label">Emprendedor (Receptor)</td>
+                    <td>
+                        <strong>{{ investment.project.owner.get_full_name|default:investment.project.owner.username }}</strong><br>
+                        Usuario: {{ investment.project.owner.username }}<br>
+                        Correo: {{ investment.project.owner.email }}
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">Inversionista (Aportante)</td>
+                    <td>
+                        <strong>{{ investment.investor.get_full_name|default:investment.investor.username }}</strong><br>
+                        Usuario: {{ investment.investor.username }}<br>
+                        Correo: {{ investment.investor.email }}
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Términos económicos -->
+        <div class="section">
+            <div class="section-title">3. Términos Económicos de la Inversión</div>
+            <table class="terms-table">
+                <thead>
+                    <tr>
+                        <th>Concepto</th>
+                        <th>Valor</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Proyecto</td>
+                        <td class="value">{{ investment.project.title }}</td>
+                    </tr>
+                    <tr>
+                        <td>Monto Invertido</td>
+                        <td class="value">{{ investment.amount|cop_currency }}</td>
+                    </tr>
+                    <tr>
+                        <td>Porcentaje de Participación (Equity)</td>
+                        <td class="value">{{ investment.equity_percentage }}%</td>
+                    </tr>
+                    <tr>
+                        <td>Meta de Financiación del Proyecto</td>
+                        <td class="value">{{ investment.project.funding_goal|cop_currency }}</td>
+                    </tr>
+                    <tr>
+                        <td>Monto Total Financiado a la Fecha</td>
+                        <td class="value">{{ investment.project.amount_raised|cop_currency }}</td>
+                    </tr>
+                    <tr>
+                        <td>Fecha de Aceptación de la Inversión</td>
+                        <td class="value">{{ investment.invested_at|date:"d/m/Y H:i" }}</td>
+                    </tr>
+                    {% if investment.project.profitability_time %}
+                    <tr>
+                        <td>Tiempo Estimado para Inicio de Rentabilidad</td>
+                        <td class="value">{{ investment.project.profitability_time }} {{ investment.project.profitability_unit }}</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Cláusulas -->
+        <div class="section">
+            <div class="section-title">4. Cláusulas y Obligaciones</div>
+
+            <div class="clause">
+                <span class="clause-number">4.1 Uso de los Fondos.</span>
+                El Emprendedor se compromete a destinar los fondos aportados exclusivamente al
+                desarrollo y operación del proyecto descrito en la plataforma CrowdMentor, sin
+                desviarlos a actividades ajenas al objeto del proyecto.
+            </div>
+
+            <div class="clause">
+                <span class="clause-number">4.2 Participación del Inversionista.</span>
+                El Inversionista adquiere una participación del <strong>{{ investment.equity_percentage }}%</strong>
+                sobre los eventuales beneficios y/o valor del proyecto, proporcional al monto aportado,
+                según los términos acordados entre las partes.
+            </div>
+
+            <div class="clause">
+                <span class="clause-number">4.3 Transparencia e Informes.</span>
+                El Emprendedor se obliga a compartir información relevante sobre el avance del proyecto
+                al Inversionista, a través de los mecanismos disponibles en la plataforma CrowdMentor.
+            </div>
+
+            <div class="clause">
+                <span class="clause-number">4.4 Irrevocabilidad.</span>
+                Una vez firmado y cargado el presente contrato, la inversión se considerará irrevocable,
+                salvo acuerdo mutuo entre las partes o disposición legal aplicable.
+            </div>
+
+            <div class="clause">
+                <span class="clause-number">4.5 Confidencialidad.</span>
+                Ambas partes acuerdan mantener confidencialidad sobre los términos específicos de este
+                contrato frente a terceros no relacionados con el proyecto.
+            </div>
+
+            <div class="clause">
+                <span class="clause-number">4.6 Plataforma Intermediaria.</span>
+                CrowdMentor actúa únicamente como plataforma de conexión y no asume responsabilidad
+                directa sobre el resultado financiero del proyecto ni sobre el cumplimiento de
+                las obligaciones entre las partes.
+            </div>
+
+            <div class="clause">
+                <span class="clause-number">4.7 Ley Aplicable.</span>
+                Este contrato se rige por las leyes vigentes de la República de Colombia. Cualquier
+                controversia será resuelta en primera instancia por conciliación directa y, en su
+                defecto, por los tribunales competentes.
+            </div>
+        </div>
+
+        <!-- Instrucciones de firma -->
+        <div class="section">
+            <div class="section-title">5. Instrucciones para la Firma</div>
+            <p>Para que este contrato tenga plena validez dentro de la plataforma CrowdMentor:</p>
+            <ol style="line-height: 2;">
+                <li>Imprima este documento o guárdelo como PDF.</li>
+                <li>Firme en los espacios designados a continuación.</li>
+                <li>Solicite la firma del Emprendedor en el espacio correspondiente.</li>
+                <li>Escanee o fotografíe el documento firmado.</li>
+                <li>Súbalo a la plataforma usando el botón <strong>"Subir Contrato Firmado"</strong>.</li>
+            </ol>
+        </div>
+
+        <!-- Espacios de firma -->
+        <div class="signatures">
+            <div class="signature-block">
+                <div class="signature-space"></div>
+                <div class="signature-line"></div>
+                <div class="signature-label">Firma del Emprendedor</div>
+                <div class="signature-name">
+                    {{ investment.project.owner.get_full_name|default:investment.project.owner.username }}<br>
+                    C.C. _______________________<br>
+                    Fecha: _____________________
+                </div>
+            </div>
+            <div class="signature-block">
+                <div class="signature-space"></div>
+                <div class="signature-line"></div>
+                <div class="signature-label">Firma del Inversionista</div>
+                <div class="signature-name">
+                    {{ investment.investor.get_full_name|default:investment.investor.username }}<br>
+                    C.C. _______________________<br>
+                    Fecha: _____________________
+                </div>
+            </div>
+        </div>
+
+        <!-- Pie de página -->
+        <div class="contract-footer">
+            <p>
+                Documento generado automáticamente por CrowdMentor &nbsp;|&nbsp;
+                Contrato N.° CM-{{ contract.id|stringformat:"06d" }} &nbsp;|&nbsp;
+                {{ contract.generated_at|date:"d/m/Y H:i" }} UTC
+            </p>
+            <p>
+                Este documento es válido únicamente cuando esté debidamente firmado por ambas partes
+                y cargado en la plataforma CrowdMentor.
+            </p>
+        </div>
+
+    </div>
+
+</body>
+</html>

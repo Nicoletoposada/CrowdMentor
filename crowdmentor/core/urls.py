@@ -77,4 +77,8 @@ urlpatterns = [
     path('ai-assistant/<int:session_id>/chat/', views.ai_project_assistant_session, name='ai_project_chat'),
     path('ai-assistant/<int:session_id>/use/', views.ai_project_use_data, name='ai_project_use_data'),
     path('ai-assistant/<int:session_id>/delete/', views.ai_project_session_delete, name='ai_project_session_delete'),
+
+    # ── Contratos de inversión ──
+    path('contracts/<int:contract_id>/', views.view_investment_contract, name='view_investment_contract'),
+    path('contracts/<int:contract_id>/upload/', views.upload_signed_contract, name='upload_signed_contract'),
 ]

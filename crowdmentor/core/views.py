@@ -8,7 +8,7 @@ from django.views import View # type: ignore
 from django.contrib.auth.models import User, Group # type: ignore
 from django.http import JsonResponse, HttpResponse # type: ignore
 from .forms import CustomUserCreationForm, ProjectForm, InvestmentForm, LoginForm, ResourceForm, ResourceCategoryForm, ProjectSearchForm, ProjectEvaluationForm, CriterionScoreForm, ProjectRatingForm, ProjectCategoryForm, MentorInvestorConnectionForm, MentorInvestorMessageForm, ConnectionSearchForm, MentorshipMessageForm, UserEditForm, ProfileEditForm, PasswordChangeCustomForm
-from .models import Project, Investment, Mentorship, Profile, Message, UploadedFile, Resource, ResourceCategory, ProjectCategory, ProjectEvaluation, EvaluationCriteria, CriterionScore, ProjectRating, Notification, MentorInvestorConnection, MentorInvestorMessage, AIProjectSession
+from .models import Project, Investment, Mentorship, Profile, Message, UploadedFile, Resource, ResourceCategory, ProjectCategory, ProjectEvaluation, EvaluationCriteria, CriterionScore, ProjectRating, Notification, MentorInvestorConnection, MentorInvestorMessage, AIProjectSession, InvestmentContract
 from django.db.models import Q, Avg, Count, Sum # type: ignore
 from django.views.decorators.http import require_POST # type: ignore
 from django.core.files.storage import default_storage # type: ignore
@@ -718,18 +718,32 @@ def manage_investment(request, investment_id):
         project = investment.project
         project.amount_raised += investment.amount
         project.save()
-        
-        # Crear notificación para el inversionista
+
+        # Generar contrato de inversión
+        contract = InvestmentContract.objects.create(investment=investment)
+
+        # Crear notificación para el inversionista con enlace al contrato
+        from django.urls import reverse
+        contract_url = reverse('view_investment_contract', args=[contract.id])
+        upload_url = reverse('upload_signed_contract', args=[contract.id])
         Notification.objects.create(
             user=investment.investor,
-            title='¡Inversión aceptada!',
-            message=f'Tu inversión de ${investment.amount:,.0f} COP en "{project.title}" ha sido aceptada.',
+            title='¡Inversión aceptada! Contrato generado',
+            message=(
+                f'Tu inversión de ${investment.amount:,.0f} COP en "{project.title}" ha sido aceptada. '
+                f'Se ha generado un contrato de inversión. '
+                f'Por favor, descárgalo, fírmalo y súbelo firmado a la plataforma.'
+            ),
             notification_type='investment',
             related_project=project,
-            related_investment=investment
+            related_investment=investment,
         )
 
-        messages.success(request, 'Has aceptado la inversión. El monto ha sido sumado al proyecto.')
+        messages.success(
+            request,
+            f'Has aceptado la inversión. Se ha generado un contrato (N.° CM-{contract.id:06d}) '
+            f'para el inversionista.'
+        )
     elif action == 'reject':
         investment.status = 'rejected'
         investment.save()
@@ -2422,3 +2436,80 @@ def ai_project_session_delete(request, session_id):
         messages.success(request, 'Sesión eliminada.')
         return redirect('ai_project_assistant')
     return redirect('ai_project_assistant')
+
+
+# ─────────────────────────────────────────────────────────────
+# Contratos de inversión
+# ─────────────────────────────────────────────────────────────
+
+@login_required
+def view_investment_contract(request, contract_id):
+    """Muestra el contrato de inversión para impresión."""
+    from .models import InvestmentContract
+    contract = get_object_or_404(InvestmentContract, id=contract_id)
+    investment = contract.investment
+
+    # Solo el emprendedor o el inversionista pueden ver el contrato
+    if request.user != investment.project.owner and request.user != investment.investor:
+        messages.error(request, 'No tienes permiso para ver este contrato.')
+        return redirect('dashboard')
+
+    return render(request, 'investment_contract.html', {
+        'contract': contract,
+        'investment': investment,
+    })
+
+
+@login_required
+def upload_signed_contract(request, contract_id):
+    """Permite al inversionista subir el contrato firmado."""
+    from .models import InvestmentContract
+    contract = get_object_or_404(InvestmentContract, id=contract_id)
+    investment = contract.investment
+
+    # Solo el inversionista puede subir el contrato firmado
+    if request.user != investment.investor:
+        messages.error(request, 'Solo el inversionista puede subir el contrato firmado.')
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        signed_file = request.FILES.get('signed_document')
+        if not signed_file:
+            messages.error(request, 'Por favor selecciona un archivo.')
+            return render(request, 'upload_signed_contract.html', {'contract': contract})
+
+        # Validar tamaño (máx. 10 MB)
+        if signed_file.size > 10 * 1024 * 1024:
+            messages.error(request, 'El archivo no puede superar 10 MB.')
+            return render(request, 'upload_signed_contract.html', {'contract': contract})
+
+        # Validar extensión
+        allowed_ext = {'.pdf', '.jpg', '.jpeg', '.png'}
+        import os
+        ext = os.path.splitext(signed_file.name)[1].lower()
+        if ext not in allowed_ext:
+            messages.error(request, 'Formato no permitido. Usa PDF, JPG o PNG.')
+            return render(request, 'upload_signed_contract.html', {'contract': contract})
+
+        contract.signed_document = signed_file
+        contract.status = 'signed_uploaded'
+        contract.signed_at = timezone.now()
+        contract.save()
+
+        # Notificar al emprendedor
+        Notification.objects.create(
+            user=investment.project.owner,
+            title='Contrato firmado recibido',
+            message=(
+                f'{investment.investor.username} ha subido el contrato firmado '
+                f'para la inversión en "{investment.project.title}".'
+            ),
+            notification_type='investment',
+            related_project=investment.project,
+            related_investment=investment,
+        )
+
+        messages.success(request, '¡Contrato firmado subido correctamente! El emprendedor ha sido notificado.')
+        return redirect('dashboard')
+
+    return render(request, 'upload_signed_contract.html', {'contract': contract})

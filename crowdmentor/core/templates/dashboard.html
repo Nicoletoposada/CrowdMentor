@@ -153,6 +153,49 @@
             {% endfor %}
         </div>
 
+        <h3 class="text-primary mt-4">Contratos de Inversión</h3>
+        <div class="row">
+            {% for investment in investments %}
+                {% if investment.status == 'accepted' and investment.contract %}
+                    <div class="col-md-6 mb-4">
+                        <div class="card shadow-sm border-0">
+                            <div class="card-body">
+                                <h6 class="card-title text-primary mb-1">
+                                    <i class="fas fa-file-contract me-1"></i>
+                                    Contrato N.° CM-{{ investment.contract.id|stringformat:"06d" }}
+                                </h6>
+                                <p class="text-muted mb-1 small">Inversionista: <strong>{{ investment.investor.username }}</strong></p>
+                                <p class="text-muted mb-2 small">Monto: {{ investment.amount|cop_currency }}</p>
+                                {% if investment.contract.status == 'generated' %}
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="fas fa-clock me-1"></i>Esperando contrato firmado
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check-double me-1"></i>Contrato firmado recibido
+                                    </span>
+                                    {% if investment.contract.signed_document %}
+                                        <div class="mt-2">
+                                            <a href="{{ investment.contract.signed_document.url }}"
+                                               class="btn btn-outline-success btn-sm" target="_blank">
+                                                <i class="fas fa-download me-1"></i>Descargar Contrato Firmado
+                                            </a>
+                                        </div>
+                                    {% endif %}
+                                {% endif %}
+                                <div class="mt-2">
+                                    <a href="{% url 'view_investment_contract' investment.contract.id %}"
+                                       class="btn btn-outline-primary btn-sm" target="_blank">
+                                        <i class="fas fa-eye me-1"></i>Ver Contrato
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            {% empty %}{% endfor %}
+        </div>
+
     {% elif profile.user_type == 'mentor' %}
         <div class="text-end mb-3">
             <a href="{% url 'mentor_metrics' %}" class="btn btn-outline-warning">
@@ -394,6 +437,44 @@
                             <h5 class="card-title text-primary">{{ investment.project.title }}</h5>
                             <p class="card-text text-muted">Monto: {{ investment.amount|cop_currency }}</p>
                             <p class="card-text text-muted">Participación: {{ investment.equity_percentage }}%</p>
+                            <!-- Estado de la inversión -->
+                            {% if investment.status == 'pending' %}
+                                <span class="badge bg-warning text-dark mb-2">
+                                    <i class="fas fa-clock me-1"></i>Pendiente de aceptación
+                                </span>
+                            {% elif investment.status == 'accepted' %}
+                                <span class="badge bg-success mb-2">
+                                    <i class="fas fa-check-circle me-1"></i>Aceptada
+                                </span>
+                            {% elif investment.status == 'rejected' %}
+                                <span class="badge bg-danger mb-2">
+                                    <i class="fas fa-times-circle me-1"></i>Rechazada
+                                </span>
+                            {% endif %}
+                            <!-- Contrato -->
+                            {% if investment.status == 'accepted' %}
+                                {% if investment.contract %}
+                                    <div class="mt-2 d-flex flex-wrap gap-2">
+                                        <a href="{% url 'view_investment_contract' investment.contract.id %}"
+                                           class="btn btn-outline-primary btn-sm" target="_blank">
+                                            <i class="fas fa-file-contract me-1"></i>Ver Contrato
+                                        </a>
+                                        {% if investment.contract.status == 'generated' %}
+                                            <a href="{% url 'upload_signed_contract' investment.contract.id %}"
+                                               class="btn btn-success btn-sm">
+                                                <i class="fas fa-upload me-1"></i>Subir Firmado
+                                            </a>
+                                            <span class="badge bg-warning text-dark align-self-center">
+                                                <i class="fas fa-exclamation-circle me-1"></i>Pendiente de firma
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-success align-self-center">
+                                                <i class="fas fa-check-double me-1"></i>Contrato firmado y cargado
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            {% endif %}
                         </div>
                     </div>
                 </div>

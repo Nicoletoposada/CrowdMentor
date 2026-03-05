@@ -493,3 +493,28 @@ class AIProjectSession(models.Model):
     def get_last_n_messages(self, n: int = 20):
         """Devuelve los últimos N mensajes para contexto."""
         return self.messages[-n:] if len(self.messages) > n else self.messages
+
+
+class InvestmentContract(models.Model):
+    """Contrato de inversión generado cuando el emprendedor acepta una inversión."""
+    CONTRACT_STATUS = [
+        ('generated', 'Generado'),
+        ('signed_uploaded', 'Firmado y Subido'),
+    ]
+
+    investment = models.OneToOneField(
+        Investment, on_delete=models.CASCADE, related_name='contract'
+    )
+    generated_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, choices=CONTRACT_STATUS, default='generated')
+
+    # Archivo del contrato firmado (subido por el inversionista)
+    signed_document = models.FileField(
+        upload_to='contracts/signed/%Y/%m/',
+        blank=True, null=True,
+        help_text='Documento firmado subido por el inversionista'
+    )
+    signed_at = models.DateTimeField(blank=True, null=True)
+
+    def __str__(self):
+        return f"Contrato – {self.investment.investor.username} / {self.investment.project.title}"
