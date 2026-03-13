@@ -391,6 +391,11 @@ def project_detail(request, pk):
             return redirect('project_detail', pk=project.pk)
             
         if request.user.profile.user_type == 'investor' and 'invest' in request.POST:
+            # Verificar que el proyecto no esté financiado o completado
+            if project.status in ('funded', 'completed'):
+                messages.error(request, 'Este proyecto ya alcanzó su meta de financiación y no acepta más inversiones.')
+                return redirect('project_detail', pk=project.pk)
+
             investment_form = InvestmentForm(request.POST)
             if investment_form.is_valid():
                 # Verificar que el usuario no sea el dueño del proyecto
@@ -454,7 +459,11 @@ def project_detail(request, pk):
     avg_rating = ratings.aggregate(Avg('rating'))['rating__avg'] or 0
     evaluations = project.evaluations.all()
     avg_evaluation = evaluations.aggregate(Avg('overall_score'))['overall_score__avg'] or 0
-    
+
+    # Participantes del proyecto (para proyectos financiados/completados)
+    accepted_mentors = Mentorship.objects.filter(project=project, status='accepted').select_related('mentor__profile')
+    accepted_investors = Investment.objects.filter(project=project, status='accepted').select_related('investor__profile')
+
     context = {
         'project': project,
         'investment_form': investment_form,
@@ -466,6 +475,8 @@ def project_detail(request, pk):
         'evaluations': evaluations,
         'avg_evaluation': avg_evaluation,
         'funding_percentage': project.get_funding_percentage(),
+        'accepted_mentors': accepted_mentors,
+        'accepted_investors': accepted_investors,
     }
     
     return render(request, 'project_detail.html', context)
@@ -659,6 +670,18 @@ def admin_toggle_investment(request, investment_id):
                 project.amount_raised = Investment.objects.filter(
                     project=project, status='accepted'
                 ).aggregate(total=Sum('amount'))['total'] or 0
+
+                # Verificar si se alcanzó la meta de financiación
+                if project.amount_raised >= project.funding_goal and project.status not in ('funded', 'completed'):
+                    project.status = 'funded'
+                    Notification.objects.create(
+                        user=project.owner,
+                        title='¡Meta de financiación alcanzada!',
+                        message=f'Tu proyecto "{project.title}" ha alcanzado su meta de financiación de {project.funding_goal:,.0f} COP. El proyecto ahora está completado.',
+                        notification_type='project_update',
+                        related_project=project,
+                    )
+
                 project.save()
         elif action == 'reject':
             if investment.status == 'accepted':
@@ -717,6 +740,19 @@ def manage_investment(request, investment_id):
         # Sumar el monto de la inversión al proyecto
         project = investment.project
         project.amount_raised += investment.amount
+
+        # Verificar si se alcanzó la meta de financiación
+        if project.amount_raised >= project.funding_goal and project.status not in ('funded', 'completed'):
+            project.status = 'funded'
+            # Notificar al emprendedor que su proyecto fue financiado
+            Notification.objects.create(
+                user=project.owner,
+                title='¡Meta de financiación alcanzada!',
+                message=f'Tu proyecto "{project.title}" ha alcanzado su meta de financiación de {project.funding_goal:,.0f} COP. El proyecto ahora está completado.',
+                notification_type='project_update',
+                related_project=project,
+            )
+
         project.save()
 
         # Generar contrato de inversión

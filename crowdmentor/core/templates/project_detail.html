@@ -76,7 +76,104 @@
                     </div>
                 </div>
 
-                {% if user.is_authenticated and user.profile.user_type == 'investor' and user != project.owner %}
+                {% if project.status == 'funded' or project.status == 'completed' %}
+                    <!-- Banner: Meta alcanzada -->
+                    <div class="alert alert-success mt-4 d-flex align-items-center" role="alert">
+                        <i class="fas fa-trophy fa-2x me-3"></i>
+                        <div>
+                            <h5 class="mb-1">¡Meta de financiación alcanzada!</h5>
+                            <p class="mb-0">Este proyecto ha completado su proceso de financiación y ya no acepta nuevas inversiones.</p>
+                        </div>
+                    </div>
+
+                    <!-- Sección de participantes -->
+                    <div class="participants-section mt-4 animate__animated animate__fadeInUp">
+                        <h3 class="text-primary mb-4">
+                            <i class="fas fa-users me-2"></i>Participantes del Proyecto
+                        </h3>
+
+                        <!-- Emprendedor -->
+                        <div class="card border-0 shadow-sm mb-3">
+                            <div class="card-header bg-primary text-white fw-semibold">
+                                <i class="fas fa-lightbulb me-2"></i>Emprendedor
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    {% if project.owner.profile.profile_picture %}
+                                        <img src="{{ project.owner.profile.profile_picture.url }}" class="rounded-circle me-3" width="50" height="50" alt="{{ project.owner.username }}" style="object-fit:cover;">
+                                    {% else %}
+                                        <i class="fas fa-user-circle fa-3x text-primary me-3"></i>
+                                    {% endif %}
+                                    <div>
+                                        <h6 class="mb-0">{{ project.owner.get_full_name|default:project.owner.username }}</h6>
+                                        {% if project.owner.profile.location %}
+                                            <small class="text-muted">{{ project.owner.profile.location }}</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Mentores -->
+                        {% if accepted_mentors %}
+                        <div class="card border-0 shadow-sm mb-3">
+                            <div class="card-header bg-info text-white fw-semibold">
+                                <i class="fas fa-chalkboard-teacher me-2"></i>Mentores
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    {% for mentorship in accepted_mentors %}
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            {% if mentorship.mentor.profile.profile_picture %}
+                                                <img src="{{ mentorship.mentor.profile.profile_picture.url }}" class="rounded-circle me-3" width="45" height="45" alt="{{ mentorship.mentor.username }}" style="object-fit:cover;">
+                                            {% else %}
+                                                <i class="fas fa-user-circle fa-2x text-info me-3"></i>
+                                            {% endif %}
+                                            <div>
+                                                <h6 class="mb-0">{{ mentorship.mentor.get_full_name|default:mentorship.mentor.username }}</h6>
+                                                {% if mentorship.mentor.profile.location %}
+                                                    <small class="text-muted">{{ mentorship.mentor.profile.location }}</small>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Inversionistas -->
+                        {% if accepted_investors %}
+                        <div class="card border-0 shadow-sm mb-3">
+                            <div class="card-header bg-success text-white fw-semibold">
+                                <i class="fas fa-hand-holding-usd me-2"></i>Inversionistas
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    {% for investment in accepted_investors %}
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            {% if investment.investor.profile.profile_picture %}
+                                                <img src="{{ investment.investor.profile.profile_picture.url }}" class="rounded-circle me-3" width="45" height="45" alt="{{ investment.investor.username }}" style="object-fit:cover;">
+                                            {% else %}
+                                                <i class="fas fa-user-circle fa-2x text-success me-3"></i>
+                                            {% endif %}
+                                            <div>
+                                                <h6 class="mb-0">{{ investment.investor.get_full_name|default:investment.investor.username }}</h6>
+                                                <small class="text-success fw-semibold">${{ investment.amount|floatformat:0 }} COP &mdash; {{ investment.equity_percentage }}% equity</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                {% elif user.is_authenticated and user.profile.user_type == 'investor' and user != project.owner %}
                     <div class="investment-section mt-5 animate__animated animate__fadeInUp">
                         <h3 class="text-primary mb-4">
                             <i class="fas fa-hand-holding-usd me-2"></i>Invertir en este Proyecto
