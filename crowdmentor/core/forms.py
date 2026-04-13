@@ -2,6 +2,8 @@
 from django import forms # type: ignore
 from django.contrib.auth.forms import UserCreationForm # type: ignore
 from django.contrib.auth.models import User # type: ignore
+from django.db.models import Sum # type: ignore
+from decimal import Decimal
 from .models import Profile, Project, Investment, Resource, ResourceCategory, ProjectCategory, ProjectEvaluation, EvaluationCriteria, CriterionScore, ProjectRating, MentorInvestorConnection, MentorInvestorMessage, Message
 
 class MultipleFileInput(forms.ClearableFileInput):
@@ -135,6 +137,10 @@ class ProjectForm(forms.ModelForm):
         return value
 
 class InvestmentForm(forms.ModelForm):
+    def __init__(self, *args, project=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.project = project
+
     class Meta:
         model = Investment
         fields = ['amount', 'equity_percentage']
@@ -167,12 +173,45 @@ class InvestmentForm(forms.ModelForm):
         if value is not None:
             cleaned = str(value).replace(',', '').replace('.', '')
             try:
-                from decimal import Decimal
                 return Decimal(cleaned)
             except Exception:
                 from django.core.exceptions import ValidationError
                 raise ValidationError('Ingresa un valor numérico válido.')
         return value
+
+    def clean(self):
+        cleaned_data = super().clean()
+        amount = cleaned_data.get('amount')
+
+        if not amount or not self.project:
+            return cleaned_data
+
+        funding_goal = self.project.funding_goal or Decimal('0')
+
+        if amount > funding_goal:
+            self.add_error(
+                'amount',
+                f'No puedes invertir más que la meta de financiación del proyecto ({funding_goal:,.0f} COP).'
+            )
+            return cleaned_data
+
+        current_total = Investment.objects.filter(
+            project=self.project,
+            status__in=['pending', 'accepted']
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+
+        remaining = funding_goal - current_total
+        if remaining <= 0:
+            self.add_error('amount', 'Este proyecto ya no tiene cupo disponible para nuevas inversiones.')
+            return cleaned_data
+
+        if amount > remaining:
+            self.add_error(
+                'amount',
+                f'La inversión supera el cupo disponible. Máximo permitido actualmente: {remaining:,.0f} COP.'
+            )
+
+        return cleaned_data
 
 class LoginForm(forms.Form):
     username = forms.CharField(

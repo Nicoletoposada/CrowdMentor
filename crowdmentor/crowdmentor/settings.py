@@ -139,9 +139,9 @@ LOGIN_REDIRECT_URL = '/dashboard/'
 LOGOUT_REDIRECT_URL = '/'
 LOGIN_URL = '/login/'
 
-# ─── Asistente IA (Google Gemini) ───
-# Obtén tu clave gratuita en: https://aistudio.google.com/app/apikey
-# Luego reemplaza el valor o defínelo como variable de entorno:
-#   set GEMINI_API_KEY=tu_clave  (Windows)
 import os
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')  # Reemplaza '' con tu clave si no usas env vars
+
+# ─── Asistente IA local (Ollama, sin API key) ───
+# El servicio local de Ollama normalmente escucha en http://127.0.0.1:11434
+OLLAMA_BASE_URL = os.environ.get('OLLAMA_BASE_URL', 'http://127.0.0.1:11434')
+OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'qwen2.5:7b-instruct')

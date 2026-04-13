@@ -13,6 +13,11 @@ from django.db.models import Q, Avg, Count, Sum # type: ignore
 from django.views.decorators.http import require_POST # type: ignore
 from django.core.files.storage import default_storage # type: ignore
 from django.core.files.base import ContentFile # type: ignore
+from decimal import Decimal, ROUND_HALF_UP
+from urllib import request as urllib_request
+from urllib.error import URLError, HTTPError
+import json
+import socket
 
 from django.utils import timezone # type: ignore
 
@@ -373,7 +378,7 @@ def project_detail(request, pk):
     project.save()
     
     # Formularios
-    investment_form = InvestmentForm()
+    investment_form = InvestmentForm(project=project)
     rating_form = ProjectRatingForm()
     
     # Obtener rating del usuario actual si existe
@@ -396,7 +401,7 @@ def project_detail(request, pk):
                 messages.error(request, 'Este proyecto ya alcanzó su meta de financiación y no acepta más inversiones.')
                 return redirect('project_detail', pk=project.pk)
 
-            investment_form = InvestmentForm(request.POST)
+            investment_form = InvestmentForm(request.POST, project=project)
             if investment_form.is_valid():
                 # Verificar que el usuario no sea el dueño del proyecto
                 if request.user == project.owner:
@@ -412,6 +417,19 @@ def project_detail(request, pk):
                 
                 if existing_investment:
                     messages.warning(request, 'Ya tienes una inversión pendiente o activa en este proyecto.')
+                    return redirect('project_detail', pk=project.pk)
+
+                # Segunda barrera para evitar sobrepasar la meta por concurrencia.
+                current_total = Investment.objects.filter(
+                    project=project,
+                    status__in=['pending', 'accepted']
+                ).aggregate(total=Sum('amount'))['total'] or 0
+                remaining = project.funding_goal - current_total
+                if investment_form.cleaned_data['amount'] > remaining:
+                    messages.error(
+                        request,
+                        f'La inversión supera el cupo disponible. Máximo permitido actualmente: {remaining:,.0f} COP.'
+                    )
                     return redirect('project_detail', pk=project.pk)
                 
                 investment = investment_form.save(commit=False)
@@ -663,10 +681,21 @@ def admin_toggle_investment(request, investment_id):
         action = request.POST.get('action')
         if action == 'accept':
             if investment.status != 'accepted':
+                project = investment.project
+                accepted_total = Investment.objects.filter(
+                    project=project,
+                    status='accepted'
+                ).exclude(id=investment.id).aggregate(total=Sum('amount'))['total'] or 0
+
+                available = project.funding_goal - accepted_total
+                if investment.amount > available:
+                    return JsonResponse({
+                        'error': f'No se puede aceptar: excede la meta del proyecto. Cupo disponible: {available:,.0f} COP.'
+                    }, status=400)
+
                 investment.status = 'accepted'
                 investment.is_accepted = True
                 investment.save()
-                project = investment.project
                 project.amount_raised = Investment.objects.filter(
                     project=project, status='accepted'
                 ).aggregate(total=Sum('amount'))['total'] or 0
@@ -733,13 +762,33 @@ def manage_investment(request, investment_id):
     action = request.POST.get('action')
 
     if action == 'accept':
+        if investment.status == 'accepted':
+            messages.info(request, 'Esta inversión ya fue aceptada anteriormente.')
+            return redirect('dashboard')
+
+        project = investment.project
+        accepted_total = Investment.objects.filter(
+            project=project,
+            status='accepted'
+        ).exclude(id=investment.id).aggregate(total=Sum('amount'))['total'] or 0
+        available = project.funding_goal - accepted_total
+
+        if investment.amount > available:
+            messages.error(
+                request,
+                f'No se puede aceptar esta inversión porque supera la meta del proyecto. Cupo disponible: {available:,.0f} COP.'
+            )
+            return redirect('dashboard')
+
         investment.status = 'accepted'
         investment.is_accepted = True
         investment.save()
 
-        # Sumar el monto de la inversión al proyecto
-        project = investment.project
-        project.amount_raised += investment.amount
+        # Recalcular el monto financiado solo con inversiones aceptadas.
+        project.amount_raised = Investment.objects.filter(
+            project=project,
+            status='accepted'
+        ).aggregate(total=Sum('amount'))['total'] or 0
 
         # Verificar si se alcanzó la meta de financiación
         if project.amount_raised >= project.funding_goal and project.status not in ('funded', 'completed'):
@@ -1090,6 +1139,8 @@ def login_view(request):
             user = authenticate(request, username=username, password=password)
             if user is not None:
                 login(request, user)
+                if user.is_superuser:
+                    return redirect('admin_dashboard')
                 return redirect('dashboard')
             else:
                 form.add_error(None, 'Usuario o contraseña incorrectos.')
@@ -2303,43 +2354,74 @@ IMPORTANTE:
 """
 
 
-def _get_gemini_response(session: AIProjectSession, user_message: str) -> str:
-    """Llama a la API de Gemini y devuelve la respuesta del modelo."""
-    api_key = getattr(settings, 'GEMINI_API_KEY', '')
-    if not api_key:
-        return (
-            '⚠️ El asistente de IA no está configurado. '
-            'El administrador debe configurar la clave GEMINI_API_KEY en settings.py. '
-            'Mientras tanto, puedes <a href="/project/create/">crear tu proyecto manualmente</a>.'
-        )
+def _get_ollama_response(session: AIProjectSession, user_message: str) -> str:
+    """Llama a Ollama local y devuelve la respuesta del modelo."""
+    base_url = getattr(settings, 'OLLAMA_BASE_URL', 'http://127.0.0.1:11434').rstrip('/')
+    model = getattr(settings, 'OLLAMA_MODEL', 'qwen2.5:7b-instruct')
+
+    def _build_payload(last_messages: int, num_predict: int) -> dict:
+        messages_payload = [{'role': 'system', 'content': PMI_SYSTEM_PROMPT}]
+        for msg in session.get_last_n_messages(last_messages):
+            role = 'user' if msg['role'] == 'user' else 'assistant'
+            messages_payload.append({'role': role, 'content': msg['content']})
+        messages_payload.append({'role': 'user', 'content': user_message})
+        return {
+            'model': model,
+            'messages': messages_payload,
+            'stream': False,
+            'options': {
+                'temperature': 0.7,
+                'num_predict': num_predict,
+            },
+        }
 
     try:
-        from google import genai  # type: ignore
-        from google.genai import types  # type: ignore
-
-        client = genai.Client(api_key=api_key)
-
-        # Construir historial para Gemini (role: user | model)
-        history = []
-        for msg in session.get_last_n_messages(18):
-            role = 'user' if msg['role'] == 'user' else 'model'
-            history.append(types.Content(role=role, parts=[types.Part(text=msg['content'])]))
-
-        # El mensaje actual del usuario
-        history.append(types.Content(role='user', parts=[types.Part(text=user_message)]))
-
-        response = client.models.generate_content(
-            model='gemini-2.0-flash',
-            contents=history,
-            config=types.GenerateContentConfig(
-                system_instruction=PMI_SYSTEM_PROMPT,
-                max_output_tokens=600,
-                temperature=0.7,
-            ),
+        req = urllib_request.Request(
+            url=f'{base_url}/api/chat',
+            data=json.dumps(_build_payload(last_messages=12, num_predict=260)).encode('utf-8'),
+            headers={'Content-Type': 'application/json'},
+            method='POST',
         )
-        return response.text or ''
+        with urllib_request.urlopen(req, timeout=180) as response:
+            body = response.read().decode('utf-8')
+            data = json.loads(body)
+            return data.get('message', {}).get('content', '').strip() or (
+                '⚠️ El modelo local respondió vacío. Inténtalo de nuevo.'
+            )
+    except (socket.timeout, TimeoutError):
+        # Reintento más liviano para equipos con CPU o memoria limitada.
+        try:
+            retry_req = urllib_request.Request(
+                url=f'{base_url}/api/chat',
+                data=json.dumps(_build_payload(last_messages=8, num_predict=140)).encode('utf-8'),
+                headers={'Content-Type': 'application/json'},
+                method='POST',
+            )
+            with urllib_request.urlopen(retry_req, timeout=180) as retry_response:
+                retry_body = retry_response.read().decode('utf-8')
+                retry_data = json.loads(retry_body)
+                return retry_data.get('message', {}).get('content', '').strip() or (
+                    '⚠️ El modelo local respondió vacío. Inténtalo de nuevo.'
+                )
+        except Exception:
+            return (
+                '⚠️ El modelo local tardó demasiado en responder. '
+                'Intenta con una pregunta más corta o vuelve a intentar en unos segundos.'
+            )
+    except HTTPError as exc:
+        return (
+            f'⚠️ Error HTTP de Ollama ({exc.code}). '
+            'Verifica que el modelo exista y esté cargado. '
+            'Mientras tanto, puedes <a href="/project/create/">crear tu proyecto manualmente</a>.'
+        )
+    except URLError:
+        return (
+            '⚠️ No se pudo conectar con Ollama local. '
+            'Verifica que el servicio esté activo en tu equipo. '
+            'Mientras tanto, puedes <a href="/project/create/">crear tu proyecto manualmente</a>.'
+        )
     except Exception as exc:
-        return f'⚠️ Ocurrió un error al contactar el asistente: {exc}. Por favor inténtalo de nuevo.'
+        return f'⚠️ Ocurrió un error al contactar el asistente local: {exc}. Por favor inténtalo de nuevo.'
 
 
 def _extract_project_data(ai_text: str) -> dict | None:
@@ -2405,8 +2487,8 @@ def ai_project_assistant_session(request, session_id):
         # Guardar mensaje del usuario
         session.add_message('user', user_message)
 
-        # Obtener respuesta del modelo
-        ai_response = _get_gemini_response(session, user_message)
+        # Obtener respuesta del modelo local
+        ai_response = _get_ollama_response(session, user_message)
 
         # Verificar si hay datos de proyecto generados
         project_data = _extract_project_data(ai_response)
@@ -2490,9 +2572,34 @@ def view_investment_contract(request, contract_id):
         messages.error(request, 'No tienes permiso para ver este contrato.')
         return redirect('dashboard')
 
+    investor_amount = investment.amount or Decimal('0')
+    investor_percentage = Decimal(str(investment.equity_percentage or 0))
+    funding_goal = investment.project.funding_goal or Decimal('0')
+
+    # El porcentaje del inversionista aplica sobre lo que invirtio.
+    investor_profit = (investor_amount * investor_percentage / Decimal('100')).quantize(
+        Decimal('0.01'),
+        rounding=ROUND_HALF_UP,
+    )
+    investor_total_return = (investor_amount + investor_profit).quantize(
+        Decimal('0.01'),
+        rounding=ROUND_HALF_UP,
+    )
+
+    # Comision de la plataforma sobre la meta de financiacion del proyecto.
+    platform_percentage = Decimal('10.00')
+    platform_amount = (funding_goal * platform_percentage / Decimal('100')).quantize(
+        Decimal('0.01'),
+        rounding=ROUND_HALF_UP,
+    )
+
     return render(request, 'investment_contract.html', {
         'contract': contract,
         'investment': investment,
+        'investor_profit': investor_profit,
+        'investor_total_return': investor_total_return,
+        'platform_percentage': platform_percentage,
+        'platform_amount': platform_amount,
     })
 
 

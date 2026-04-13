@@ -325,8 +325,20 @@
                         <td class="value">{{ investment.equity_percentage }}%</td>
                     </tr>
                     <tr>
+                        <td>Ganancia del Inversionista ({{ investment.equity_percentage }}% sobre lo invertido)</td>
+                        <td class="value">{{ investor_profit|cop_currency }}</td>
+                    </tr>
+                    <tr>
+                        <td>Retorno Total al Inversionista (Inversión + Ganancia)</td>
+                        <td class="value">{{ investor_total_return|cop_currency }}</td>
+                    </tr>
+                    <tr>
                         <td>Meta de Financiación del Proyecto</td>
                         <td class="value">{{ investment.project.funding_goal|cop_currency }}</td>
+                    </tr>
+                    <tr>
+                        <td>Participación de CrowdMentor ({{ platform_percentage }}% de la meta de financiación)</td>
+                        <td class="value">{{ platform_amount|cop_currency }}</td>
                     </tr>
                     <tr>
                         <td>Monto Total Financiado a la Fecha</td>
@@ -390,7 +402,27 @@
             </div>
 
             <div class="clause">
-                <span class="clause-number">4.7 Ley Aplicable.</span>
+                <span class="clause-number">4.7 Participación de CrowdMentor sobre la Meta del Proyecto.</span>
+                Las partes aceptan y declaran que, por el uso de la plataforma para la creación y
+                gestión del proyecto, CrowdMentor percibirá una participación equivalente al
+                <strong>{{ platform_percentage }}%</strong> del <strong>funding goal</strong> del proyecto.
+                Para este contrato, dicha participación corresponde a
+                <strong>{{ platform_amount|cop_currency }}</strong>, calculada sobre una meta de
+                <strong>{{ investment.project.funding_goal|cop_currency }}</strong>.
+            </div>
+
+            <div class="clause">
+                <span class="clause-number">4.8 Forma de Retorno del Inversionista.</span>
+                El retorno del inversionista se calculará sobre el monto efectivamente invertido.
+                En este caso, si el inversionista aporta
+                <strong>{{ investment.amount|cop_currency }}</strong> y acuerda un porcentaje de
+                <strong>{{ investment.equity_percentage }}%</strong>, su ganancia proyectada será
+                <strong>{{ investor_profit|cop_currency }}</strong>, para un retorno total estimado de
+                <strong>{{ investor_total_return|cop_currency }}</strong>.
+            </div>
+
+            <div class="clause">
+                <span class="clause-number">4.9 Ley Aplicable.</span>
                 Este contrato se rige por las leyes vigentes de la República de Colombia. Cualquier
                 controversia será resuelta en primera instancia por conciliación directa y, en su
                 defecto, por los tribunales competentes.

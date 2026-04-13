@@ -81,6 +81,21 @@
     transition: opacity .2s, transform .2s;
 }
 .btn-send:hover { opacity:.85; transform:scale(1.07); }
+.btn-send:disabled { opacity:.65; transform:none; cursor:not-allowed; }
+.request-status {
+    display: none;
+    margin-top: .6rem;
+    font-size: .85rem;
+    color: #6c757d;
+    align-items: center;
+    gap: .45rem;
+}
+.request-status.show { display: flex; }
+.request-status .spinner-border {
+    width: .95rem;
+    height: .95rem;
+    border-width: .15rem;
+}
 /* Project card (rendered when IA returns data) */
 .project-card-preview {
     border: 2px solid #667eea; border-radius: 1rem;
@@ -217,13 +232,19 @@
 
     <!-- ── INPUT AREA ── -->
     {% if session.status == 'active' %}
-    <div class="chat-footer d-flex gap-2 align-items-end">
-        <textarea id="user-input" class="form-control chat-input" rows="2"
-            placeholder="Escribe tu mensaje aquí… (Enter para enviar)"
-            maxlength="1500" autofocus></textarea>
-        <button class="btn-send" id="send-btn" title="Enviar">
-            <i class="fas fa-paper-plane"></i>
-        </button>
+    <div class="chat-footer">
+        <div class="d-flex gap-2 align-items-end">
+            <textarea id="user-input" class="form-control chat-input" rows="2"
+                placeholder="Escribe tu mensaje aquí… (Enter para enviar)"
+                maxlength="1500" autofocus></textarea>
+            <button class="btn-send" id="send-btn" title="Enviar">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+        <div class="request-status" id="request-status" aria-live="polite">
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            <span id="request-status-text">Cargando respuesta IA...</span>
+        </div>
     </div>
     {% else %}
     <div class="chat-footer text-center text-muted py-3">
@@ -247,6 +268,8 @@
     const userInput   = document.getElementById('user-input');
     const sendBtn     = document.getElementById('send-btn');
     const typingEl    = document.getElementById('typing-indicator');
+    const requestStatusEl = document.getElementById('request-status');
+    const requestStatusTextEl = document.getElementById('request-status-text');
 
     // ── Scroll to bottom ──
     function scrollBottom() {
@@ -279,6 +302,31 @@
     function setTyping(show) {
         typingEl.classList.toggle('show', show);
         if (show) scrollBottom();
+    }
+
+    function setLoadingState(loading, text) {
+        if (userInput) {
+            if (loading) {
+                userInput.setAttribute('disabled', true);
+            } else {
+                userInput.removeAttribute('disabled');
+            }
+        }
+        if (sendBtn) {
+            if (loading) {
+                sendBtn.setAttribute('disabled', true);
+                sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            } else {
+                sendBtn.removeAttribute('disabled');
+                sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+            }
+        }
+        if (requestStatusEl) {
+            requestStatusEl.classList.toggle('show', loading);
+        }
+        if (requestStatusTextEl && text) {
+            requestStatusTextEl.textContent = text;
+        }
     }
 
     // ── Show project preview card ──
@@ -349,8 +397,7 @@
         if (!text) return;
 
         userInput.value = '';
-        userInput.setAttribute('disabled', true);
-        sendBtn && sendBtn.setAttribute('disabled', true);
+        setLoadingState(true, 'Cargando respuesta IA...');
 
         appendBubble('user', renderText(text));
         setTyping(true);
@@ -381,8 +428,7 @@
             appendBubble('ai', `<span class="text-danger">Error de conexión. Intenta de nuevo.</span>`);
         }
 
-        userInput.removeAttribute('disabled');
-        sendBtn && sendBtn.removeAttribute('disabled');
+        setLoadingState(false);
         userInput.focus();
     }
 
