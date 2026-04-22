@@ -152,8 +152,15 @@ AI_READ_TIMEOUT_SECONDS = int(os.environ.get('AI_READ_TIMEOUT_SECONDS', '45'))
 
 # Fallback remoto opcional (OpenRouter compatible) para reducir dependencia de Ollama
 AI_ENABLE_REMOTE_FALLBACK = os.environ.get('AI_ENABLE_REMOTE_FALLBACK', 'true').lower() in ('1', 'true', 'yes', 'on', 'si', 'sí')
-AI_PREFER_REMOTE = os.environ.get('AI_PREFER_REMOTE', 'false').lower() in ('1', 'true', 'yes', 'on', 'si', 'sí')
-AI_REMOTE_API_URL = os.environ.get('AI_REMOTE_API_URL', 'https://openrouter.ai/api/v1/chat/completions')
-AI_REMOTE_MODEL = os.environ.get('AI_REMOTE_MODEL', 'openai/gpt-4o-mini')
-AI_REMOTE_API_KEY = os.environ.get('AI_REMOTE_API_KEY', '')
-AI_REMOTE_TIMEOUT_SECONDS = int(os.environ.get('AI_REMOTE_TIMEOUT_SECONDS', '35'))
+AI_PREFER_REMOTE = os.environ.get('AI_PREFER_REMOTE', 'true').lower() in ('1', 'true', 'yes', 'on', 'si', 'sí')
+
+# Backend remoto: Gemini API
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', os.environ.get('AI_REMOTE_API_KEY', ''))
+GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-2.0-flash')
+GEMINI_API_BASE_URL = os.environ.get('GEMINI_API_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta/models')
+GEMINI_TIMEOUT_SECONDS = int(os.environ.get('GEMINI_TIMEOUT_SECONDS', os.environ.get('AI_REMOTE_TIMEOUT_SECONDS', '35')))
+
+# Compatibilidad con variables previas
+AI_REMOTE_API_KEY = GEMINI_API_KEY
+AI_REMOTE_MODEL = GEMINI_MODEL
+AI_REMOTE_TIMEOUT_SECONDS = GEMINI_TIMEOUT_SECONDS

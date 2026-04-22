@@ -40,7 +40,49 @@ def resources(request):
 
 def home(request):
     projects = Project.objects.filter(is_active=True)
-    return render(request, 'home.html', {'projects': projects})
+
+    # Ranking de impacto con datos ficticios (siempre con nombres), 100 pts por proyecto.
+    entrepreneur_seed = [
+        ('Valentina Rojas', 5),
+        ('Santiago Mejia', 4),
+        ('Camila Torres', 3),
+        ('Andres Salazar', 2),
+        ('Laura Cardenas', 1),
+    ]
+    mentor_seed = [
+        ('Juan Pablo Diaz', 5),
+        ('Manuela Restrepo', 4),
+        ('Felipe Arango', 3),
+        ('Natalia Giraldo', 2),
+        ('David Quintero', 1),
+    ]
+
+    entrepreneur_ranking = [
+        {
+            'name': name,
+            'funded_projects': projects_count,
+            'points': projects_count * 100,
+        }
+        for name, projects_count in entrepreneur_seed
+    ]
+
+    mentor_ranking = [
+        {
+            'name': name,
+            'funded_projects': projects_count,
+            'points': projects_count * 100,
+        }
+        for name, projects_count in mentor_seed
+    ]
+
+    entrepreneur_ranking = sorted(entrepreneur_ranking, key=lambda item: item['points'], reverse=True)
+    mentor_ranking = sorted(mentor_ranking, key=lambda item: item['points'], reverse=True)
+
+    return render(request, 'home.html', {
+        'projects': projects,
+        'entrepreneur_ranking': entrepreneur_ranking,
+        'mentor_ranking': mentor_ranking,
+    })
 
 def ensure_project_categories():
     if ProjectCategory.objects.exists():
@@ -2358,8 +2400,11 @@ def _get_ollama_response(session: AIProjectSession, user_message: str) -> str:
     """Llama a Ollama local y devuelve la respuesta del modelo."""
     base_url = getattr(settings, 'OLLAMA_BASE_URL', 'http://127.0.0.1:11434').rstrip('/')
     model = getattr(settings, 'OLLAMA_MODEL', 'qwen2.5:7b-instruct')
+    connect_timeout = int(getattr(settings, 'AI_CONNECT_TIMEOUT_SECONDS', 15))
+    read_timeout = int(getattr(settings, 'AI_READ_TIMEOUT_SECONDS', 45))
+    total_timeout = max(connect_timeout + read_timeout, 30)
 
-    def _build_payload(last_messages: int, num_predict: int) -> dict:
+    def _build_payload(last_messages: int, num_predict: int, temperature: float = 0.7) -> dict:
         messages_payload = [{'role': 'system', 'content': PMI_SYSTEM_PROMPT}]
         for msg in session.get_last_n_messages(last_messages):
             role = 'user' if msg['role'] == 'user' else 'assistant'
@@ -2370,7 +2415,7 @@ def _get_ollama_response(session: AIProjectSession, user_message: str) -> str:
             'messages': messages_payload,
             'stream': False,
             'options': {
-                'temperature': 0.7,
+                'temperature': temperature,
                 'num_predict': num_predict,
             },
         }
@@ -2382,7 +2427,7 @@ def _get_ollama_response(session: AIProjectSession, user_message: str) -> str:
             headers={'Content-Type': 'application/json'},
             method='POST',
         )
-        with urllib_request.urlopen(req, timeout=180) as response:
+        with urllib_request.urlopen(req, timeout=total_timeout) as response:
             body = response.read().decode('utf-8')
             data = json.loads(body)
             return data.get('message', {}).get('content', '').strip() or (
@@ -2424,42 +2469,57 @@ def _get_ollama_response(session: AIProjectSession, user_message: str) -> str:
         return f'⚠️ Ocurrió un error al contactar el asistente local: {exc}. Por favor inténtalo de nuevo.'
 
 
+def _build_gemini_contents(session: AIProjectSession, user_message: str, last_messages: int = 8) -> list[dict]:
+    """Convierte el historial a formato de conversación de Gemini."""
+    contents = []
+    for msg in session.get_last_n_messages(last_messages):
+        role = 'user' if msg.get('role') == 'user' else 'model'
+        text = (msg.get('content') or '').strip()
+        if text:
+            contents.append({'role': role, 'parts': [{'text': text}]})
+
+    contents.append({'role': 'user', 'parts': [{'text': user_message}]})
+    return contents
+
+
 def _get_remote_llm_response(session: AIProjectSession, user_message: str) -> str:
-    """Fallback remoto opcional (OpenRouter compatible) para mejorar disponibilidad y calidad."""
-    api_key = getattr(settings, 'AI_REMOTE_API_KEY', '') or os.environ.get('AI_REMOTE_API_KEY', '')
+    """Backend remoto con Gemini vía API key."""
+    api_key = getattr(settings, 'GEMINI_API_KEY', '') or os.environ.get('GEMINI_API_KEY', '')
     if not api_key:
         return ''
 
-    api_url = getattr(settings, 'AI_REMOTE_API_URL', 'https://openrouter.ai/api/v1/chat/completions')
-    model = getattr(settings, 'AI_REMOTE_MODEL', 'openai/gpt-4o-mini')
-    timeout = int(getattr(settings, 'AI_REMOTE_TIMEOUT_SECONDS', 35))
+    api_base_url = getattr(settings, 'GEMINI_API_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta/models').rstrip('/')
+    model = getattr(settings, 'GEMINI_MODEL', 'gemini-2.0-flash')
+    timeout = int(getattr(settings, 'GEMINI_TIMEOUT_SECONDS', 35))
 
     payload = {
-        'model': model,
-        'messages': _build_llm_messages(session, user_message, last_messages=8),
-        'temperature': 0.45,
-        'max_tokens': 180,
+        'system_instruction': {
+            'parts': [{'text': PMI_SYSTEM_PROMPT}],
+        },
+        'contents': _build_gemini_contents(session, user_message, last_messages=8),
+        'generationConfig': {
+            'temperature': 0.45,
+            'maxOutputTokens': 220,
+        },
     }
 
     try:
         req = urllib_request.Request(
-            url=api_url,
+            url=f'{api_base_url}/{model}:generateContent?key={api_key}',
             data=json.dumps(payload).encode('utf-8'),
-            headers={
-                'Content-Type': 'application/json',
-                'Authorization': f'Bearer {api_key}',
-            },
+            headers={'Content-Type': 'application/json'},
             method='POST',
         )
         with urllib_request.urlopen(req, timeout=timeout) as response:
             body = response.read().decode('utf-8')
             data = json.loads(body)
-            return (
-                data.get('choices', [{}])[0]
-                .get('message', {})
-                .get('content', '')
-                .strip()
+            parts = (
+                data.get('candidates', [{}])[0]
+                .get('content', {})
+                .get('parts', [])
             )
+            text = ''.join(part.get('text', '') for part in parts).strip()
+            return text
     except Exception:
         return ''
 
@@ -2501,26 +2561,24 @@ def _build_local_guided_fallback(session: AIProjectSession) -> str:
 
 
 def _get_ai_response(session: AIProjectSession, user_message: str) -> tuple[str, str]:
-    """Orquesta backend IA: Ollama -> remoto opcional -> fallback guiado local."""
-    prefer_remote = getattr(settings, 'AI_PREFER_REMOTE', False)
-    enable_remote_fallback = getattr(settings, 'AI_ENABLE_REMOTE_FALLBACK', True)
+    """Responde solo con Gemini. Sin API key o sin respuesta, no genera contenido conversacional."""
+    gemini_api_key = getattr(settings, 'GEMINI_API_KEY', '') or os.environ.get('GEMINI_API_KEY', '')
+    if not gemini_api_key:
+        return (
+            '⚠️ El asistente IA está deshabilitado porque no hay API key de Gemini configurada. '
+            'Configura GEMINI_API_KEY para habilitar respuestas.',
+            'gemini-not-configured',
+        )
 
-    if prefer_remote:
-        remote_text = _get_remote_llm_response(session, user_message)
-        if remote_text:
-            return remote_text, 'remote'
+    remote_text = _get_remote_llm_response(session, user_message)
+    if remote_text:
+        return remote_text, 'gemini'
 
-    ollama_text = _get_ollama_response(session, user_message)
-    if ollama_text and not ollama_text.startswith('⚠️'):
-        return ollama_text, 'ollama'
-
-    if enable_remote_fallback:
-        remote_text = _get_remote_llm_response(session, user_message)
-        if remote_text:
-            return remote_text, 'remote'
-
-    guided = _build_local_guided_fallback(session)
-    return guided, 'guided-fallback'
+    return (
+        '⚠️ No se pudo obtener respuesta de Gemini en este momento. '
+        'Verifica tu API key, modelo o conexión e inténtalo de nuevo.',
+        'gemini-error',
+    )
 
 
 def _extract_project_data(ai_text: str) -> dict | None:
