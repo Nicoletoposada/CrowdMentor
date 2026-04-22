@@ -145,3 +145,15 @@ import os
 # El servicio local de Ollama normalmente escucha en http://127.0.0.1:11434
 OLLAMA_BASE_URL = os.environ.get('OLLAMA_BASE_URL', 'http://127.0.0.1:11434')
 OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'qwen2.5:7b-instruct')
+
+# Timeouts y estrategia para mejorar latencia
+AI_CONNECT_TIMEOUT_SECONDS = int(os.environ.get('AI_CONNECT_TIMEOUT_SECONDS', '15'))
+AI_READ_TIMEOUT_SECONDS = int(os.environ.get('AI_READ_TIMEOUT_SECONDS', '45'))
+
+# Fallback remoto opcional (OpenRouter compatible) para reducir dependencia de Ollama
+AI_ENABLE_REMOTE_FALLBACK = os.environ.get('AI_ENABLE_REMOTE_FALLBACK', 'true').lower() in ('1', 'true', 'yes', 'on', 'si', 'sí')
+AI_PREFER_REMOTE = os.environ.get('AI_PREFER_REMOTE', 'false').lower() in ('1', 'true', 'yes', 'on', 'si', 'sí')
+AI_REMOTE_API_URL = os.environ.get('AI_REMOTE_API_URL', 'https://openrouter.ai/api/v1/chat/completions')
+AI_REMOTE_MODEL = os.environ.get('AI_REMOTE_MODEL', 'openai/gpt-4o-mini')
+AI_REMOTE_API_KEY = os.environ.get('AI_REMOTE_API_KEY', '')
+AI_REMOTE_TIMEOUT_SECONDS = int(os.environ.get('AI_REMOTE_TIMEOUT_SECONDS', '35'))

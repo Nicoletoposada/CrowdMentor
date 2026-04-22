@@ -18,6 +18,7 @@ from urllib import request as urllib_request
 from urllib.error import URLError, HTTPError
 import json
 import socket
+import os
 
 from django.utils import timezone # type: ignore
 
@@ -42,7 +43,6 @@ def home(request):
     return render(request, 'home.html', {'projects': projects})
 
 def ensure_project_categories():
-    """Seed default project categories if none exist."""
     if ProjectCategory.objects.exists():
         return
 
@@ -2393,11 +2393,11 @@ def _get_ollama_response(session: AIProjectSession, user_message: str) -> str:
         try:
             retry_req = urllib_request.Request(
                 url=f'{base_url}/api/chat',
-                data=json.dumps(_build_payload(last_messages=8, num_predict=140)).encode('utf-8'),
+                data=json.dumps(_build_payload(last_messages=5, num_predict=110, temperature=0.45)).encode('utf-8'),
                 headers={'Content-Type': 'application/json'},
                 method='POST',
             )
-            with urllib_request.urlopen(retry_req, timeout=180) as retry_response:
+            with urllib_request.urlopen(retry_req, timeout=total_timeout) as retry_response:
                 retry_body = retry_response.read().decode('utf-8')
                 retry_data = json.loads(retry_body)
                 return retry_data.get('message', {}).get('content', '').strip() or (
@@ -2422,6 +2422,105 @@ def _get_ollama_response(session: AIProjectSession, user_message: str) -> str:
         )
     except Exception as exc:
         return f'⚠️ Ocurrió un error al contactar el asistente local: {exc}. Por favor inténtalo de nuevo.'
+
+
+def _get_remote_llm_response(session: AIProjectSession, user_message: str) -> str:
+    """Fallback remoto opcional (OpenRouter compatible) para mejorar disponibilidad y calidad."""
+    api_key = getattr(settings, 'AI_REMOTE_API_KEY', '') or os.environ.get('AI_REMOTE_API_KEY', '')
+    if not api_key:
+        return ''
+
+    api_url = getattr(settings, 'AI_REMOTE_API_URL', 'https://openrouter.ai/api/v1/chat/completions')
+    model = getattr(settings, 'AI_REMOTE_MODEL', 'openai/gpt-4o-mini')
+    timeout = int(getattr(settings, 'AI_REMOTE_TIMEOUT_SECONDS', 35))
+
+    payload = {
+        'model': model,
+        'messages': _build_llm_messages(session, user_message, last_messages=8),
+        'temperature': 0.45,
+        'max_tokens': 180,
+    }
+
+    try:
+        req = urllib_request.Request(
+            url=api_url,
+            data=json.dumps(payload).encode('utf-8'),
+            headers={
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {api_key}',
+            },
+            method='POST',
+        )
+        with urllib_request.urlopen(req, timeout=timeout) as response:
+            body = response.read().decode('utf-8')
+            data = json.loads(body)
+            return (
+                data.get('choices', [{}])[0]
+                .get('message', {})
+                .get('content', '')
+                .strip()
+            )
+    except Exception:
+        return ''
+
+
+def _build_local_guided_fallback(session: AIProjectSession) -> str:
+    """Respuesta local determinística para no bloquear al usuario si no hay motor IA disponible."""
+    user_turns = [m for m in session.messages if m.get('role') == 'user']
+    n = len(user_turns)
+
+    if n <= 1:
+        return (
+            '¡Buena base! Para aterrizar tu idea, dime en una frase: '
+            '¿qué problema real resuelves y para quién?'
+        )
+    if n == 2:
+        return (
+            'Perfecto, ya entendí el problema. Ahora vamos al mercado: '
+            '¿quién es tu cliente ideal (edad, perfil o tipo de negocio) y cómo lo contactas hoy?'
+        )
+    if n == 3:
+        return (
+            'Vamos bien. Cuéntame tu modelo de ingresos: '
+            '¿cómo cobrarás (suscripción, comisión, venta directa) y por qué te elegirán frente a otras opciones?'
+        )
+    if n == 4:
+        return (
+            'Siguiente paso: presupuesto inicial. '
+            '¿cuánto capital necesitas para arrancar y en qué 3 rubros principales lo invertirías?'
+        )
+    if n == 5:
+        return (
+            'Antes del resumen, identifiquemos riesgos: '
+            'menciona 2 riesgos clave (comercial, técnico o financiero) y cómo planeas mitigarlos.'
+        )
+    return (
+        'Con lo que tenemos, ya puedes continuar al formulario y pulir detalles finales. '
+        'Si quieres, responde con el tiempo estimado para llegar a rentabilidad (ej. 12 meses).'
+    )
+
+
+def _get_ai_response(session: AIProjectSession, user_message: str) -> tuple[str, str]:
+    """Orquesta backend IA: Ollama -> remoto opcional -> fallback guiado local."""
+    prefer_remote = getattr(settings, 'AI_PREFER_REMOTE', False)
+    enable_remote_fallback = getattr(settings, 'AI_ENABLE_REMOTE_FALLBACK', True)
+
+    if prefer_remote:
+        remote_text = _get_remote_llm_response(session, user_message)
+        if remote_text:
+            return remote_text, 'remote'
+
+    ollama_text = _get_ollama_response(session, user_message)
+    if ollama_text and not ollama_text.startswith('⚠️'):
+        return ollama_text, 'ollama'
+
+    if enable_remote_fallback:
+        remote_text = _get_remote_llm_response(session, user_message)
+        if remote_text:
+            return remote_text, 'remote'
+
+    guided = _build_local_guided_fallback(session)
+    return guided, 'guided-fallback'
 
 
 def _extract_project_data(ai_text: str) -> dict | None:
@@ -2487,8 +2586,8 @@ def ai_project_assistant_session(request, session_id):
         # Guardar mensaje del usuario
         session.add_message('user', user_message)
 
-        # Obtener respuesta del modelo local
-        ai_response = _get_ollama_response(session, user_message)
+        # Obtener respuesta IA con estrategia de fallback.
+        ai_response, response_backend = _get_ai_response(session, user_message)
 
         # Verificar si hay datos de proyecto generados
         project_data = _extract_project_data(ai_response)
@@ -2501,7 +2600,7 @@ def ai_project_assistant_session(request, session_id):
 
         session.add_message('assistant', clean_response)
 
-        response_payload = {'message': clean_response, 'project_data': None}
+        response_payload = {'message': clean_response, 'project_data': None, 'backend': response_backend}
 
         if project_data:
             session.generated_title = project_data.get('title', '')

@@ -8,6 +8,74 @@
 
 {% block content %}
 <div class="container py-5">
+    <!-- Rankings Section -->
+    <section class="mb-5">
+        <h2 class="section-title text-center mb-3">
+            Ranking de <span class="text-primary">Impacto</span>
+        </h2>
+        <p class="text-center text-muted mb-5">
+            Puntajes por proyectos con funding goal alcanzado.
+        </p>
+
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="card h-100 border-0 shadow-sm ranking-card animate__animated animate__fadeInUp">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h5 class="mb-0 text-primary fw-bold">
+                                <i class="fas fa-rocket me-2"></i>Top Emprendedores
+                            </h5>
+                            <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis">Actual</span>
+                        </div>
+
+                        <div class="ranking-list">
+                            {% for item in entrepreneur_ranking %}
+                                <div class="ranking-item d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <span class="ranking-position">#{{ forloop.counter }}</span>
+                                        <div>
+                                            <div class="fw-semibold">{{ item.name }}</div>
+                                            <small class="text-muted">{{ item.funded_projects }} proyectos fondeados</small>
+                                        </div>
+                                    </div>
+                                    <span class="ranking-points">{{ item.points }} pts</span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card h-100 border-0 shadow-sm ranking-card animate__animated animate__fadeInUp delay-1">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h5 class="mb-0 text-primary fw-bold">
+                                <i class="fas fa-chalkboard-teacher me-2"></i>Top Mentores
+                            </h5>
+                            <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis">Actual</span>
+                        </div>
+
+                        <div class="ranking-list">
+                            {% for item in mentor_ranking %}
+                                <div class="ranking-item d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <span class="ranking-position">#{{ forloop.counter }}</span>
+                                        <div>
+                                            <div class="fw-semibold">{{ item.name }}</div>
+                                            <small class="text-muted">{{ item.funded_projects }} proyectos guiados fondeados</small>
+                                        </div>
+                                    </div>
+                                    <span class="ranking-points">{{ item.points }} pts</span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Featured Projects Section -->
     <section class="mb-5">
         <h2 class="section-title text-center mb-5">
