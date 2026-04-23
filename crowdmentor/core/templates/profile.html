@@ -283,6 +283,15 @@
                 </div>
                 {% endif %}
 
+                {% if profile.user_type == 'mentor' and profile.mentor_specialty %}
+                <div class="section-card">
+                    <h5><i class="fas fa-tag me-2"></i>Especialidad</h5>
+                    <span class="badge bg-primary fs-6 px-3 py-2">
+                        {{ profile.get_mentor_specialty_display }}
+                    </span>
+                </div>
+                {% endif %}
+
                 <div class="text-center mt-2 mb-3">
                     <button class="btn btn-save" onclick="document.getElementById('edit-tab').click()">
                         <i class="fas fa-edit me-2"></i>Editar mi perfil
@@ -372,6 +381,14 @@
                                 {{ profile_form.experience }}
                                 {% if profile_form.experience.errors %}<div class="text-danger small">{{ profile_form.experience.errors }}</div>{% endif %}
                             </div>
+                            {% if profile.user_type == 'mentor' %}
+                            <div class="col-12" id="mentor-specialty-edit-wrapper">
+                                <label class="form-label"><i class="fas fa-tag me-1 text-primary"></i>{{ profile_form.mentor_specialty.label }}</label>
+                                {{ profile_form.mentor_specialty }}
+                                {% if profile_form.mentor_specialty.errors %}<div class="text-danger small">{{ profile_form.mentor_specialty.errors }}</div>{% endif %}
+                                <small class="form-text text-muted">{{ profile_form.mentor_specialty.help_text }}</small>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
 

@@ -9,6 +9,13 @@
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">{{ mentor.user.get_full_name|default:mentor.user.username }}</h5>
+                    {% if mentor.mentor_specialty %}
+                    <p class="card-text mb-2">
+                        <span class="badge bg-primary">
+                            <i class="fas fa-tag me-1"></i>{{ mentor.get_mentor_specialty_display }}
+                        </span>
+                    </p>
+                    {% endif %}
                     <p class="card-text">
                         <strong>Experiencia:</strong><br>
                         {{ mentor.experience|linebreaks }}

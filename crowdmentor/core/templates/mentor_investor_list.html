@@ -99,6 +99,13 @@
                                 </div>
                             </div>
                             
+                            {% if mentor.mentor_specialty %}
+                            <div class="mb-2">
+                                <span class="badge bg-primary">
+                                    <i class="fas fa-tag me-1"></i>{{ mentor.get_mentor_specialty_display }}
+                                </span>
+                            </div>
+                            {% endif %}
                             <div class="mb-3">
                                 <h6 class="text-muted">Experiencia:</h6>
                                 <p class="card-text small">

@@ -146,7 +146,8 @@ def register(request):
                 user_type=user_type,
                 bio=form.cleaned_data['bio'],
                 experience=form.cleaned_data['experience'],
-                is_approved=user_type in ['entrepreneur', 'investor']
+                is_approved=user_type in ['entrepreneur', 'investor'],
+                mentor_specialty=form.cleaned_data.get('mentor_specialty') if user_type == 'mentor' else None
             )
 
             # Handle multiple file uploads

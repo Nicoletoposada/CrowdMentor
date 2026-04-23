@@ -26,8 +26,15 @@ class MultipleFileField(forms.FileField):
 class CustomUserCreationForm(UserCreationForm):
     user_type = forms.ChoiceField(
         choices=Profile.USER_TYPES,
-        widget=forms.Select(attrs={'class': 'form-control custom-select'}),
+        widget=forms.Select(attrs={'class': 'form-control custom-select', 'id': 'id_user_type'}),
         required=True
+    )
+    mentor_specialty = forms.ChoiceField(
+        choices=[('', '---------')] + list(Profile.MENTOR_SPECIALTIES),
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_mentor_specialty'}),
+        required=False,
+        label='Especialidad',
+        help_text='Selecciona tu área de especialización como mentor'
     )
     bio = forms.CharField(
         widget=forms.Textarea(attrs={'class': 'form-control'}),
@@ -67,7 +74,7 @@ class CustomUserCreationForm(UserCreationForm):
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password1', 'password2', 'user_type', 'bio', 'experience', 'files']
+        fields = ['username', 'email', 'password1', 'password2', 'user_type', 'mentor_specialty', 'bio', 'experience', 'files']
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre de usuario'}),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Correo electrónico'}),
@@ -75,9 +82,19 @@ class CustomUserCreationForm(UserCreationForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Make all fields required
+        # Make all fields required except mentor_specialty
         for field in self.fields:
-            self.fields[field].required = True
+            if field != 'mentor_specialty':
+                self.fields[field].required = True
+        self.fields['mentor_specialty'].required = False
+
+    def clean(self):
+        cleaned_data = super().clean()
+        user_type = cleaned_data.get('user_type')
+        mentor_specialty = cleaned_data.get('mentor_specialty')
+        if user_type == 'mentor' and not mentor_specialty:
+            self.add_error('mentor_specialty', 'Debes seleccionar una especialidad para registrarte como mentor.')
+        return cleaned_data
 
 class ProjectForm(forms.ModelForm):
     class Meta:
@@ -671,11 +688,18 @@ class ProfileEditForm(forms.ModelForm):
         required=False,
         widget=forms.ClearableFileInput(attrs={'class': 'form-control'})
     )
+    mentor_specialty = forms.ChoiceField(
+        choices=[('', '---------')] + list(Profile.MENTOR_SPECIALTIES),
+        label='Especialidad',
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text='Solo aplica si eres mentor'
+    )
 
     class Meta:
         model = Profile
         fields = ['bio', 'experience', 'birth_date', 'phone_number', 'location',
-                  'linkedin_url', 'website_url', 'profile_picture']
+                  'linkedin_url', 'website_url', 'profile_picture', 'mentor_specialty']
 
 
 class PasswordChangeCustomForm(forms.Form):

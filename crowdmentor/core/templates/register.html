@@ -21,15 +21,30 @@
                     <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
                         {% csrf_token %}
                         {% for field in form %}
-                            <div class="form-floating mb-3">
-                                {{ field }}
-                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                                {% if field.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {{ field.errors }}
-                                    </div>
-                                {% endif %}
-                            </div>
+                            {% if field.html_name == 'mentor_specialty' %}
+                                <div class="form-floating mb-3" id="mentor-specialty-wrapper" style="display:none;">
+                                    {{ field }}
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {% if field.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ field.errors }}
+                                        </div>
+                                    {% endif %}
+                                    {% if field.help_text %}
+                                        <small class="form-text text-muted">{{ field.help_text }}</small>
+                                    {% endif %}
+                                </div>
+                            {% else %}
+                                <div class="form-floating mb-3">
+                                    {{ field }}
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {% if field.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ field.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
                         {% endfor %}
                         
                         <div class="alert alert-info d-flex align-items-center" role="alert">
@@ -72,18 +87,38 @@
             }, false)
         })
     })()
-    
-    // File input handling
-    document.addEventListener('DOMContentLoaded', function() {
+
+    // Mostrar/ocultar campo de especialidad según el tipo de usuario
+    document.addEventListener('DOMContentLoaded', function () {
+        const userTypeSelect = document.getElementById('id_user_type');
+        const specialtyWrapper = document.getElementById('mentor-specialty-wrapper');
+        const specialtySelect = document.getElementById('id_mentor_specialty');
+
+        function toggleSpecialty() {
+            if (userTypeSelect && userTypeSelect.value === 'mentor') {
+                specialtyWrapper.style.display = 'block';
+                specialtySelect.setAttribute('required', 'required');
+            } else {
+                specialtyWrapper.style.display = 'none';
+                specialtySelect.removeAttribute('required');
+                specialtySelect.value = '';
+            }
+        }
+
+        if (userTypeSelect) {
+            userTypeSelect.addEventListener('change', toggleSpecialty);
+            // Ejecutar al cargar por si hay un valor previo (p.ej. error de validación)
+            toggleSpecialty();
+        }
+
+        // File input handling
         const fileInput = document.querySelector('input[type="file"]');
         if (fileInput) {
-            fileInput.addEventListener('change', function() {
+            fileInput.addEventListener('change', function () {
                 if (this.files.length > 10) {
                     alert('No puedes subir más de 10 archivos.');
                     this.value = '';
                 }
-                
-                // Update custom file label
                 const label = this.nextElementSibling;
                 if (label && label.classList.contains('custom-file-label')) {
                     if (this.files.length > 0) {

@@ -10,10 +10,30 @@ class Profile(models.Model):
         ('investor', 'Inversionista'),
         ('evaluator', 'Evaluador'),
     )
+    MENTOR_SPECIALTIES = (
+        ('agronomy', 'Agronomía y Proyectos Agropecuarios'),
+        ('technology', 'Tecnología e Innovación'),
+        ('finance', 'Finanzas y Negocios'),
+        ('health', 'Salud y Bienestar'),
+        ('marketing', 'Marketing y Ventas'),
+        ('legal', 'Legal y Cumplimiento'),
+        ('education', 'Educación'),
+        ('manufacturing', 'Manufactura e Industria'),
+        ('environment', 'Medio Ambiente y Sostenibilidad'),
+        ('arts', 'Arte y Entretenimiento'),
+        ('other', 'Otra especialidad'),
+    )
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     user_type = models.CharField(max_length=20, choices=USER_TYPES)
     bio = models.TextField()
     experience = models.TextField()
+    mentor_specialty = models.CharField(
+        max_length=50,
+        choices=MENTOR_SPECIALTIES,
+        blank=True,
+        null=True,
+        verbose_name='Especialidad (Mentor)'
+    )
     is_approved = models.BooleanField(default=False)  # For mentors/evaluators
     is_approved_by_admin = models.BooleanField(default=False)  # Para evaluadores aprobados por el administrador
 
