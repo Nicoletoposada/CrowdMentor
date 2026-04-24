@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Análisis IA — {{ project.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Página de Análisis IA ─────────────────────── */
+.ai-hero {
+    background: linear-gradient(135deg, #0d1b2a 0%, #1a3a5c 100%);
+    color: #fff;
+    padding: 2.5rem 0 2rem;
+}
+.ai-hero h1 { font-size: 1.6rem; font-weight: 700; }
+.ai-hero .subtitle { color: #a8c4e0; font-size: .95rem; }
+
+/* Tarjeta de predicción */
+.prediction-card {
+    border: none;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0,0,0,.10);
+}
+.prediction-card .card-header {
+    background: linear-gradient(90deg, #1a3a5c, #2d6fa8);
+    color: #fff;
+    font-weight: 600;
+    padding: 1rem 1.4rem;
+}
+.prob-gauge {
+    width: 140px; height: 140px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+    font-weight: 800;
+    font-size: 2rem;
+    margin: 0 auto;
+    box-shadow: 0 0 0 8px rgba(255,255,255,.15);
+}
+.prob-high   { background: linear-gradient(135deg,#22c55e,#16a34a); color:#fff; }
+.prob-medium { background: linear-gradient(135deg,#f59e0b,#d97706); color:#fff; }
+.prob-low    { background: linear-gradient(135deg,#ef4444,#dc2626); color:#fff; }
+.prob-none   { background: #e5e7eb; color: #6b7280; font-size: 1rem; }
+
+/* Badges de confianza */
+.badge-high   { background:#dcfce7; color:#16a34a; }
+.badge-medium { background:#fef3c7; color:#d97706; }
+.badge-low    { background:#fee2e2; color:#dc2626; }
+
+/* Sugerencias */
+.suggestion-item {
+    border-left: 4px solid #2d6fa8;
+    background: #f0f7ff;
+    border-radius: 0 8px 8px 0;
+    padding: .8rem 1rem;
+    margin-bottom: .6rem;
+}
+.suggestion-item.priority-alta   { border-color: #ef4444; background: #fff5f5; }
+.suggestion-item.priority-media  { border-color: #f59e0b; background: #fffbeb; }
+.suggestion-item.priority-baja   { border-color: #22c55e; background: #f0fdf4; }
+
+/* Mentores */
+.mentor-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1rem;
+    transition: box-shadow .2s;
+}
+.mentor-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.10); }
+.match-bar {
+    height: 6px; border-radius: 3px;
+    background: linear-gradient(90deg, #2d6fa8, #22c55e);
+}
+
+/* Not trained badge */
+.not-trained-alert {
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── Hero ─────────────────────────────────────── -->
+<div class="ai-hero">
+  <div class="container">
+    <nav aria-label="breadcrumb" class="mb-2">
+      <ol class="breadcrumb" style="background:transparent;padding:0;margin:0;">
+        <li class="breadcrumb-item"><a href="{% url 'project_list' %}" class="text-white-50">Proyectos</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'project_detail' project.pk %}" class="text-white-50">{{ project.title|truncatechars:30 }}</a></li>
+        <li class="breadcrumb-item active text-white">Análisis IA</li>
+      </ol>
+    </nav>
+    <h1><i class="fas fa-brain me-2"></i>Análisis Inteligente del Proyecto</h1>
+    <p class="subtitle mb-0">
+      Sistema CrowdMentor IA — Predicción · Sugerencias · Recomendación de Mentores
+    </p>
+  </div>
+</div>
+
+<div class="container py-4">
+  <div class="row g-4">
+
+    <!-- ── Columna izquierda: Predicción ──────── -->
+    <div class="col-lg-4">
+
+      <!-- Tarjeta predicción de éxito -->
+      <div class="prediction-card card mb-4">
+        <div class="card-header">
+          <i class="fas fa-chart-line me-2"></i>Predicción de Éxito
+          <span class="badge bg-white text-primary ms-2" style="font-size:.7rem;">Módulo 1</span>
+        </div>
+        <div class="card-body text-center py-4">
+
+          {% if prediction.is_trained %}
+            {% with pct=prediction.probability_pct %}
+              <div class="prob-gauge mb-3
+                {% if pct >= 60 %}prob-high
+                {% elif pct >= 40 %}prob-medium
+                {% else %}prob-low{% endif %}">
+                <span>{{ pct }}%</span>
+              </div>
+            {% endwith %}
+
+            <h5 class="fw-bold mb-1">{{ prediction.label }}</h5>
+            <span class="badge rounded-pill px-3 py-1
+              {% if prediction.confidence == 'Alta' %}badge-high
+              {% elif prediction.confidence == 'Media' %}badge-medium
+              {% else %}badge-low{% endif %}">
+              Confianza {{ prediction.confidence }}
+            </span>
+
+            {% if prediction.factors %}
+            <hr class="my-3">
+            <div class="text-start">
+              <p class="fw-semibold mb-2" style="font-size:.85rem;color:#374151;">
+                <i class="fas fa-lightbulb text-warning me-1"></i>Factores detectados:
+              </p>
+              {% for f in prediction.factors %}
+              <p class="mb-1" style="font-size:.82rem;color:#6b7280;">
+                <i class="fas fa-circle" style="font-size:.4rem;vertical-align:middle;"></i>
+                {{ f }}
+              </p>
+              {% endfor %}
+            </div>
+            {% endif %}
+
+          {% else %}
+            <div class="prob-gauge prob-none mb-3">
+              <i class="fas fa-robot" style="font-size:2rem;"></i>
+            </div>
+            <div class="not-trained-alert">
+              <p class="fw-semibold mb-1">Modelo no entrenado</p>
+              <p class="mb-2" style="font-size:.83rem;color:#92400e;">
+                El predictor requiere entrenamiento con el dataset de Kaggle.
+              </p>
+              {% if request.user.is_staff %}
+              <code style="font-size:.78rem;background:#fff3cd;padding:.3rem .6rem;border-radius:6px;display:block;">
+                python manage.py train_ai --kaggle ruta/ks-projects.csv
+              </code>
+              {% endif %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Info del modelo (para tesis) -->
+      <div class="card border-0 bg-light">
+        <div class="card-body" style="font-size:.82rem;color:#6b7280;">
+          <p class="fw-semibold mb-2 text-dark">
+            <i class="fas fa-info-circle me-1 text-primary"></i>Modelo matemático
+          </p>
+          <p class="mb-1"><strong>Vectorización:</strong> TF-IDF (bigramas, 8 000 features)</p>
+          <p class="mb-1"><strong>Clasificador:</strong> Regresión Logística L2</p>
+          <p class="mb-1"><strong>Función:</strong> P(éxito|x) = σ(wᵀx + b)</p>
+          <p class="mb-0"><strong>Dataset:</strong> Kickstarter Projects (Kaggle)</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Columna derecha ─────────────────────── -->
+    <div class="col-lg-8">
+
+      <!-- Sugerencias de mejora -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom py-3">
+          <h6 class="mb-0 fw-bold">
+            <i class="fas fa-magic text-primary me-2"></i>Sugerencias de Mejora
+            <span class="badge bg-primary ms-2" style="font-size:.7rem;">Módulo 3</span>
+          </h6>
+          <small class="text-muted">Basadas en proyectos exitosos similares</small>
+        </div>
+        <div class="card-body">
+          {% if suggestions %}
+            {% for s in suggestions %}
+            <div class="suggestion-item priority-{{ s.priority|lower }}">
+              <div class="d-flex align-items-start gap-2">
+                <span class="badge rounded-pill px-2 py-1 flex-shrink-0
+                  {% if s.priority == 'Alta' %}bg-danger
+                  {% elif s.priority == 'Media' %}bg-warning text-dark
+                  {% else %}bg-success{% endif %}"
+                  style="font-size:.7rem;">
+                  {{ s.priority }}
+                </span>
+                <div>
+                  <span class="fw-semibold" style="font-size:.85rem;">{{ s.area }}</span>
+                  <p class="mb-0 text-muted" style="font-size:.83rem;">{{ s.suggestion }}</p>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="text-center py-3 text-muted">
+              <i class="fas fa-check-circle text-success fs-3 mb-2 d-block"></i>
+              No se detectaron áreas críticas de mejora.<br>
+              <small>Ejecuta el entrenamiento para activar sugerencias basadas en contenido.</small>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Mentores recomendados -->
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom py-3">
+          <h6 class="mb-0 fw-bold">
+            <i class="fas fa-user-tie text-success me-2"></i>Mentores Recomendados
+            <span class="badge bg-success ms-2" style="font-size:.7rem;">Módulo 2</span>
+          </h6>
+          <small class="text-muted">Compatibilidad calculada con similitud coseno</small>
+        </div>
+        <div class="card-body">
+          {% if mentor_recs %}
+            <div class="row g-3">
+              {% for m in mentor_recs %}
+              <div class="col-sm-6">
+                <div class="mentor-card">
+                  <div class="d-flex align-items-center gap-2 mb-2">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                         style="width:38px;height:38px;background:linear-gradient(135deg,#2d6fa8,#22c55e);color:#fff;font-weight:700;font-size:.85rem;">
+                      {{ m.name|first|upper }}
+                    </div>
+                    <div>
+                      <p class="mb-0 fw-semibold" style="font-size:.85rem;">{{ m.name }}</p>
+                      <p class="mb-0 text-muted" style="font-size:.75rem;">{{ m.specialty_display|default:"Sin especialidad" }}</p>
+                    </div>
+                  </div>
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <small class="text-muted">Compatibilidad</small>
+                    <strong style="font-size:.85rem;color:#2d6fa8;">{{ m.match_pct }}%</strong>
+                  </div>
+                  <div class="match-bar" style="width:{{ m.match_pct }}%;"></div>
+                  {% if m.bio %}
+                  <p class="mt-2 mb-0 text-muted" style="font-size:.78rem;">{{ m.bio|truncatechars:80 }}</p>
+                  {% endif %}
+                  {% if is_owner %}
+                  <a href="{% url 'request_mentorship_by_entrepreneur' m.user_id %}"
+                     class="btn btn-outline-primary btn-sm mt-2 w-100" style="font-size:.78rem;">
+                    Solicitar mentoría
+                  </a>
+                  {% endif %}
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="text-center py-3 text-muted">
+              <i class="fas fa-users-slash fs-3 mb-2 d-block text-secondary"></i>
+              No hay mentores indexados aún.<br>
+              <small>El administrador debe ejecutar el entrenamiento del índice de mentores.</small>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+    </div><!-- /col -->
+  </div><!-- /row -->
+
+  <!-- Botón volver -->
+  <div class="mt-4">
+    <a href="{% url 'project_detail' project.pk %}" class="btn btn-outline-secondary">
+      <i class="fas fa-arrow-left me-1"></i>Volver al proyecto
+    </a>
+  </div>
+</div>
+{% endblock %}

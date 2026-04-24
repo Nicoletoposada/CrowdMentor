@@ -81,4 +81,10 @@ urlpatterns = [
     # ── Contratos de inversión ──
     path('contracts/<int:contract_id>/', views.view_investment_contract, name='view_investment_contract'),
     path('contracts/<int:contract_id>/upload/', views.upload_signed_contract, name='upload_signed_contract'),
+
+    # ── CrowdMentor AI System (módulos propios) ──
+    path('project/<int:project_id>/ai-analysis/', views.project_ai_analysis, name='project_ai_analysis'),
+    path('project/<int:project_id>/ai-mentors/', views.mentor_ai_recommendations, name='mentor_ai_recommendations'),
+    path('ai/predict/', views.ai_predict_project_ajax, name='ai_predict_project_ajax'),
+    path('admin/rebuild-ai/', views.admin_rebuild_ai, name='admin_rebuild_ai'),
 ]

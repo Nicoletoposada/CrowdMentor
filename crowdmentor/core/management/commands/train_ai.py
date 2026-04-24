@@ -1,0 +1,280 @@
+"""
+Comando de gestión: train_ai
+=============================
+Entrena los tres módulos de IA de CrowdMentor.
+
+Uso
+---
+    python manage.py train_ai                        # Entrena todos los módulos
+    python manage.py train_ai --module predictor     # Solo predictor de éxito
+    python manage.py train_ai --module mentors       # Solo recomendador de mentores
+    python manage.py train_ai --module advisor       # Solo asesor de mejoras
+    python manage.py train_ai --kaggle ruta/archivo.csv  # Entrenar con CSV de Kaggle
+    python manage.py train_ai --status               # Ver estado de los modelos
+
+Descripción de cada módulo
+---------------------------
+  predictor : Regresión Logística + TF-IDF para predecir éxito de proyectos.
+              Requiere CSV de Kaggle (Kickstarter) o datos de la BD.
+  mentors   : Indexación TF-IDF de perfiles de mentores para recomendación.
+              Lee directamente de la BD de CrowdMentor.
+  advisor   : Corpus TF-IDF de proyectos exitosos para generar sugerencias.
+              Lee proyectos financiados ≥ 80% de la BD.
+"""
+import sys
+from pathlib import Path
+
+from django.core.management.base import BaseCommand, CommandError
+
+
+class Command(BaseCommand):
+    help = 'Entrena los módulos de IA de CrowdMentor'
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--module',
+            choices=['predictor', 'mentors', 'advisor', 'all'],
+            default='all',
+            help='Módulo a entrenar (por defecto: all)',
+        )
+        parser.add_argument(
+            '--kaggle',
+            type=str,
+            default=None,
+            metavar='CSV_PATH',
+            help='Ruta al CSV de Kaggle Kickstarter para entrenar el predictor',
+        )
+        parser.add_argument(
+            '--status',
+            action='store_true',
+            help='Muestra el estado de los modelos entrenados y sale',
+        )
+        parser.add_argument(
+            '--eval-split',
+            type=float,
+            default=0.20,
+            metavar='FRAC',
+            help='Fracción de datos para evaluación (default: 0.20)',
+        )
+
+    def handle(self, *args, **options):
+        if options['status']:
+            self._print_status()
+            return
+
+        module = options['module']
+        kaggle_csv = options['kaggle']
+        eval_split = options['eval_split']
+
+        self.stdout.write(self.style.SUCCESS('═' * 55))
+        self.stdout.write(self.style.SUCCESS('   CrowdMentor — Sistema de IA: Entrenamiento'))
+        self.stdout.write(self.style.SUCCESS('═' * 55))
+
+        if module in ('predictor', 'all'):
+            self._train_predictor(kaggle_csv, eval_split)
+
+        if module in ('mentors', 'all'):
+            self._train_mentors()
+
+        if module in ('advisor', 'all'):
+            self._train_advisor()
+
+        self.stdout.write('')
+        self.stdout.write(self.style.SUCCESS('✓ Entrenamiento completado.'))
+        self.stdout.write('  Los modelos se guardaron en saved_models/')
+
+    # ── Predictor de éxito ────────────────────────────
+
+    def _train_predictor(self, kaggle_csv: str | None, eval_split: float):
+        self.stdout.write('')
+        self.stdout.write(self.style.HTTP_INFO('[ Módulo 1 ] Predictor de Éxito de Proyectos'))
+
+        try:
+            from ml_models.success_predictor import get_predictor
+        except ImportError as e:
+            self.stderr.write(f'  Error importando módulo: {e}')
+            return
+
+        predictor = get_predictor()
+
+        # Intentar cargar datos: Kaggle tiene prioridad, luego BD, luego auto-detect
+        if kaggle_csv:
+            texts, labels = self._load_kaggle_data(kaggle_csv)
+            source = f'Kaggle CSV especificado ({len(texts)} proyectos)'
+        else:
+            # Intentar auto-detectar CSVs en datasets/
+            try:
+                texts, labels = self._load_kaggle_data(None)
+                source = f'Kaggle CSVs auto-detectados ({len(texts)} proyectos)'
+            except Exception:
+                texts, labels = self._load_crowdmentor_projects()
+                source = f'BD CrowdMentor ({len(texts)} proyectos)'
+
+        if len(texts) < 10:
+            self.stdout.write(
+                self.style.WARNING(
+                    f'  ⚠ Datos insuficientes ({len(texts)} proyectos). '
+                    'Usa --kaggle para un CSV de Kickstarter.'
+                )
+            )
+            self.stdout.write(
+                '  Descarga el dataset en: '
+                'https://www.kaggle.com/datasets/kemical/kickstarter-projects'
+            )
+            return
+
+        self.stdout.write(f'  Fuente: {source}')
+        self.stdout.write(f'  Distribución: {sum(labels)} exitosos / {len(labels)-sum(labels)} fallidos')
+        self.stdout.write('  Entrenando Regresión Logística con TF-IDF...')
+
+        try:
+            metrics = predictor.train(texts, labels, eval_split=eval_split)
+            self.stdout.write(self.style.SUCCESS(f'  ✓ Accuracy : {metrics["accuracy"]:.4f}'))
+            self.stdout.write(self.style.SUCCESS(f'  ✓ F1-Score : {metrics["f1"]:.4f}'))
+            self.stdout.write(self.style.SUCCESS(f'  ✓ ROC-AUC  : {metrics["roc_auc"]:.4f}'))
+            self.stdout.write(f'  Reporte completo:\n{metrics["report"]}')
+        except Exception as exc:
+            self.stderr.write(f'  Error durante entrenamiento: {exc}')
+
+    def _load_kaggle_data(self, csv_path: str | None) -> tuple[list[str], list[int]]:
+        """
+        Carga el dataset Kickstarter de Kaggle.
+        Si csv_path es None, busca automáticamente en datasets/ los CSVs de Kickstarter.
+        Si hay dos archivos, los fusiona para maximizar los datos de entrenamiento.
+        """
+        from ml_models.kaggle_trainer import load_kickstarter_data
+        from pathlib import Path
+
+        try:
+            import pandas as pd  # noqa: F401
+        except ImportError:
+            raise CommandError('Instala pandas: pip install pandas')
+
+        # ── Auto-detección de datasets si no se especificó ruta ──────────────
+        if not csv_path:
+            datasets_dir = Path(__file__).resolve().parents[3] / 'datasets'
+            found = sorted(datasets_dir.glob('ks-projects-*.csv'))
+            if not found:
+                raise CommandError(
+                    'No se encontró ningún CSV de Kickstarter en datasets/.\n'
+                    'Descarga el dataset en:\n'
+                    '  https://www.kaggle.com/datasets/kemical/kickstarter-projects\n'
+                    'y coloca los archivos en la carpeta datasets/'
+                )
+            paths = [str(p) for p in found]
+            self.stdout.write(
+                f'  Auto-detectados {len(paths)} dataset(s): '
+                + ', '.join(p.name for p in found)
+            )
+        else:
+            paths = [p.strip() for p in csv_path.split(',') if p.strip()]
+
+        self.stdout.write(f'  Cargando y fusionando {len(paths)} CSV(s)...')
+        return load_kickstarter_data(paths)
+
+    def _load_crowdmentor_projects(self) -> tuple[list[str], list[int]]:
+        """Carga proyectos de la BD de CrowdMentor como datos de entrenamiento."""
+        from core.models import Project
+
+        projects = Project.objects.filter(is_active=True).select_related('category')
+        texts  = []
+        labels = []
+
+        for p in projects:
+            try:
+                pct = float(p.amount_raised) / float(p.funding_goal)
+            except Exception:
+                pct = 0
+
+            label = 1 if (pct >= 0.8 or p.status in ('funded', 'completed')) else 0
+            texts.append(f"{p.title} {p.description}")
+            labels.append(label)
+
+        return texts, labels
+
+    # ── Recomendador de mentores ──────────────────────
+
+    def _train_mentors(self):
+        self.stdout.write('')
+        self.stdout.write(self.style.HTTP_INFO('[ Módulo 2 ] Recomendador de Mentores'))
+
+        try:
+            from ml_models.mentor_recommender import rebuild_mentor_index
+        except ImportError as e:
+            self.stderr.write(f'  Error importando módulo: {e}')
+            return
+
+        self.stdout.write('  Indexando perfiles de mentores con TF-IDF...')
+        try:
+            count = rebuild_mentor_index()
+            if count == 0:
+                self.stdout.write(
+                    self.style.WARNING(
+                        '  ⚠ No se encontraron mentores aprobados en la BD. '
+                        'Aprueba mentores desde el panel de administración.'
+                    )
+                )
+            else:
+                self.stdout.write(self.style.SUCCESS(f'  ✓ {count} mentores indexados'))
+        except Exception as exc:
+            self.stderr.write(f'  Error: {exc}')
+
+    # ── Asesor de mejoras ─────────────────────────────
+
+    def _train_advisor(self):
+        self.stdout.write('')
+        self.stdout.write(self.style.HTTP_INFO('[ Módulo 3 ] Asesor de Mejoras de Proyectos'))
+
+        try:
+            from ml_models.advisor import rebuild_advisor_corpus
+        except ImportError as e:
+            self.stderr.write(f'  Error importando módulo: {e}')
+            return
+
+        self.stdout.write('  Construyendo corpus de proyectos exitosos...')
+        try:
+            count = rebuild_advisor_corpus()
+            if count == 0:
+                self.stdout.write(
+                    self.style.WARNING(
+                        '  ⚠ No hay proyectos con financiamiento suficiente '
+                        'para construir el corpus. El asesor usará sugerencias basadas en reglas.'
+                    )
+                )
+            else:
+                self.stdout.write(self.style.SUCCESS(f'  ✓ {count} proyectos exitosos indexados'))
+        except Exception as exc:
+            self.stderr.write(f'  Error: {exc}')
+
+    # ── Estado ────────────────────────────────────────
+
+    def _print_status(self):
+        from ml_models.config import (
+            SUCCESS_PREDICTOR_PATH, MENTOR_MATRIX_PATH, ADVISOR_CORPUS_PATH
+        )
+
+        self.stdout.write(self.style.SUCCESS('═' * 45))
+        self.stdout.write('   Estado de Modelos — CrowdMentor IA')
+        self.stdout.write(self.style.SUCCESS('═' * 45))
+
+        models = [
+            ('Predictor de Éxito',     SUCCESS_PREDICTOR_PATH),
+            ('Recomendador de Mentores', MENTOR_MATRIX_PATH),
+            ('Asesor de Mejoras',       ADVISOR_CORPUS_PATH),
+        ]
+
+        for name, path in models:
+            if path.exists():
+                import os
+                size_kb = os.path.getsize(path) / 1024
+                self.stdout.write(
+                    self.style.SUCCESS(f'  ✓ {name:<30} [{size_kb:.0f} KB]')
+                )
+            else:
+                self.stdout.write(
+                    self.style.WARNING(f'  ✗ {name:<30} [no entrenado]')
+                )
+
+        self.stdout.write('')
+        self.stdout.write('Para entrenar: python manage.py train_ai')
+        self.stdout.write('Con Kaggle:    python manage.py train_ai --kaggle ruta/ks-projects.csv')

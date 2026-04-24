@@ -2525,61 +2525,785 @@ def _get_remote_llm_response(session: AIProjectSession, user_message: str) -> st
         return ''
 
 
-def _build_local_guided_fallback(session: AIProjectSession) -> str:
-    """Respuesta local determinística para no bloquear al usuario si no hay motor IA disponible."""
-    user_turns = [m for m in session.messages if m.get('role') == 'user']
-    n = len(user_turns)
+# ── Motor PMI Local — CrowdMentor AI ──────────────────────────────────────────
+# Reemplaza Gemini con el motor conversacional propio de CrowdMentor.
+# No requiere API keys externas.
 
-    if n <= 1:
-        return (
-            '¡Buena base! Para aterrizar tu idea, dime en una frase: '
-            '¿qué problema real resuelves y para quién?'
-        )
-    if n == 2:
-        return (
-            'Perfecto, ya entendí el problema. Ahora vamos al mercado: '
-            '¿quién es tu cliente ideal (edad, perfil o tipo de negocio) y cómo lo contactas hoy?'
-        )
-    if n == 3:
-        return (
-            'Vamos bien. Cuéntame tu modelo de ingresos: '
-            '¿cómo cobrarás (suscripción, comisión, venta directa) y por qué te elegirán frente a otras opciones?'
-        )
-    if n == 4:
-        return (
-            'Siguiente paso: presupuesto inicial. '
-            '¿cuánto capital necesitas para arrancar y en qué 3 rubros principales lo invertirías?'
-        )
-    if n == 5:
-        return (
-            'Antes del resumen, identifiquemos riesgos: '
-            'menciona 2 riesgos clave (comercial, técnico o financiero) y cómo planeas mitigarlos.'
-        )
+_PMI_PHASE_ORDER = [
+    'welcome', 'brainstorming', 'ideation', 'problem', 'market',
+    'business_model', 'resources', 'risks', 'timeline', 'summary',
+]
+
+# ── Detección "no tengo idea" ─────────────────────────────────────────────────
+import re as _re
+
+_NO_IDEA_PATTERNS = [
+    r'no\s+tengo\s+(una\s+)?(buena\s+)?(idea|ideas)',
+    r'sin\s+ideas?',
+    r'no\s+s[eé]\s+(qu[eé]\s+)?(hacer|poner|escribir|decir|emprender|elegir)',
+    r'no\s+se\s+me\s+ocurre',
+    r'no\s+tengo\s+nada\b',
+    r'ayú?dame\s+a\s+(encontrar|elegir|pensar|definir)',
+    r'no\s+s[eé]\s+por\s+d[oó]nde\s+empezar',
+    r'ninguna\s+idea',
+    r'no\s+s[eé]\s+qu[eé]\s+proyecto',
+    r'(todav[ií]a\s+)?no\s+tengo\s+(claro|definido|un)',
+    r'estoy\s+(perdido|confundido)\b',
+    r'no\s+se\s+me\s+ocurre\s+nada',
+    r'no\s+s[eé]\s+c[oó]mo\s+empezar',
+    r'(no|tampoco)\s+(tengo|tiene)\s+idea',
+    r'nada\s+en\s+mente',
+    r'no\s+tengo\s+(proyecto|algo)\s+(en\s+mente|concreto)',
+]
+
+
+def _detect_no_idea(msg: str) -> bool:
+    """Detecta si el usuario expresa que no tiene una idea de proyecto."""
+    msg_lower = msg.lower().strip()
+    for pattern in _NO_IDEA_PATTERNS:
+        if _re.search(pattern, msg_lower):
+            return True
+    return False
+
+
+# ── Preguntas de descubrimiento (brainstorming) — 4 pasos ────────────────────
+_BRAINSTORMING_QUESTIONS = [
+    (
+        '¡No te preocupes! Es completamente normal — muchos grandes proyectos '
+        'nacen de alguien que simplemente no encontraba solución a algo cotidiano.\n\n'
+        '😤 **Pregunta 1 — Frustraciones:** ¿Hay algo que te fastidie, complique '
+        'o consuma tiempo en tu vida diaria, tu trabajo o tu comunidad?\n\n'
+        'Piensa en estas áreas:\n'
+        '• **Trabajo**: procesos lentos, herramientas anticuadas, trámites innecesarios\n'
+        '• **Salud**: acceso a médicos, seguimiento de enfermedades, bienestar\n'
+        '• **Educación**: acceso a conocimiento, prácticas, orientación vocacional\n'
+        '• **Comercio**: comprar/vender local, intermediarios, logística\n'
+        '• **Alimentación**: opciones saludables, desperdicios, acceso a comida\n'
+        '• **Comunidad**: adultos mayores, jóvenes, agricultores, artesanos\n\n'
+        'No importa si parece pequeño. Los mejores negocios resuelven problemas '
+        'que todos sufren pero nadie ha solucionado bien.'
+    ),
+    (
+        '¡Muy interesante! Ya tengo registrada tu frustración principal.\n\n'
+        '💡 **Pregunta 2 — Tus talentos y conocimientos:** ¿En qué eres bueno '
+        'o tienes conocimiento profundo? Los mejores emprendedores combinan '
+        '*"un problema que vi"* con *"lo que yo sé hacer bien"*.\n\n'
+        'Algunos ejemplos:\n'
+        '• Desarrollo de software, diseño web o apps\n'
+        '• Medicina, nutrición, fisioterapia o salud\n'
+        '• Docencia, capacitación o pedagogía\n'
+        '• Ventas, marketing o comunicación\n'
+        '• Gastronomía, hostelería o producción de alimentos\n'
+        '• Contabilidad, finanzas o tributación\n'
+        '• Agricultura, pecuaria o producción rural\n'
+        '• Arte, diseño gráfico o producción creativa\n'
+        '• Logística, transporte o distribución\n\n'
+        '¿Cuál es tu área de expertise o habilidad principal?'
+    ),
+    (
+        'Perfecto, ya voy viendo el perfil.\n\n'
+        '🌍 **Pregunta 3 — Tu mercado objetivo:** ¿A qué grupo de personas, '
+        'sector o comunidad quieres ayudar o impactar principalmente?\n\n'
+        'Ser específico aquí es clave — los inversores y mentores valoran '
+        'proyectos con un nicho bien definido, no soluciones para "todos".\n\n'
+        'Ejemplos de grupos concretos:\n'
+        '• Pequeños restaurantes o negocios gastronómicos\n'
+        '• Estudiantes universitarios de últimos semestres\n'
+        '• Agricultores o productores rurales sin acceso a tecnología\n'
+        '• Adultos mayores con limitaciones digitales\n'
+        '• Madres y padres que trabajan y necesitan organización\n'
+        '• PYMEs de 5-50 empleados sin sistemas formales\n'
+        '• Profesionales independientes (freelancers)\n'
+        '• Jóvenes sin experiencia laboral buscando oportunidades\n\n'
+        '¿Quién es tu cliente o beneficiario ideal?'
+    ),
+]
+
+
+def _synthesize_project_ideas(session: 'AIProjectSession') -> str:
+    """
+    Genera 3 ideas de proyecto personalizadas basadas en las 3 respuestas
+    de brainstorming del usuario (frustración, talento, mercado).
+    """
+    # Recopilar las 3 respuestas del brainstorming
+    brainstorm_answers: list[str] = []
+    in_bs = False
+    for msg in session.messages:
+        if msg.get('role') == 'assistant' and '¡No te preocupes!' in msg.get('content', ''):
+            in_bs = True
+            brainstorm_answers = []
+        elif in_bs and msg.get('role') == 'user':
+            brainstorm_answers.append(msg['content'])
+
+    combined = ' '.join(brainstorm_answers).lower()
+    sector = _detect_sector(combined)
+
+    # Banco de ideas por sector + ideas genéricas
+    sector_ideas: dict[str, list[str]] = {
+        'tecnología': [
+            "**Plataforma SaaS** para automatizar el proceso manual o tedioso que identificaste, dirigida al sector o grupo que mencionas",
+            "**App móvil** que conecta digitalmente a las personas que sufren el problema con quienes pueden resolverlo",
+            "**Herramienta de analítica o IA** que transforma los datos del área en decisiones más inteligentes para tu mercado objetivo",
+        ],
+        'salud': [
+            "**Plataforma de telemedicina o seguimiento** para el problema de salud específico que mencionas",
+            "**App de bienestar o prevención** orientada al grupo demográfico que quieres impactar",
+            "**Sistema de gestión para centros de salud pequeños** (clínicas, consultorios, laboratorios)",
+        ],
+        'educación': [
+            "**Plataforma de microaprendizaje** basada en el conocimiento o habilidad que tienes, para tu mercado objetivo",
+            "**Marketplace de tutores o mentores** que conecte expertos con personas que necesitan aprender esa área",
+            "**App de práctica y seguimiento** de competencias clave para el perfil educativo que identificaste",
+        ],
+        'gastronomía': [
+            "**Sistema de gestión digital** (pedidos, inventario, menú) para el tipo de negocio gastronómico que identificas",
+            "**Marketplace de comida especializada** (saludable, local, orgánica) para el mercado que describes",
+            "**Plataforma de conexión** entre productores de alimentos y consumidores finales, eliminando intermediarios",
+        ],
+        'finanzas': [
+            "**Fintech de acceso a crédito o ahorro** diseñada para el segmento desatendido que identificaste",
+            "**App de educación y planificación financiera** práctica para tu comunidad objetivo",
+            "**Plataforma de inversión colectiva** en el sector productivo o comunidad que mencionas",
+        ],
+        'comercio': [
+            "**Marketplace local** que conecte productores o artesanos con compradores urbanos, eliminando intermediarios",
+            "**Sistema de gestión de inventario y ventas** para el tipo de comercio que tienes en mente",
+            "**Plataforma de e-commerce especializada** en el nicho o categoría de producto que identificaste",
+        ],
+        'agricultura': [
+            "**App de conexión** entre agricultores y compradores directos, eliminando al intermediario",
+            "**Plataforma de gestión agrícola** con datos del clima, precios de mercado y recomendaciones",
+            "**Marketplace de insumos agrícolas** con precios transparentes y entrega en zonas rurales",
+        ],
+        'logística': [
+            "**Plataforma de last-mile delivery** para el sector o zona geográfica que identificas",
+            "**Sistema de trazabilidad** de productos o envíos para el tipo de negocio que mencionas",
+            "**App de optimización de rutas** para transportadores independientes o PYMEs con flota propia",
+        ],
+        'turismo': [
+            "**Plataforma de experiencias locales auténticas** para el destino o tipo de turismo que identificas",
+            "**Sistema de reservas y gestión** para establecimientos de hospedaje pequeños y medianos",
+            "**App de guía local** que conecte viajeros con guías independientes de la comunidad",
+        ],
+        'sostenibilidad': [
+            "**Plataforma de economía circular** para el tipo de residuo o recurso que identificas",
+            "**App de huella ambiental** que ayuda a empresas o personas a medir y reducir su impacto",
+            "**Marketplace de productos eco-friendly** o de segunda mano para tu mercado objetivo",
+        ],
+    }
+
+    ideas = sector_ideas.get(sector, [
+        "**Plataforma digital** que resuelve el problema de fricción que identificaste, dirigida al grupo que quieres impactar",
+        "**Servicio o app especializada** que aprovecha tu conocimiento para dar solución al dolor que describiste",
+        "**Negocio de consultoría o capacitación** que convierte tu experiencia en un servicio pagado para tu mercado objetivo",
+    ])
+
+    ideas_text = '\n'.join(f'{i + 1}. {idea}' for i, idea in enumerate(ideas))
+    sector_label = f' (sector: **{sector}**)' if sector else ''
+
     return (
-        'Con lo que tenemos, ya puedes continuar al formulario y pulir detalles finales. '
-        'Si quieres, responde con el tiempo estimado para llegar a rentabilidad (ej. 12 meses).'
+        f'¡Excelente{sector_label}! Con todo lo que me contaste ya tengo suficiente para sugerirte ideas. '
+        f'Aquí van **3 posibles proyectos** basados en tu perfil:\n\n'
+        f'{ideas_text}\n\n'
+        '¿Cuál de estas ideas resuena más contigo? Puedes:\n'
+        '• Elegir una y decirme el número\n'
+        '• Combinar elementos de varias\n'
+        '• Describir tu propia idea si ya tienes una más concreta en mente\n\n'
+        '💡 *No hay respuesta incorrecta — lo que importa es que el proyecto te motive y resuelva un problema real.*'
     )
+
+
+# ── Preguntas guiadas por fase PMI — versión educativa ───────────────────────
+_PMI_PHASE_QUESTIONS = {
+    'ideation': (
+        '🔍 **Fase 1 — Problema y Solución**\n'
+        'Esta es la pregunta más importante. Los inversores y mentores necesitan '
+        'saber exactamente qué dolor o ineficiencia resuelves y para quién.\n\n'
+        '**Cuéntame:**\n'
+        '• ¿Qué situación o dificultad existe hoy y quién la sufre?\n'
+        '• ¿Qué tan frecuente o costosa es?\n'
+        '• ¿En qué consiste tu solución?\n'
+        '• ¿Por qué tu solución es mejor que las alternativas actuales?'
+    ),
+    'problem': (
+        '👥 **Fase 2 — Mercado Objetivo**\n'
+        'Conocer a tu cliente ideal es tan importante como tener un buen producto. '
+        'Los inversores quieren saber si el mercado es grande y alcanzable.\n\n'
+        '**Describe tu mercado:**\n'
+        '• Perfil del cliente ideal (edad, profesión, tipo de empresa, ubicación)\n'
+        '• Tamaño estimado (¿cuántas personas o empresas tienen el problema?)\n'
+        '• ¿Dónde buscan soluciones hoy? (Google, redes, ferias, referidos)\n'
+        '• ¿Por qué estarían dispuestos a pagar por tu solución?'
+    ),
+    'market': (
+        '💰 **Fase 3 — Modelo de Negocio**\n'
+        'Tu modelo de negocio responde: ¿cómo ganas dinero? '
+        'Debe ser sostenible, escalable y justo para el cliente.\n\n'
+        '**Explica:**\n'
+        '• ¿Cómo cobras? (suscripción, comisión, pago único, B2B, publicidad...)\n'
+        '• ¿Cuánto paga el cliente y con qué frecuencia?\n'
+        '• ¿Con cuántos clientes empiezas a cubrir tus costos?\n'
+        '• ¿Qué ventaja competitiva te hace diferente a las soluciones existentes?'
+    ),
+    'business_model': (
+        '🏦 **Fase 4 — Recursos y Presupuesto**\n'
+        'Los inversores necesitan saber exactamente en qué usarás su dinero '
+        'y que cada peso tiene un propósito estratégico.\n\n'
+        '**Indica:**\n'
+        '• Capital total que necesitas para arrancar (da una cifra)\n'
+        '• Los 3 principales rubros de inversión con porcentaje o valor\n'
+        '  (producto/tecnología, marketing/ventas, equipo, operaciones, legal)\n'
+        '• ¿Qué hito concreto lograrás con ese capital?'
+    ),
+    'resources': (
+        '⚠️ **Fase 5 — Riesgos y Mitigación**\n'
+        'Identificar riesgos no debilita tu proyecto — al contrario, '
+        'demuestra madurez y visión estratégica ante inversores y mentores.\n\n'
+        '**Describe 2-3 riesgos reales con su mitigación:**\n'
+        '• **Riesgo de mercado**: ¿qué pasa si la adopción es más lenta de lo esperado?\n'
+        '• **Riesgo competitivo**: ¿qué pasa si un actor grande copia la idea?\n'
+        '• **Riesgo operativo o técnico**: ¿qué podría salir mal internamente?\n\n'
+        'Para cada uno: *"Riesgo [X] → mitigación: [acción concreta]"*'
+    ),
+    'risks': (
+        '📅 **Fase 6 — Cronograma y Rentabilidad**\n'
+        'Los inversores quieren saber cuándo recuperarán su inversión '
+        'y qué hitos marcan el camino hacia la rentabilidad.\n\n'
+        '**Responde:**\n'
+        '• ¿En cuánto tiempo empieza a generar ingresos el proyecto?\n'
+        '• ¿Cuándo cubre sus propios costos (break-even)?\n'
+        '• ¿Cuándo genera retorno para los inversores?\n\n'
+        'Indica un número y unidad: **"18 meses"**, **"2 años"**, etc.\n\n'
+        '*Referencia: tech B2B → 12-24 meses normal. Hardware/regulado → 3-5 años.*'
+    ),
+    'timeline': (
+        '¡Perfecto! Ya tengo toda la información necesaria. '
+        'Generando tu proyecto estructurado...'
+    ),
+}
+
+_PMI_ENCOURAGE = [
+    '¡Muy bien!', '¡Excelente!', '¡Perfecto!', 'Entendido.', 'Anotado.',
+    '¡Buena respuesta!', '¡Genial!', '¡Estupendo!', 'Muy claro.',
+]
+
+# ── Detección de sector / industria ──────────────────────────────────────────
+_SECTOR_KEYWORDS: dict[str, set[str]] = {
+    'tecnología': {
+        'app', 'software', 'plataforma', 'web', 'digital', 'datos', 'ia',
+        'saas', 'api', 'automatizar', 'algoritmo', 'inteligencia', 'blockchain',
+        'nube', 'cloud', 'programacion', 'desarrollo', 'tecnologia', 'sistema',
+        'robot', 'iot', 'movil', 'celular',
+    },
+    'salud': {
+        'salud', 'medico', 'medica', 'hospital', 'clinica', 'paciente',
+        'enfermedad', 'bienestar', 'fitness', 'nutricion', 'dieta', 'terapia',
+        'farmacia', 'medicina', 'telemedicina', 'cita', 'consulta', 'especialista',
+    },
+    'educación': {
+        'educacion', 'aprendizaje', 'curso', 'estudiante', 'escuela',
+        'universidad', 'ensenanza', 'capacitacion', 'formacion', 'tutoria',
+        'aprender', 'colegio', 'docente', 'profesor', 'clases',
+    },
+    'gastronomía': {
+        'comida', 'restaurante', 'restaurantes', 'alimentos', 'cocina', 'gastronomia',
+        'delivery', 'receta', 'chef', 'catering', 'bebida', 'menu', 'organico',
+        'saludable', 'gastronomo', 'hosteleria',
+    },
+    'finanzas': {
+        'finanzas', 'dinero', 'prestamo', 'credito', 'inversion', 'banco',
+        'fintech', 'pagos', 'ahorro', 'seguro', 'contabilidad', 'fiscal',
+        'tributario', 'deuda', 'interes',
+    },
+    'comercio': {
+        'tienda', 'comercio', 'venta', 'ecommerce', 'producto', 'moda', 'ropa',
+        'marketplace', 'catalogo', 'inventario', 'retail', 'artesania',
+        'artesano', 'productor',
+    },
+    'agricultura': {
+        'agricultura', 'agricultor', 'agricultores', 'campo', 'cultivo', 'agro',
+        'cosecha', 'granja', 'agronomo', 'suelo', 'semilla', 'riego', 'agricola',
+        'rural', 'campesino', 'ganadero', 'productor', 'produccion',
+    },
+    'logística': {
+        'logistica', 'transporte', 'envio', 'despacho', 'almacen',
+        'distribucion', 'carga', 'flete', 'mensajeria', 'camion', 'ruta',
+    },
+    'turismo': {
+        'turismo', 'viaje', 'hotel', 'hospedaje', 'turista', 'destino',
+        'aventura', 'tour', 'reserva', 'viajero', 'agencia', 'excursion',
+    },
+    'sostenibilidad': {
+        'ambiente', 'sostenible', 'ecologico', 'reciclaje', 'energia', 'solar',
+        'eolica', 'carbono', 'verde', 'residuos', 'sustentable', 'contaminacion',
+    },
+}
+
+
+def _detect_sector(text: str) -> str:
+    """
+    Detecta el sector principal del proyecto.
+    Las palabras genéricas de tecnología (app, sistema, plataforma, digital)
+    no computan si otro sector tiene coincidencias propias.
+    """
+    _TECH_GENERIC = {'app', 'sistema', 'plataforma', 'digital', 'web', 'movil', 'celular', 'nube', 'cloud'}
+    words = set(_re.sub(r'[^\w\s]', ' ', text.lower()).split())
+    scores: dict[str, int] = {}
+    for sector, keywords in _SECTOR_KEYWORDS.items():
+        if sector == 'tecnología':
+            # Solo contar keywords NO genéricas para la puntuación base
+            domain_kw = keywords - _TECH_GENERIC
+            scores[sector] = len(domain_kw & words)
+        else:
+            scores[sector] = len(keywords & words)
+
+    best = max(scores, key=scores.get)
+    if scores[best] == 0:
+        return ''
+    # Si tecnología gana solo por genéricos, añadir las genéricas ahora
+    # y comparar de nuevo para desempate
+    tech_total = len(_SECTOR_KEYWORDS['tecnología'] & words)
+    scores['tecnología'] = max(scores['tecnología'], 0)
+    # Si algún sector especializado tiene puntaje > 0, excluir tecnología del
+    # ganador a menos que tenga más puntos que el especializado
+    other_max = max((v for k, v in scores.items() if k != 'tecnología'), default=0)
+    if other_max > 0 and scores['tecnología'] < other_max:
+        # Ignorar tecnología: el sector especializado gana
+        scores.pop('tecnología')
+        best = max(scores, key=scores.get)
+    else:
+        best = max(scores, key=scores.get)
+    return best if scores.get(best, 0) > 0 else ''
+
+
+# ── Ejemplos por sector para cada fase PMI ───────────────────────────────────
+_SECTOR_EXAMPLES: dict[str, dict[str, str]] = {
+    'tecnología': {
+        'ideation':       '*Ej: "Los pequeños negocios pierden 2h/día en tareas manuales. Mi plataforma las automatiza con IA."*',
+        'problem':        '*Ej: "PYMEs de 1-50 empleados en Colombia, ~800,000 empresas. Hoy usan Excel y WhatsApp sin integración."*',
+        'market':         '*Ej: "SaaS $29/mes básico y $99/mes pro, 30 días gratis. Break-even con 150 clientes activos."*',
+        'business_model': '*Ej: "$40,000 USD: 50% desarrollo, 20% infraestructura cloud, 30% equipo de ventas primer año."*',
+        'resources':      '*Ej: "Riesgo: adopción lenta → 60 días de prueba gratis. Riesgo: competencia → nicho muy específico."*',
+        'risks':          '*Ej: "Primeros ingresos mes 4, break-even mes 18, ROI para inversores en año 3."*',
+    },
+    'salud': {
+        'ideation':       '*Ej: "Pacientes esperan 3 semanas para ver un especialista. Mi app resuelve la cita en 24h por videollamada."*',
+        'problem':        '*Ej: "Adultos 40+ con enfermedades crónicas en ciudades de +200k hab. Aprox. 15M personas en Colombia."*',
+        'market':         '*Ej: "Consulta virtual $25 USD + suscripción de seguimiento $40/mes. Break-even con 200 consultas/mes."*',
+        'business_model': '*Ej: "$60,000 USD: 40% plataforma, 25% cumplimiento regulatorio, 35% adquisición de médicos."*',
+        'resources':      '*Ej: "Riesgo: regulación → alianza con IPS certificada. Riesgo: desconfianza → pilotos con médicos reconocidos."*',
+        'risks':          '*Ej: "Ingresos desde mes 3 (pilotos), break-even mes 14, escala sin costo incremental alto."*',
+    },
+    'gastronomía': {
+        'ideation':       '*Ej: "Restaurantes locales pierden 30% de clientes por no tener pedidos en línea. Mi app lo soluciona."*',
+        'problem':        '*Ej: "Restaurantes familiares de 1-15 empleados sin sistema de pedidos. Aprox. 50,000 en Colombia."*',
+        'market':         '*Ej: "Mensualidad $30 USD + comisión 5% sobre pedidos. Break-even con 120 restaurantes activos."*',
+        'business_model': '*Ej: "$35,000 USD: 45% desarrollo, 35% ventas directas a restaurantes, 20% operaciones."*',
+        'resources':      '*Ej: "Riesgo: Rappi copia el modelo → nos enfocamos en pedidos propios, no marketplace general."*',
+        'risks':          '*Ej: "Primeros ingresos mes 2 (ventas directas), break-even mes 16, rentable a 24 meses."*',
+    },
+    'educación': {
+        'ideation':       '*Ej: "El 60% de universitarios no consigue prácticas por falta de contactos. Mi plataforma los conecta con empresas."*',
+        'problem':        '*Ej: "Estudiantes de últimos semestres en universidades colombianas. Mercado de ~2M estudiantes."*',
+        'market':         '*Ej: "B2B: $150 USD/mes por empresa. Estudiantes gratis (modelo B2B2C). Break-even con 80 empresas."*',
+        'business_model': '*Ej: "$25,000 USD: 35% plataforma, 30% alianzas con universidades, 35% marketing digital."*',
+        'resources':      '*Ej: "Riesgo: universidades no adoptan → acceso directo por LinkedIn. Riesgo: bajo uso → gamificación."*',
+        'risks':          '*Ej: "Ingresos desde mes 4, break-even mes 20, escalabilidad sin costo por usuario adicional."*',
+    },
+}
+
+_SECTOR_EXAMPLES_DEFAULT: dict[str, str] = {
+    'ideation':       '*Ej: "X personas sufren Y problema cada día. Las alternativas cuestan más o no lo resuelven bien. Yo propongo [solución]."*',
+    'problem':        '*Ej: "Profesionales de 25-45 años en ciudades de +300k hab. Mercado de N personas. Hoy resuelven el problema con [alternativa ineficiente]."*',
+    'market':         '*Ej: "Suscripción $X/mes o comisión Y% por transacción. Con N clientes cubrimos costos fijos. Diferencial: [factor único]."*',
+    'business_model': '*Ej: "$X total: Desarrollo X%, Marketing X%, Operaciones X%. Con esto logramos [hito concreto] en M meses."*',
+    'resources':      '*Ej: "Riesgo 1: [problema] → mitigación: [acción]. Riesgo 2: [problema] → mitigación: [acción]."*',
+    'risks':          '*Ej: "Primeros ingresos mes N. Break-even mes M. Rentabilidad para inversores en X años."*',
+}
+
+
+def _get_sector_example(sector: str, phase: str) -> str:
+    """Retorna ejemplo contextual por sector y fase PMI."""
+    example = _SECTOR_EXAMPLES.get(sector, {}).get(phase) or _SECTOR_EXAMPLES_DEFAULT.get(phase, '')
+    return f'\n\n{example}' if example else ''
+
+
+# ── Validación de profundidad de respuesta ────────────────────────────────────
+_PHASE_MIN_WORDS: dict[str, int] = {
+    'ideation':       10,
+    'problem':        10,
+    'market':         8,
+    'business_model': 7,
+    'resources':      5,
+    'risks':          3,
+}
+
+_VAGUE_FOLLOWUPS: dict[str, str] = {
+    'ideation': (
+        'Voy a necesitar un poco más de detalle para ayudarte mejor. 🙂\n\n'
+        '¿Puedes describir la idea con 2-3 frases? Incluye:\n'
+        '• El problema que resuelve\n'
+        '• Para quién es\n'
+        '• En qué consiste tu propuesta concretamente'
+    ),
+    'problem': (
+        'Eso es un buen inicio, pero los inversores necesitan más especificidad.\n\n'
+        '¿Puedes ampliar un poco más?\n'
+        '• ¿Cuántas personas o empresas sufren este problema?\n'
+        '• ¿Dónde están (ciudad, país, sector)?\n'
+        '• ¿Qué usan hoy para resolverlo y por qué no es suficiente?'
+    ),
+    'market': (
+        'Necesito un perfil un poco más concreto de tu cliente. 😊\n\n'
+        '• ¿Qué edad tienen o qué tipo de empresa son?\n'
+        '• ¿Dónde están ubicados?\n'
+        '• ¿Cuántos hay aproximadamente en tu mercado objetivo?'
+    ),
+    'business_model': (
+        'Para estructurar bien el modelo de negocio necesito un poco más. 💰\n\n'
+        '• ¿Cómo cobrarás exactamente? (suscripción, comisión, venta única...)\n'
+        '• ¿Cuánto pagaría un cliente?\n'
+        '• ¿Qué te diferencia de otras soluciones que ya existen?'
+    ),
+    'risks': (
+        'Identifica los riesgos con un poco más de detalle para que sean útiles. ⚠️\n\n'
+        '• ¿Cuál es el principal riesgo que podría hacer fallar el proyecto?\n'
+        '• ¿Cómo planeas reducir ese riesgo?\n'
+        '• Intenta mencionar al menos 2 riesgos (comercial, técnico o financiero)'
+    ),
+}
+
+
+def _is_answer_vague(msg: str, phase: str) -> bool:
+    """True si la respuesta del usuario es muy corta para la fase."""
+    min_words = _PHASE_MIN_WORDS.get(phase, 0)
+    return min_words > 0 and len(msg.strip().split()) < min_words
+
+
+def _build_contextual_ack(user_message: str) -> str:
+    """Construye un reconocimiento cálido que menciona lo que dijo el usuario."""
+    import random
+    if not user_message or len(user_message.strip().split()) < 4:
+        return random.choice(_PMI_ENCOURAGE) + ' '
+    words = user_message.strip().split()
+    snippet = ' '.join(words[:10]) + ('...' if len(words) > 10 else '')
+    snippet_lower = snippet[0].lower() + snippet[1:]
+    acks = [
+        f'Entendido — *"{snippet_lower}"*.\n\n',
+        f'Anotado: *"{snippet_lower}"*.\n\n',
+        f'Registrado lo de *"{snippet_lower}"*.\n\n',
+    ]
+    return random.choice(acks)
+
+
+def _count_brainstorming_turns(session: 'AIProjectSession') -> int:
+    """
+    Cuenta cuántos mensajes del usuario han ocurrido desde que empezó el brainstorming.
+    El brainstorming comienza cuando la IA envía '¡No te preocupes!'.
+    """
+    count = 0
+    in_brainstorming = False
+    for msg in session.messages:
+        if msg.get('role') == 'assistant' and '¡No te preocupes!' in msg.get('content', ''):
+            in_brainstorming = True
+            count = 0
+        elif in_brainstorming and msg.get('role') == 'user':
+            count += 1
+    return count
+
+
+def _extract_user_context(session: 'AIProjectSession') -> dict:
+    """
+    Extrae información clave de todos los mensajes del usuario en la sesión.
+    Retorna un dict con los campos detectados para construir el PROJECT_DATA.
+    """
+    user_msgs = [m['content'] for m in session.messages if m.get('role') == 'user']
+    full_text = ' '.join(user_msgs)
+
+    import re
+
+    # Extraer monto de financiamiento
+    funding_goal = '50000'
+    money_match = re.search(
+        r'(\d[\d\.,]*)\s*(millones?|mil|k|usd|cop|pesos|dolares)?',
+        full_text, re.IGNORECASE
+    )
+    if money_match:
+        raw = money_match.group(1).replace(',', '').replace('.', '')
+        unit = (money_match.group(2) or '').lower()
+        try:
+            val = int(raw)
+            if 'millon' in unit:
+                val *= 1_000_000
+            elif unit in ('mil', 'k'):
+                val *= 1_000
+            if 500 <= val <= 50_000_000:
+                funding_goal = str(val)
+        except ValueError:
+            pass
+
+    # Extraer tiempo de rentabilidad
+    prof_time = '18'
+    prof_unit = 'meses'
+    time_match = re.search(
+        r'(\d+)\s*(meses?|años?|year|month)',
+        full_text, re.IGNORECASE
+    )
+    if time_match:
+        prof_time = time_match.group(1)
+        raw_unit = time_match.group(2).lower()
+        prof_unit = 'años' if raw_unit.startswith('a') or raw_unit.startswith('y') else 'meses'
+
+    # Construir título a partir del primer mensaje del usuario
+    title = ''
+    if user_msgs:
+        first = user_msgs[0][:80].strip()
+        title = re.sub(r'\s+', ' ', first).capitalize()
+        if len(title) > 60:
+            title = title[:57] + '...'
+
+    # Descripción combinada de los primeros mensajes
+    description = ' '.join(user_msgs[:6])
+    if len(description) > 1000:
+        description = description[:997] + '...'
+
+    # Tags a partir de palabras relevantes
+    tag_keywords = re.findall(r'\b[a-záéíóúüñA-ZÁÉÍÓÚÜÑ]{5,}\b', full_text)
+    from collections import Counter
+    common = Counter(tag_keywords).most_common(8)
+    tags = ', '.join(w.lower() for w, _ in common if w.lower() not in {
+        'proyecto', 'empresa', 'negocio', 'quiero', 'puedo', 'tengo',
+        'seria', 'podria', 'nuestro', 'nuestra',
+    })[:200]
+
+    return {
+        'title':                title or 'Mi Proyecto',
+        'description':          description or 'Proyecto estructurado con asistente CrowdMentor IA.',
+        'tags':                 tags or 'emprendimiento, innovacion',
+        'funding_goal':         funding_goal,
+        'profitability_time':   prof_time,
+        'profitability_unit':   prof_unit,
+    }
+
+
+def _get_kaggle_prediction(text: str, funding_goal: str = '50000') -> str:
+    """
+    Ejecuta el predictor entrenado con Kaggle y retorna un bloque de texto
+    listo para insertar en la respuesta del chat.
+    Retorna '' si el modelo no está disponible.
+    """
+    try:
+        from ml_models.success_predictor import get_predictor
+        predictor = get_predictor()
+        if not predictor.is_trained():
+            return ''
+        result = predictor.predict(text, float(funding_goal))
+        prob = result.get('probability', 0)
+        label = result.get('label', 0)
+        pct = int(prob * 100)
+        # Barra visual de probabilidad
+        filled = round(pct / 10)
+        bar = '🟩' * filled + '⬜' * (10 - filled)
+        if pct >= 70:
+            icon, verdict = '🚀', 'Alta probabilidad de éxito'
+        elif pct >= 50:
+            icon, verdict = '📈', 'Probabilidad moderada'
+        else:
+            icon, verdict = '⚠️', 'Probabilidad baja — refuerza tu propuesta'
+        return (
+            f'\n\n---\n'
+            f'### {icon} Análisis Predictivo Kaggle\n'
+            f'Basado en **150,000 proyectos reales de Kickstarter**, '
+            f'tu propuesta tiene una probabilidad estimada de éxito de:\n\n'
+            f'**{pct}%** {bar}\n\n'
+            f'**Veredicto:** {verdict}'
+        )
+    except Exception:
+        return ''
+
+
+def _get_advisor_tips_for_response(user_message: str, phase: str) -> str:
+    """
+    Usa el Módulo 3 (Advisor) para enriquecer la respuesta con una sugerencia
+    contextual cuando el usuario describe su proyecto.
+    Solo agrega la sugerencia en fases clave.
+    """
+    if phase not in ('problem', 'market', 'business_model'):
+        return ''
+    try:
+        from ml_models.advisor import get_advisor
+        advisor = get_advisor()
+        if not advisor.is_ready():
+            return ''
+        tips = advisor.advise(user_message)
+        # Tomar solo la sugerencia de mayor prioridad que aplique
+        for t in tips:
+            if t.get('source') == 'rule' and t.get('priority') == 'Alta':
+                return f'\n\n💡 **Sugerencia IA:** {t["suggestion"]}'
+        return ''
+    except Exception:
+        return ''
+
+
+def _advance_phase(session: AIProjectSession) -> str:
+    """Avanza la fase PMI al siguiente paso y la guarda. Retorna la nueva fase."""
+    phases = _PMI_PHASE_ORDER
+    current = session.current_phase
+    try:
+        idx = phases.index(current)
+    except ValueError:
+        idx = 0
+    next_phase = phases[idx + 1] if idx + 1 < len(phases) else 'summary'
+    session.current_phase = next_phase
+    session.save(update_fields=['current_phase'])
+    return next_phase
+
+
+def _build_local_guided_fallback(session: AIProjectSession) -> str:
+    """Mantiene compatibilidad: delega al motor PMI local."""
+    return _get_ai_response(session, '')[0]
 
 
 def _get_ai_response(session: AIProjectSession, user_message: str) -> tuple[str, str]:
-    """Responde solo con Gemini. Sin API key o sin respuesta, no genera contenido conversacional."""
-    gemini_api_key = getattr(settings, 'GEMINI_API_KEY', '') or os.environ.get('GEMINI_API_KEY', '')
-    if not gemini_api_key:
+    """
+    Motor conversacional PMI local — no requiere ninguna API externa.
+    Incluye:
+    - Detección de "no tengo idea" + brainstorming de 3 preguntas + síntesis de ideas
+    - Validación de profundidad: si la respuesta es muy vaga, pide más detalle sin avanzar de fase
+    - Reconocimiento contextual: menciona lo que el usuario dijo
+    - Ejemplos por sector (tecnología, salud, gastronomía, educación, etc.)
+    - Sugerencias del Advisor en fases clave
+    """
+    import random
+
+    current_phase = session.current_phase
+
+    # ── Fase summary: ya terminó ───────────────────────────────────────────────
+    if current_phase == 'summary':
         return (
-            '⚠️ El asistente IA está deshabilitado porque no hay API key de Gemini configurada. '
-            'Configura GEMINI_API_KEY para habilitar respuestas.',
-            'gemini-not-configured',
+            '✅ Tu proyecto ya fue estructurado. Puedes usar los datos generados '
+            'para crear tu proyecto en CrowdMentor o iniciar una nueva sesión.',
+            'local-pmi',
         )
 
-    remote_text = _get_remote_llm_response(session, user_message)
-    if remote_text:
-        return remote_text, 'gemini'
+    # ── Detectar "no tengo idea" en fase welcome ───────────────────────────────
+    if user_message and current_phase == 'welcome' and _detect_no_idea(user_message):
+        session.current_phase = 'brainstorming'
+        session.save(update_fields=['current_phase'])
+        return _BRAINSTORMING_QUESTIONS[0], 'local-pmi'
 
-    return (
-        '⚠️ No se pudo obtener respuesta de Gemini en este momento. '
-        'Verifica tu API key, modelo o conexión e inténtalo de nuevo.',
-        'gemini-error',
+    # ── Brainstorming: 3 preguntas + síntesis de ideas (4° paso) ──────────────
+    if current_phase == 'brainstorming':
+        bt = _count_brainstorming_turns(session)
+        if bt < len(_BRAINSTORMING_QUESTIONS):
+            return _BRAINSTORMING_QUESTIONS[bt], 'local-pmi'
+        elif bt == len(_BRAINSTORMING_QUESTIONS):
+            # 4° paso: sintetizar ideas basadas en sus respuestas
+            return _synthesize_project_ideas(session), 'local-pmi'
+        else:
+            # El usuario respondió a la síntesis → transicionar a ideation
+            session.current_phase = 'ideation'
+            session.save(update_fields=['current_phase'])
+            current_phase = 'ideation'
+            bridge = (
+                '¡Perfecto! Ya elegiste tu idea. Ahora vamos a estructurarla '
+                'profesionalmente para que puedas presentarla a mentores e inversores.\n\n'
+                '🔍 **Fase 1 — Problema y Solución:** Descríbeme en 2-3 frases '
+                'cuál es exactamente tu proyecto: '
+                '¿qué problema resuelve, para quién y cómo?'
+            )
+            return bridge, 'local-pmi'
+
+    # ── Detectar respuesta vaga (sin avanzar de fase) ─────────────────────────
+    if user_message and _is_answer_vague(user_message, current_phase):
+        followup = _VAGUE_FOLLOWUPS.get(current_phase, '')
+        if followup:
+            return followup, 'local-pmi'
+
+    # ── Contar respuestas del usuario en la fase actual ───────────────────────
+    phase_user_count = 0
+    for msg in reversed(session.messages):
+        if msg.get('role') == 'assistant':
+            break
+        if msg.get('role') == 'user':
+            phase_user_count += 1
+
+    # Avanzar a la siguiente fase
+    if user_message and phase_user_count >= 1:
+        next_phase = _advance_phase(session)
+        current_phase = next_phase
+
+    # ── Fase timeline: generar PROJECT_DATA + predicción Kaggle ────────────────
+    if current_phase == 'timeline' or (current_phase == 'summary' and not session.generated_title):
+        ctx = _extract_user_context(session)
+        import json as _json
+        project_json = _json.dumps(ctx, ensure_ascii=False, indent=2)
+        encourage_word = random.choice(_PMI_ENCOURAGE)
+
+        # Texto representativo del proyecto para la predicción
+        all_user_text = ' '.join(
+            m['content'] for m in session.messages if m.get('role') == 'user'
+        )
+        prediction_block = _get_kaggle_prediction(all_user_text, ctx['funding_goal'])
+
+        response = (
+            f'{encourage_word} Ya tengo todo lo necesario para estructurar tu proyecto.\n\n'
+            f'📋 **Título sugerido:** {ctx["title"]}\n'
+            f'🏷️ **Tags:** {ctx["tags"]}\n'
+            f'💰 **Meta de financiamiento:** ${int(ctx["funding_goal"]):,}\n'
+            f'📅 **Rentabilidad estimada:** {ctx["profitability_time"]} {ctx["profitability_unit"]}'
+            f'{prediction_block}\n\n'
+            f'Pulsa **"Crear Proyecto"** para publicarlo en CrowdMentor '
+            f'y conectar con mentores e inversores.\n\n'
+            f'<PROJECT_DATA>{project_json}</PROJECT_DATA>'
+        )
+        session.current_phase = 'summary'
+        session.save(update_fields=['current_phase'])
+        return response, 'local-pmi'
+
+    # ── Construir respuesta contextual para la fase actual ────────────────────
+    # Detectar sector de toda la conversación
+    all_user_text = ' '.join(
+        m['content'] for m in session.messages if m.get('role') == 'user'
     )
+    sector = _detect_sector(all_user_text)
+
+    # Reconocimiento contextual (menciona lo que dijeron)
+    ack = _build_contextual_ack(user_message) if user_message else ''
+
+    # Pregunta guiada de la fase
+    phase_question = _PMI_PHASE_QUESTIONS.get(current_phase, '')
+
+    # Ejemplo del sector para la fase
+    sector_example = _get_sector_example(sector, current_phase)
+
+    # Sugerencia del Advisor en fases clave
+    advisor_tip = _get_advisor_tips_for_response(user_message, current_phase) if user_message else ''
+
+    # Predicción Kaggle solo al RESPONDER en business_model (análisis preliminar)
+    kaggle_preview = ''
+    if user_message and current_phase == 'resources':  # justo después de describir el modelo
+        all_user_text_bm = ' '.join(
+            m['content'] for m in session.messages if m.get('role') == 'user'
+        )
+        kaggle_preview = _get_kaggle_prediction(all_user_text_bm)
+        if kaggle_preview:
+            kaggle_preview = (
+                '\n\n> 💡 *Análisis preliminar basado en los datos que has compartido hasta ahora:*'
+                + kaggle_preview
+                + '\n> *(Este valor se actualizará con la información completa al finalizar.)*'
+            )
+
+    if phase_question:
+        response = f'{ack}{phase_question}{sector_example}{advisor_tip}{kaggle_preview}'.strip()
+    else:
+        fallback_example = _SECTOR_EXAMPLES_DEFAULT.get('ideation', '')
+        response = (
+            f'{ack}¡Cuéntame tu proyecto! ¿Qué problema resuelve y a quién va dirigido?\n\n'
+            f'{fallback_example}{advisor_tip}{kaggle_preview}'
+        ).strip()
+
+    return response, 'local-pmi'
 
 
 def _extract_project_data(ai_text: str) -> dict | None:
@@ -2814,3 +3538,154 @@ def upload_signed_contract(request, contract_id):
         return redirect('dashboard')
 
     return render(request, 'upload_signed_contract.html', {'contract': contract})
+
+# ─────────────────────────────────────────────────────────────
+# Módulos de IA propios — CrowdMentor AI System
+# ─────────────────────────────────────────────────────────────
+
+@login_required
+def project_ai_analysis(request, project_id):
+    """
+    Modulo 1 + 3: Prediccion de exito y sugerencias de mejora para un proyecto.
+    Accesible por el dueno del proyecto, mentores y evaluadores.
+    """
+    project = get_object_or_404(Project, pk=project_id)
+
+    user_profile = Profile.objects.filter(user=request.user).first()
+    is_owner = project.owner == request.user
+    is_mentor = user_profile and user_profile.user_type == 'mentor'
+    is_evaluator = user_profile and user_profile.user_type in ('evaluator', )
+    is_admin = request.user.is_staff or request.user.is_superuser
+
+    if not (is_owner or is_mentor or is_evaluator or is_admin):
+        messages.error(request, 'No tienes permiso para ver este analisis.')
+        return redirect('project_detail', pk=project_id)
+
+    prediction = None
+    try:
+        from ml_models.success_predictor import get_predictor
+        predictor = get_predictor()
+        prediction = predictor.predict(
+            description=f"{project.title} {project.description}",
+            funding_goal=float(project.funding_goal),
+            category=project.category.name if project.category else '',
+        )
+    except Exception:
+        prediction = {'is_trained': False, 'label': 'No disponible', 'factors': []}
+
+    suggestions = []
+    try:
+        from ml_models.advisor import get_advisor
+        advisor = get_advisor()
+        suggestions = advisor.advise(
+            project_description=f"{project.title} {project.description}",
+            project_category=project.category.name if project.category else '',
+        )
+    except Exception:
+        suggestions = []
+
+    mentor_recs = []
+    try:
+        from ml_models.mentor_recommender import get_recommender
+        rec = get_recommender()
+        mentor_recs = rec.recommend(
+            project_description=f"{project.title} {project.description}",
+            project_category=project.category.name if project.category else '',
+            top_k=5,
+        )
+    except Exception:
+        mentor_recs = []
+
+    context = {
+        'project':     project,
+        'prediction':  prediction,
+        'suggestions': suggestions,
+        'mentor_recs': mentor_recs,
+        'is_owner':    is_owner,
+    }
+    return render(request, 'project_ai_analysis.html', context)
+
+
+@login_required
+def mentor_ai_recommendations(request, project_id):
+    """Modulo 2: Retorna recomendaciones de mentores en JSON (AJAX)."""
+    project = get_object_or_404(Project, pk=project_id)
+
+    try:
+        from ml_models.mentor_recommender import get_recommender
+        rec = get_recommender()
+
+        if not rec.is_ready():
+            return JsonResponse({
+                'status': 'not_ready',
+                'message': 'El indice de mentores aun no ha sido construido.',
+                'recommendations': [],
+            })
+
+        results = rec.recommend(
+            project_description=f"{project.title} {project.description}",
+            project_category=project.category.name if project.category else '',
+            top_k=5,
+        )
+        return JsonResponse({'status': 'ok', 'recommendations': results})
+
+    except Exception as exc:
+        return JsonResponse({'status': 'error', 'message': str(exc), 'recommendations': []})
+
+
+@login_required
+def ai_predict_project_ajax(request):
+    """Modulo 1: Predice el exito de un proyecto a partir de texto (AJAX POST)."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Metodo no permitido'}, status=405)
+
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'JSON invalido'}, status=400)
+
+    description  = str(body.get('description', ''))
+    funding_goal = body.get('funding_goal')
+    category     = str(body.get('category', ''))
+
+    if not description.strip():
+        return JsonResponse({'error': 'Descripcion vacia'}, status=400)
+
+    try:
+        from ml_models.success_predictor import get_predictor
+        predictor = get_predictor()
+        result = predictor.predict(description, funding_goal, category)
+        return JsonResponse(result)
+    except Exception as exc:
+        return JsonResponse({'error': str(exc)}, status=500)
+
+
+@login_required
+def admin_rebuild_ai(request):
+    """Vista de administrador para reconstruir todos los indices de IA."""
+    if not (request.user.is_staff or request.user.is_superuser):
+        messages.error(request, 'Acceso restringido.')
+        return redirect('admin_dashboard')
+
+    if request.method == 'POST':
+        results = {}
+
+        try:
+            from ml_models.mentor_recommender import rebuild_mentor_index
+            results['mentors'] = f'{rebuild_mentor_index()} mentores indexados'
+        except Exception as e:
+            results['mentors'] = f'Error: {e}'
+
+        try:
+            from ml_models.advisor import rebuild_advisor_corpus
+            results['advisor'] = f'{rebuild_advisor_corpus()} proyectos indexados'
+        except Exception as e:
+            results['advisor'] = f'Error: {e}'
+
+        messages.success(
+            request,
+            f"IA actualizada. Mentores: {results.get('mentors')} | Asesor: {results.get('advisor')}"
+        )
+        return redirect('admin_dashboard')
+
+    return render(request, 'admin_rebuild_ai.html')

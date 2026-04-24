@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Reconstruir Índices IA{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-7">
+      <div class="card border-0 shadow">
+        <div class="card-body p-4">
+          <h4 class="fw-bold mb-1">
+            <i class="fas fa-brain text-primary me-2"></i>Reconstruir Índices IA
+          </h4>
+          <p class="text-muted mb-4">
+            Actualiza el índice de mentores y el corpus del asesor de proyectos
+            con los datos actuales de la base de datos.
+          </p>
+
+          <div class="alert alert-info" style="font-size:.88rem;">
+            <i class="fas fa-info-circle me-2"></i>
+            Esta acción indexa los perfiles de mentores aprobados y los proyectos
+            exitosos. No entrena el predictor de éxito (usa
+            <code>python manage.py train_ai</code> para eso).
+          </div>
+
+          <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary w-100">
+              <i class="fas fa-sync-alt me-2"></i>Reconstruir ahora
+            </button>
+          </form>
+
+          <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-secondary w-100 mt-2">
+            <i class="fas fa-arrow-left me-1"></i>Volver al panel
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
