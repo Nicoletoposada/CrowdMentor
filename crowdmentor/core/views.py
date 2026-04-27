@@ -2537,6 +2537,97 @@ _PMI_PHASE_ORDER = [
 # ── Detección "no tengo idea" ─────────────────────────────────────────────────
 import re as _re
 
+# ── Patrones de confusión / desconocimiento en cualquier fase ─────────────────
+_CONFUSED_PATTERNS = [
+    r'es\s+que\s+no\s+s[eé]',
+    r'no\s+s[eé]\s+nada',
+    r'no\s+s[eé]\s+de\s+eso',
+    r'no\s+entiendo',
+    r'no\s+comprendo',
+    r'no\s+lo\s+entiendo',
+    r'(no|tampoco)\s+tengo\s+(ni\s+)?idea\b',
+    r'que\s+es\s+eso',
+    r'qu[eé]\s+significa',
+    r'qu[eé]\s+(debo|tengo\s+que)\s+(poner|responder|escribir|decir)',
+    r'qu[eé]\s+respondo',
+    r'no\s+s[eé]\s+(qu[eé]|c[oó]mo|cuánto|quién)',
+    r'nunca\s+he\s+(hecho|pensado|estudiado)',
+    r'no\s+tengo\s+experiencia',
+    r'me\s+puedes\s+(explicar|ayudar)',
+    r'puedes\s+(explicarme|ayudarme)',
+    r'no\s+tengo\s+ni\s+idea',
+    r'no\s+manejo\s+ese\s+tema',
+    r'no\s+s[eé]\s+ese\s+tema',
+    r'^no\s+s[eé][\.\!\?]?$',
+    r'^no\s+sé\s+nada[\.\!\?]?$',
+]
+
+# ── Mensajes de ayuda educativa cuando el usuario no entiende la fase ─────────
+_CONFUSED_HELP: dict[str, str] = {
+    'ideation': (
+        '¡No hay problema, es completamente normal cuando se empieza! 😊\n\n'
+        '**¿Qué te estoy preguntando exactamente?**\n'
+        'Solo quiero que me cuentes en pocas palabras de qué trata tu proyecto.\n\n'
+        'Piensa en estas 3 preguntas simples:\n'
+        '1. ¿Qué ofreces? (una app, una tienda, un servicio, un producto...)\n'
+        '2. ¿Para quién? (restaurantes, estudiantes, mamás, adultos mayores...)\n'
+        '3. ¿Qué problema resuelve o qué mejora?\n\n'
+        '*Ej: "Quiero crear una app para que los restaurantes pequeños reciban pedidos online sin pagar comisiones a Rappi."*\n\n'
+        'No tiene que ser perfecto — ¡cuéntamelo con tus propias palabras!'
+    ),
+    'problem': (
+        '¡Tranquilo/a! Te explico qué necesito. 😊\n\n'
+        '**¿Qué es el mercado objetivo?**\n'
+        'Es simplemente el grupo de personas o negocios a los que quieres vender.\n\n'
+        'Responde con lo que sepas de estas preguntas:\n'
+        '• ¿Quiénes comprarían tu producto o servicio? (edad, tipo de negocio, profesión...)\n'
+        '• ¿Dónde están? (tu ciudad, tu país, toda Latinoamérica...)\n'
+        '• ¿Cuántos crees que hay? (una estimación está bien)\n\n'
+        '*Ej: "Dueños de pequeños restaurantes en Bogotá. Creo que hay unos 10,000."*\n\n'
+        '¿A qué tipo de personas va dirigido tu proyecto?'
+    ),
+    'market': (
+        '¡Sin problema, te explico! 💰\n\n'
+        '**¿Cómo vas a ganar dinero?** Es más simple de lo que parece:\n\n'
+        '• **Opción A — Cobro mensual:** Le cobras a tus clientes una cuota fija cada mes\n'
+        '• **Opción B — Comisión:** Te quedas con un % de cada venta o transacción\n'
+        '• **Opción C — Pago único:** El cliente paga una sola vez\n'
+        '• **Opción D — Freemium:** La versión básica es gratis, las funciones avanzadas son de pago\n\n'
+        '*Ej: "Cobro $30 al mes por restaurante. Me diferencio porque es súper fácil de usar sin saber de tecnología."*\n\n'
+        '¿Cuál de esas opciones se parece más a lo que tienes en mente?'
+    ),
+    'business_model': (
+        '¡Vamos paso a paso! 📦 Te explico qué necesito.\n\n'
+        '**¿Cuánto dinero necesitas para arrancar y en qué lo gastarías?**\n\n'
+        'Piensa en los costos más básicos:\n'
+        '• ¿Necesitas desarrollar una app o sitio web? ¿Cuánto crees que costaría?\n'
+        '• ¿Necesitas contratar a alguien para empezar?\n'
+        '• ¿Cómo darás a conocer tu proyecto? (publicidad, redes sociales...)\n\n'
+        'No tienes que ser preciso — una estimación gruesa sirve.\n\n'
+        '*Ej: "Necesito como $15,000: $8,000 para la app, $4,000 para un vendedor y $3,000 para marketing."*\n\n'
+        '¿Cuánto crees que necesitarías para empezar?'
+    ),
+    'risks': (
+        '¡Los riesgos son simplemente los "¿qué podría salir mal?" del proyecto! ⚠️\n\n'
+        'No necesitas ser experto — solo piensa en estos 3 escenarios:\n\n'
+        '• **Riesgo de clientes:** ¿Por qué alguien podría preferir no comprarte?\n'
+        '• **Riesgo de competencia:** ¿Ya existe algo parecido que sea muy fuerte?\n'
+        '• **Riesgo de operación:** ¿Hay algo técnico, legal o de dinero que te preocupe?\n\n'
+        '*Ej: "El mayor riesgo es que los clientes ya usen Rappi. Lo resolvería enfocándome en que los restaurantes tengan su propio sistema de pedidos."*\n\n'
+        '¿Cuál sería el mayor obstáculo que ves para tu proyecto?'
+    ),
+}
+
+
+def _detect_confused(msg: str) -> bool:
+    """True si el usuario expresa que no entiende o no sabe nada sobre lo que se le pregunta."""
+    msg_lower = msg.lower().strip()
+    for pattern in _CONFUSED_PATTERNS:
+        if _re.search(pattern, msg_lower):
+            return True
+    return False
+
+
 _NO_IDEA_PATTERNS = [
     r'no\s+tengo\s+(una\s+)?(buena\s+)?(idea|ideas)',
     r'sin\s+ideas?',
@@ -3213,6 +3304,12 @@ def _get_ai_response(session: AIProjectSession, user_message: str) -> tuple[str,
                 '¿qué problema resuelve, para quién y cómo?'
             )
             return bridge, 'local-pmi'
+
+    # ── Detectar confusión / desconocimiento del usuario (tiene prioridad sobre vaguedad) ──
+    if user_message and _detect_confused(user_message):
+        help_msg = _CONFUSED_HELP.get(current_phase, '')
+        if help_msg:
+            return help_msg, 'local-pmi'
 
     # ── Detectar respuesta vaga (sin avanzar de fase) ─────────────────────────
     if user_message and _is_answer_vague(user_message, current_phase):
