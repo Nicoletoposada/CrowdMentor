@@ -31,13 +31,16 @@ from __future__ import annotations
 
 import logging
 import numpy as np
+import math
 
 try:
     import joblib
     from sklearn.linear_model import LogisticRegression
+    from sklearn.linear_model import SGDClassifier
     from sklearn.feature_extraction.text import TfidfVectorizer
     from sklearn.pipeline import Pipeline, FeatureUnion
     from sklearn.preprocessing import FunctionTransformer, StandardScaler
+    from sklearn.utils import shuffle as sk_shuffle
     from sklearn.metrics import (
         accuracy_score, precision_score, recall_score,
         f1_score, roc_auc_score, classification_report,
@@ -53,6 +56,65 @@ logger = logging.getLogger(__name__)
 
 
 class ProjectSuccessPredictor:
+    @staticmethod
+    def _clip_probability(value: float) -> float:
+        return max(0.01, min(0.99, value))
+
+    def _context_adjustment(self, description: str, funding_goal: float | None, category: str | None) -> float:
+        """
+        Ajusta la probabilidad base con señales simples de contexto para
+        evitar salidas planas en proyectos nuevos con texto escaso.
+        """
+        delta = 0.0
+        words = [w for w in description.split() if w.strip()]
+        word_count = len(words)
+
+        if word_count < 20:
+            delta -= 0.10
+        elif word_count < 50:
+            delta -= 0.04
+        elif word_count > 120:
+            delta += 0.06
+        elif word_count > 70:
+            delta += 0.03
+
+        if funding_goal is not None:
+            try:
+                goal = float(funding_goal)
+                if goal > 0:
+                    # Penaliza metas muy altas y favorece metas realistas.
+                    delta -= min(0.12, max(0.0, math.log10(goal / 50_000)))
+                    if goal < 20_000:
+                        delta += 0.04
+            except (TypeError, ValueError):
+                pass
+
+        category_boost = {
+            'tecnologia': 0.03,
+            'salud': 0.02,
+            'educacion': 0.02,
+            'agricultura': 0.01,
+            'social': 0.01,
+        }
+        category_penalty = {
+            'arte': -0.01,
+            'moda': -0.02,
+            'cine': -0.02,
+            'musica': -0.01,
+        }
+
+        cat = (category or '').lower()
+        for name, value in category_boost.items():
+            if name in cat:
+                delta += value
+                break
+        for name, value in category_penalty.items():
+            if name in cat:
+                delta += value
+                break
+
+        return delta
+
     """
     Predictor de éxito de proyectos de crowdfunding.
 
@@ -166,6 +228,37 @@ class ProjectSuccessPredictor:
         X_train_vec = vectorizer.fit_transform(X_train_clean)
         X_test_vec  = vectorizer.transform(X_test_clean)
 
+        # ── Curva de accuracy por épocas (auxiliar para visualización) ──
+        epochs = int(cfg.get('epochs_curve', 30))
+        batch_size = int(cfg.get('curve_batch_size', 2048))
+        sgd_curve_model = SGDClassifier(
+            loss='log_loss',
+            random_state=42,
+            learning_rate='adaptive',
+            eta0=float(cfg.get('curve_eta0', 0.01)),
+            max_iter=1,
+            tol=None,
+            class_weight=None,
+        )
+        y_train_arr = np.array(y_train)
+        train_accuracy_by_epoch = []
+        val_accuracy_by_epoch = []
+        classes = np.array([0, 1])
+        n_samples = X_train_vec.shape[0]
+
+        for epoch_idx in range(epochs):
+            # Mezclar distinto en cada época evita curvas planas artificiales.
+            X_epoch, y_epoch = sk_shuffle(X_train_vec, y_train_arr, random_state=42 + epoch_idx)
+
+            for start in range(0, n_samples, batch_size):
+                end = min(start + batch_size, n_samples)
+                sgd_curve_model.partial_fit(X_epoch[start:end], y_epoch[start:end], classes=classes)
+
+            y_train_pred_epoch = sgd_curve_model.predict(X_train_vec)
+            y_val_pred_epoch = sgd_curve_model.predict(X_test_vec)
+            train_accuracy_by_epoch.append(round(accuracy_score(y_train_arr, y_train_pred_epoch), 4))
+            val_accuracy_by_epoch.append(round(accuracy_score(y_test, y_val_pred_epoch), 4))
+
         # ── Modelo: Regresión Logística con L2 ──
         clf = LogisticRegression(
             C=cfg['C'],
@@ -195,6 +288,17 @@ class ProjectSuccessPredictor:
             'train_size': len(X_train),
             'test_size':  len(X_test),
             'report':     classification_report(y_test, y_pred, target_names=['Fallido', 'Exitoso']),
+            # Datos crudos para análisis y visualización posterior.
+            'y_test':     [int(v) for v in y_test],
+            'y_pred':     [int(v) for v in y_pred],
+            'y_proba':    [float(v) for v in y_proba],
+            'class_counts': {
+                'fallido': int(len(labels) - sum(labels)),
+                'exitoso': int(sum(labels)),
+            },
+            'epochs': list(range(1, epochs + 1)),
+            'train_accuracy_by_epoch': train_accuracy_by_epoch,
+            'val_accuracy_by_epoch': val_accuracy_by_epoch,
         }
 
         logger.info(
@@ -230,7 +334,10 @@ class ProjectSuccessPredictor:
 
         preprocessor = get_preprocessor()
         clean_text = preprocessor.transform(description)
-        proba = float(self._pipeline.predict_proba([clean_text])[0][1])
+        base_proba = float(self._pipeline.predict_proba([clean_text])[0][1])
+        proba = self._clip_probability(
+            base_proba + self._context_adjustment(description, funding_goal, category)
+        )
 
         threshold = self._cfg['threshold']
         label = 'Probable éxito' if proba >= threshold else 'Riesgo alto'

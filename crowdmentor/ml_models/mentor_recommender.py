@@ -28,6 +28,7 @@ la matriz de vectores de mentores y se persiste en disco.
 from __future__ import annotations
 
 import logging
+import re
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -146,12 +147,14 @@ class MentorRecommender:
             # Construir texto del perfil: bio + experiencia + especialidad
             specialty_text = m.get_mentor_specialty_display() if m.mentor_specialty else ''
             raw = f"{m.bio} {m.experience} {specialty_text}"
-            corpus.append(preprocessor.transform(raw))
+            profile_text = preprocessor.transform(raw)
+            corpus.append(profile_text)
             meta.append({
                 'user_id':   m.user.id,
                 'username':  m.user.username,
                 'name':      m.user.get_full_name() or m.user.username,
                 'bio':       m.bio[:200],
+                'profile_text': profile_text,
                 'specialty': m.mentor_specialty or '',
                 'specialty_display': specialty_text,
             })
@@ -184,12 +187,14 @@ class MentorRecommender:
 
         for m in mentors_data:
             raw = f"{m.get('bio', '')} {m.get('experience', '')} {m.get('specialty', '')}"
-            corpus.append(preprocessor.transform(raw))
+            profile_text = preprocessor.transform(raw)
+            corpus.append(profile_text)
             meta.append({
                 'user_id':          m.get('user_id'),
                 'username':         m.get('username', ''),
                 'name':             m.get('name', ''),
                 'bio':              m.get('bio', '')[:200],
+                'profile_text':     profile_text,
                 'specialty':        m.get('specialty', ''),
                 'specialty_display': m.get('specialty_display', ''),
             })
@@ -206,6 +211,17 @@ class MentorRecommender:
         return len(meta)
 
     # ── Recomendación ─────────────────────────────────
+
+    @staticmethod
+    def _token_overlap_score(query_text: str, mentor_text: str) -> float:
+        """Fallback léxico cuando TF-IDF entrega empates en cero."""
+        query_tokens = {t for t in re.split(r'\s+', query_text.strip()) if len(t) > 2}
+        mentor_tokens = {t for t in re.split(r'\s+', mentor_text.strip()) if len(t) > 2}
+        if not query_tokens or not mentor_tokens:
+            return 0.0
+        inter = len(query_tokens & mentor_tokens)
+        union = len(query_tokens | mentor_tokens)
+        return inter / union if union else 0.0
 
     def recommend(self, project_description: str, project_category: str = '',
                   top_k: int | None = None) -> list[dict]:
@@ -249,6 +265,7 @@ class MentorRecommender:
             meta   = self._mentor_meta[idx]
             specialty_key     = meta['specialty'].lower()
             specialty_display = meta.get('specialty_display', '').lower()
+            profile_text = meta.get('profile_text', '')
             # Comparar contra la clave interna Y el nombre legible de la especialidad
             has_match = cat_lower and (
                 cat_lower in specialty_key or
@@ -257,11 +274,13 @@ class MentorRecommender:
                 any(word in specialty_display for word in cat_lower.split() if len(word) > 3)
             )
             bonus  = specialty_bonus if has_match else 0.0
-            score  = float(sim) + bonus
+            lexical_overlap = self._token_overlap_score(query_clean, profile_text)
+            blended_similarity = max(float(sim), lexical_overlap * 0.8)
+            score  = blended_similarity + bonus
 
             results.append({
                 **meta,
-                'similarity': round(float(sim), 4),
+                'similarity': round(blended_similarity, 4),
                 'score':      round(score, 4),
                 'match_pct':  min(int(score * 100), 100),
             })
