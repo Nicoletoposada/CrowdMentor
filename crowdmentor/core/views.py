@@ -3685,10 +3685,16 @@ def project_ai_analysis(request, project_id):
     try:
         from ml_models.mentor_recommender import get_recommender
         rec = get_recommender()
+        # Reconstruir índice en vivo desde la BD para incluir todos los mentores
+        # aprobados actualmente (evita que mentores nuevos queden fuera).
+        total_mentors = Profile.objects.filter(
+            user_type='mentor', is_approved=True
+        ).count()
+        rec.build_index()
         mentor_recs = rec.recommend(
             project_description=f"{project.title} {project.description}",
             project_category=project.category.name if project.category else '',
-            top_k=5,
+            top_k=total_mentors if total_mentors > 0 else 10,
         )
     except Exception:
         mentor_recs = []

@@ -247,7 +247,16 @@ class MentorRecommender:
         results = []
         for idx, sim in enumerate(sims):
             meta   = self._mentor_meta[idx]
-            bonus  = specialty_bonus if cat_lower and cat_lower in meta['specialty'].lower() else 0.0
+            specialty_key     = meta['specialty'].lower()
+            specialty_display = meta.get('specialty_display', '').lower()
+            # Comparar contra la clave interna Y el nombre legible de la especialidad
+            has_match = cat_lower and (
+                cat_lower in specialty_key or
+                cat_lower in specialty_display or
+                specialty_key in cat_lower or
+                any(word in specialty_display for word in cat_lower.split() if len(word) > 3)
+            )
+            bonus  = specialty_bonus if has_match else 0.0
             score  = float(sim) + bonus
 
             results.append({
