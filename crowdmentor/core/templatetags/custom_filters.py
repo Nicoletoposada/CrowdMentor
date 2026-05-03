@@ -53,3 +53,8 @@ def get_user_type(user):
     if hasattr(user, 'profile') and user.profile:
         return user.profile.user_type
     return None
+
+@register.filter
+def get_item(dictionary, key):
+    """Obtiene un elemento de un diccionario por clave."""
+    return dictionary.get(key)

@@ -89,6 +89,19 @@
                 {% endif %}
                 <!-- ── /Botón Análisis IA ─────────────────────── -->
 
+                <!-- ── Botón Evaluar Proyecto ─────────────────── -->
+                {% if user.is_authenticated and user.profile.user_type == 'mentor' or user.is_authenticated and user.profile.user_type == 'evaluator' %}
+                <div class="mb-4">
+                    <a href="{% url 'evaluate_project' project.pk %}"
+                       class="btn btn-warning w-100"
+                       style="border-radius:10px;">
+                        <i class="fas fa-clipboard-check me-2"></i>
+                        Evaluar Proyecto
+                    </a>
+                </div>
+                {% endif %}
+                <!-- ── /Botón Evaluar Proyecto ─────────────────── -->
+
                 {% if project.status == 'funded' or project.status == 'completed' %}
                     <!-- Banner: Meta alcanzada -->
                     <div class="alert alert-success mt-4 d-flex align-items-center" role="alert">
