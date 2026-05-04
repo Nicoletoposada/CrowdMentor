@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Entorno virtual
+venv/
+env/
+.env
+.venv/
+
+# Django
+*.sqlite3
+staticfiles/
+media/
+local_settings.py
+
+# Modelos ML entrenados (se regeneran con train_ai)
+saved_models/
+graficas/
+
+# Datasets de entrenamiento (muy pesados para Git)
+datasets/
+
+# IDE / Sistema operativo
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Variables de entorno
+.env
+.env.local
+.env.production
