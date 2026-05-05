@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+staticfiles/
+media/
+
+# Entorno virtual
+env/
+venv/
+.venv/
+ENV/
+
+# ML models (se entrenan en producción o se suben manualmente)
+saved_models/
+
+# Datasets (archivos pesados, no para git)
+datasets/
+
+# Graficas generadas
+graficas/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Variables de entorno
+.env
+.env.*
+!.env.example
