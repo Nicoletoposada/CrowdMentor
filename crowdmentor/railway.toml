@@ -1,5 +1,6 @@
 [build]
 builder = "NIXPACKS"
+rootDirectory = "crowdmentor"
 
 [deploy]
 startCommand = "gunicorn crowdmentor.wsgi --bind 0.0.0.0:$PORT --workers 2 --timeout 120"
