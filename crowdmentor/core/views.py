@@ -827,26 +827,6 @@ def manage_investment(request, investment_id):
         investment.is_accepted = True
         investment.save()
 
-        # Recalcular el monto financiado solo con inversiones aceptadas.
-        project.amount_raised = Investment.objects.filter(
-            project=project,
-            status='accepted'
-        ).aggregate(total=Sum('amount'))['total'] or 0
-
-        # Verificar si se alcanzó la meta de financiación
-        if project.amount_raised >= project.funding_goal and project.status not in ('funded', 'completed'):
-            project.status = 'funded'
-            # Notificar al emprendedor que su proyecto fue financiado
-            Notification.objects.create(
-                user=project.owner,
-                title='¡Meta de financiación alcanzada!',
-                message=f'Tu proyecto "{project.title}" ha alcanzado su meta de financiación de {project.funding_goal:,.0f} COP. El proyecto ahora está completado.',
-                notification_type='project_update',
-                related_project=project,
-            )
-
-        project.save()
-
         # Generar contrato de inversión
         contract = InvestmentContract.objects.create(investment=investment)
 
@@ -1363,7 +1343,7 @@ def toggle_resource_featured(request, resource_id):
 @login_required
 def evaluate_project(request, project_id):
     """Vista para evaluar un proyecto"""
-    if request.user.profile.user_type not in ['evaluator', 'mentor']:
+    if request.user.profile.user_type != 'evaluator':
         messages.error(request, 'No tienes permisos para evaluar proyectos.')
         return redirect('project_detail', pk=project_id)
 
@@ -3572,6 +3552,17 @@ def view_investment_contract(request, contract_id):
         rounding=ROUND_HALF_UP,
     )
 
+    # Comision de los mentores sobre la meta de financiacion del proyecto.
+    mentor_percentage = Decimal('10.00')
+    mentor_amount = (funding_goal * mentor_percentage / Decimal('100')).quantize(
+        Decimal('0.01'),
+        rounding=ROUND_HALF_UP,
+    )
+    mentor_count = Mentorship.objects.filter(
+        project=investment.project,
+        status='accepted'
+    ).count()
+
     return render(request, 'investment_contract.html', {
         'contract': contract,
         'investment': investment,
@@ -3579,6 +3570,9 @@ def view_investment_contract(request, contract_id):
         'investor_total_return': investor_total_return,
         'platform_percentage': platform_percentage,
         'platform_amount': platform_amount,
+        'mentor_percentage': mentor_percentage,
+        'mentor_amount': mentor_amount,
+        'mentor_count': mentor_count,
     })
 
 
@@ -3617,6 +3611,27 @@ def upload_signed_contract(request, contract_id):
         contract.status = 'signed_uploaded'
         contract.signed_at = timezone.now()
         contract.save()
+
+        # Actualizar el monto recaudado del proyecto con los contratos firmados
+        project = investment.project
+        project.amount_raised = Investment.objects.filter(
+            project=project,
+            status='accepted',
+            contract__status='signed_uploaded'
+        ).aggregate(total=Sum('amount'))['total'] or 0
+
+        # Verificar si se alcanzó la meta de financiación
+        if project.amount_raised >= project.funding_goal and project.status not in ('funded', 'completed'):
+            project.status = 'funded'
+            Notification.objects.create(
+                user=project.owner,
+                title='¡Meta de financiación alcanzada!',
+                message=f'Tu proyecto "{project.title}" ha alcanzado su meta de financiación de {project.funding_goal:,.0f} COP.',
+                notification_type='project_update',
+                related_project=project,
+            )
+
+        project.save()
 
         # Notificar al emprendedor
         Notification.objects.create(

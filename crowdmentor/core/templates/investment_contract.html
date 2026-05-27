@@ -341,6 +341,10 @@
                         <td class="value">{{ platform_amount|cop_currency }}</td>
                     </tr>
                     <tr>
+                        <td>Participación de Mentores ({{ mentor_percentage }}% de la meta de financiación{% if mentor_count %} — {{ mentor_count }} mentor{{ mentor_count|pluralize:"es" }}{% endif %})</td>
+                        <td class="value">{{ mentor_amount|cop_currency }}</td>
+                    </tr>
+                    <tr>
                         <td>Monto Total Financiado a la Fecha</td>
                         <td class="value">{{ investment.project.amount_raised|cop_currency }}</td>
                     </tr>
@@ -412,7 +416,19 @@
             </div>
 
             <div class="clause">
-                <span class="clause-number">4.8 Forma de Retorno del Inversionista.</span>
+                <span class="clause-number">4.8 Participación de los Mentores sobre la Meta del Proyecto.</span>
+                Las partes aceptan y declaran que los mentores que hayan participado activamente en la
+                orientación del proyecto recibirán, en conjunto, una participación equivalente al
+                <strong>{{ mentor_percentage }}%</strong> del <strong>funding goal</strong> del proyecto,
+                distribuida en partes iguales entre los mentores aceptados (actualmente
+                <strong>{{ mentor_count }}</strong> mentor{{ mentor_count|pluralize:"es" }}).
+                Para este contrato, dicha participación total corresponde a
+                <strong>{{ mentor_amount|cop_currency }}</strong>, calculada sobre una meta de
+                <strong>{{ investment.project.funding_goal|cop_currency }}</strong>.
+            </div>
+
+            <div class="clause">
+                <span class="clause-number">4.9 Forma de Retorno del Inversionista.</span>
                 El retorno del inversionista se calculará sobre el monto efectivamente invertido.
                 En este caso, si el inversionista aporta
                 <strong>{{ investment.amount|cop_currency }}</strong> y acuerda un porcentaje de
@@ -422,7 +438,7 @@
             </div>
 
             <div class="clause">
-                <span class="clause-number">4.9 Ley Aplicable.</span>
+                <span class="clause-number">4.10 Ley Aplicable.</span>
                 Este contrato se rige por las leyes vigentes de la República de Colombia. Cualquier
                 controversia será resuelta en primera instancia por conciliación directa y, en su
                 defecto, por los tribunales competentes.
